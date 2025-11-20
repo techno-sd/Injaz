@@ -1,29 +1,38 @@
--- SQL script to set up demo account and sample projects
--- Run this in Supabase SQL Editor after running the main schema migration
+-- SQL script to set up demo projects for existing demo user
+-- Prerequisites: Demo user must already exist in Supabase Auth
+-- Either created via the "Try Demo" button or manually via Supabase Dashboard
 
--- Note: The demo account will be created via Supabase Auth automatically
--- when a user clicks "Try Demo" button. This SQL is for manual setup or reference.
+-- IMPORTANT: This SQL creates the projects and files ONLY
+-- The demo user (demo@ieditor.dev) must be created via:
+-- 1. Supabase Dashboard → Authentication → Users → Add User
+--    OR
+-- 2. Clicking "Try Demo" button in the app (automatic)
 
--- Demo user details:
--- Email: demo@ieditor.dev
--- Password: demo123456
--- This user must be created via Supabase Auth dashboard or the app's demo login
+-- Step 1: Verify demo user exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'demo@ieditor.dev') THEN
+    RAISE EXCEPTION 'Demo user does not exist. Create user demo@ieditor.dev in Supabase Dashboard first.';
+  END IF;
+END $$;
 
--- Step 1: After creating demo user in Auth, get the user ID
--- You can find this by running:
--- SELECT id FROM auth.users WHERE email = 'demo@ieditor.dev';
-
--- Step 2: Insert the user profile (replace 'YOUR_DEMO_USER_ID' with actual ID)
+-- Step 2: Create user profile if it doesn't exist
 INSERT INTO public.users (id, email, full_name, avatar_url)
-VALUES (
-  'YOUR_DEMO_USER_ID', -- Replace with actual user ID from auth.users
+SELECT
+  id,
   'demo@ieditor.dev',
   'Demo User',
   NULL
-)
-ON CONFLICT (id) DO NOTHING;
+FROM auth.users
+WHERE email = 'demo@ieditor.dev'
+ON CONFLICT (id) DO UPDATE
+SET full_name = EXCLUDED.full_name;
 
--- Step 3: Create sample projects for demo user
+-- Step 3: Delete any existing demo projects (for clean slate)
+DELETE FROM public.projects
+WHERE user_id = (SELECT id FROM auth.users WHERE email = 'demo@ieditor.dev');
+
+-- Step 4: Create sample projects for demo user
 WITH demo_user AS (
   SELECT id FROM auth.users WHERE email = 'demo@ieditor.dev' LIMIT 1
 ),
@@ -35,7 +44,7 @@ project1 AS (
     'A beautiful landing page built with AI',
     'landing-page'
   FROM demo_user
-  RETURNING id
+  RETURNING id, name
 ),
 project2 AS (
   INSERT INTO public.projects (user_id, name, description, template)
@@ -45,7 +54,7 @@ project2 AS (
     'Analytics dashboard with charts',
     'dashboard'
   FROM demo_user
-  RETURNING id
+  RETURNING id, name
 ),
 project3 AS (
   INSERT INTO public.projects (user_id, name, description, template)
@@ -55,15 +64,16 @@ project3 AS (
     'A minimal blog for sharing ideas',
     'blog'
   FROM demo_user
-  RETURNING id
-)
+  RETURNING id, name
+),
 
--- Step 4: Insert files for Project 1 (Landing Page)
-INSERT INTO public.files (project_id, path, content, language)
-SELECT
-  id,
-  'package.json',
-  '{
+-- Step 5: Insert files for Project 1 (Landing Page)
+files1 AS (
+  INSERT INTO public.files (project_id, path, content, language)
+  SELECT
+    p.id,
+    'package.json',
+    '{
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
@@ -78,13 +88,13 @@ SELECT
     "react-dom": "^18.2.0"
   }
 }',
-  'json'
-FROM project1
-UNION ALL
-SELECT
-  id,
-  'app/page.tsx',
-  'export default function Home() {
+    'json'
+  FROM project1 p
+  UNION ALL
+  SELECT
+    p.id,
+    'app/page.tsx',
+    'export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <section className="container mx-auto px-4 py-20 text-center">
@@ -122,15 +132,18 @@ SELECT
     </main>
   )
 }',
-  'typescript'
-FROM project1;
+    'typescript'
+  FROM project1 p
+  RETURNING project_id
+),
 
 -- Insert files for Project 2 (Dashboard)
-INSERT INTO public.files (project_id, path, content, language)
-SELECT
-  id,
-  'package.json',
-  '{
+files2 AS (
+  INSERT INTO public.files (project_id, path, content, language)
+  SELECT
+    p.id,
+    'package.json',
+    '{
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
@@ -145,13 +158,13 @@ SELECT
     "react-dom": "^18.2.0"
   }
 }',
-  'json'
-FROM project2
-UNION ALL
-SELECT
-  id,
-  'app/page.tsx',
-  'export default function Dashboard() {
+    'json'
+  FROM project2 p
+  UNION ALL
+  SELECT
+    p.id,
+    'app/page.tsx',
+    'export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
@@ -207,15 +220,18 @@ SELECT
     </div>
   )
 }',
-  'typescript'
-FROM project2;
+    'typescript'
+  FROM project2 p
+  RETURNING project_id
+),
 
 -- Insert files for Project 3 (Blog)
-INSERT INTO public.files (project_id, path, content, language)
-SELECT
-  id,
-  'package.json',
-  '{
+files3 AS (
+  INSERT INTO public.files (project_id, path, content, language)
+  SELECT
+    p.id,
+    'package.json',
+    '{
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
@@ -230,13 +246,13 @@ SELECT
     "react-dom": "^18.2.0"
   }
 }',
-  'json'
-FROM project3
-UNION ALL
-SELECT
-  id,
-  'app/page.tsx',
-  'export default function Home() {
+    'json'
+  FROM project3 p
+  UNION ALL
+  SELECT
+    p.id,
+    'app/page.tsx',
+    'export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="text-4xl font-bold">Welcome!</h1>
@@ -246,10 +262,12 @@ SELECT
     </main>
   )
 }',
-  'typescript'
-FROM project3;
+    'typescript'
+  FROM project3 p
+  RETURNING project_id
+)
 
--- Step 5: Insert welcome messages for each project
+-- Step 6: Insert welcome messages for each project
 INSERT INTO public.messages (project_id, role, content)
 SELECT id, 'assistant', 'Hi! I''ve created your My Landing Page. Feel free to customize it by chatting with me!'
 FROM project1
@@ -260,11 +278,22 @@ UNION ALL
 SELECT id, 'assistant', 'Hi! I''ve created your Personal Blog. Feel free to customize it by chatting with me!'
 FROM project3;
 
--- Verify the setup
-SELECT 'Demo setup complete! Projects created:' as status;
-SELECT p.name, p.template, COUNT(f.id) as file_count
+-- Step 7: Verify the setup
+SELECT
+  '✅ Demo setup complete!' as status,
+  COUNT(*) as total_projects
+FROM public.projects
+WHERE user_id = (SELECT id FROM auth.users WHERE email = 'demo@ieditor.dev');
+
+-- Show created projects
+SELECT
+  p.name,
+  p.template,
+  COUNT(f.id) as file_count,
+  COUNT(m.id) as message_count
 FROM public.projects p
 LEFT JOIN public.files f ON f.project_id = p.id
+LEFT JOIN public.messages m ON m.project_id = p.id
 WHERE p.user_id = (SELECT id FROM auth.users WHERE email = 'demo@ieditor.dev')
 GROUP BY p.id, p.name, p.template
 ORDER BY p.created_at;
