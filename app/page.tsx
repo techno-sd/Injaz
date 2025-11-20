@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Code2, Sparkles, Send, ArrowRight, Zap, Layout, Rocket } from 'lucide-react'
+import { DemoLoginButton } from '@/components/demo-login-button'
 
 export default function HomePage() {
   const [chatInput, setChatInput] = useState('')
@@ -39,6 +40,7 @@ export default function HomePage() {
             <span className="text-xl font-bold">iEditor</span>
           </Link>
           <div className="flex items-center gap-3">
+            <DemoLoginButton variant="ghost" />
             <Button asChild variant="ghost">
               <Link href="/login">Sign In</Link>
             </Button>
