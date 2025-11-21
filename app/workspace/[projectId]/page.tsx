@@ -41,12 +41,20 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     .eq('project_id', params.projectId)
     .order('created_at', { ascending: true })
 
+  // Check if user has Vercel connected
+  const { data: vercelToken } = await supabase
+    .from('vercel_tokens')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+
   return (
     <WebContainerProvider>
       <WorkspaceLayout
         project={project}
         initialFiles={files || []}
         initialMessages={messages || []}
+        isVercelConnected={!!vercelToken}
       />
     </WebContainerProvider>
   )

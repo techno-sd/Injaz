@@ -9,6 +9,7 @@ import { UserNav } from '@/components/user-nav'
 import { ProjectCard } from '@/components/project-card'
 import { GitHubConnectButton } from '@/components/github/github-connect-button'
 import { RepoBrowser } from '@/components/github/repo-browser'
+import { VercelConnectButton } from '@/components/vercel/vercel-connect-button'
 import { DashboardSkeleton } from '@/components/loading-skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { PageTransition } from '@/components/page-transition'
@@ -36,6 +37,13 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .single()
 
+  // Check if user has Vercel connected
+  const { data: vercelToken } = await supabase
+    .from('vercel_tokens')
+    .select('team_name')
+    .eq('user_id', user.id)
+    .single()
+
   // Calculate stats
   const totalProjects = projects?.length || 0
   const recentProjects = projects?.filter(p => {
@@ -57,6 +65,10 @@ export default async function DashboardPage() {
             <GitHubConnectButton
               isConnected={!!githubToken}
               githubUsername={githubToken?.github_username}
+            />
+            <VercelConnectButton
+              isConnected={!!vercelToken}
+              teamName={vercelToken?.team_name}
             />
             <UserNav user={user} />
           </div>

@@ -45,6 +45,8 @@ export interface Database {
           preview_url: string | null
           deployment_url: string | null
           is_public: boolean
+          vercel_project_id: string | null
+          vercel_project_name: string | null
           created_at: string
           updated_at: string
         }
@@ -57,6 +59,8 @@ export interface Database {
           preview_url?: string | null
           deployment_url?: string | null
           is_public?: boolean
+          vercel_project_id?: string | null
+          vercel_project_name?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -69,6 +73,8 @@ export interface Database {
           preview_url?: string | null
           deployment_url?: string | null
           is_public?: boolean
+          vercel_project_id?: string | null
+          vercel_project_name?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -221,6 +227,79 @@ export interface Database {
           favorite_count?: number
           last_used_at?: string | null
           updated_at?: string
+        }
+      }
+      vercel_tokens: {
+        Row: {
+          id: string
+          user_id: string
+          access_token: string
+          team_id: string | null
+          team_name: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          access_token: string
+          team_id?: string | null
+          team_name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          access_token?: string
+          team_id?: string | null
+          team_name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      vercel_deployments: {
+        Row: {
+          id: string
+          project_id: string
+          user_id: string
+          vercel_deployment_id: string
+          vercel_project_id: string | null
+          url: string
+          status: 'QUEUED' | 'BUILDING' | 'READY' | 'ERROR' | 'CANCELED'
+          alias_url: string | null
+          build_logs: string | null
+          error_message: string | null
+          created_at: string
+          ready_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          user_id: string
+          vercel_deployment_id: string
+          vercel_project_id?: string | null
+          url: string
+          status: 'QUEUED' | 'BUILDING' | 'READY' | 'ERROR' | 'CANCELED'
+          alias_url?: string | null
+          build_logs?: string | null
+          error_message?: string | null
+          created_at?: string
+          ready_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          user_id?: string
+          vercel_deployment_id?: string
+          vercel_project_id?: string | null
+          url?: string
+          status?: 'QUEUED' | 'BUILDING' | 'READY' | 'ERROR' | 'CANCELED'
+          alias_url?: string | null
+          build_logs?: string | null
+          error_message?: string | null
+          created_at?: string
+          ready_at?: string | null
         }
       }
     }

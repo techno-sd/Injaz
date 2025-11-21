@@ -12,23 +12,25 @@ import { WorkspaceHeader } from './workspace-header'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { CommandPalette } from '@/components/command-palette'
 import { Button } from '@/components/ui/button'
-import { Globe, Terminal as TerminalIcon, MessageSquare, GitBranch } from 'lucide-react'
+import { Globe, Terminal as TerminalIcon, MessageSquare, GitBranch, Rocket } from 'lucide-react'
+import { DeploymentPanel } from '@/components/vercel/deployment-panel'
 import type { Project, File, Message } from '@/types'
 
 interface WorkspaceLayoutProps {
   project: Project
   initialFiles: File[]
   initialMessages: Message[]
+  isVercelConnected: boolean
 }
 
-export function WorkspaceLayout({ project, initialFiles, initialMessages }: WorkspaceLayoutProps) {
+export function WorkspaceLayout({ project, initialFiles, initialMessages, isVercelConnected }: WorkspaceLayoutProps) {
   const [files, setFiles] = useState<File[]>(initialFiles)
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [activeFileId, setActiveFileId] = useState<string | null>(
     initialFiles.length > 0 ? initialFiles[0].id : null
   )
   const [bottomView, setBottomView] = useState<'preview' | 'terminal'>('preview')
-  const [rightView, setRightView] = useState<'chat' | 'git'>('chat')
+  const [rightView, setRightView] = useState<'chat' | 'git' | 'deploy'>('chat')
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [fileSearchOpen, setFileSearchOpen] = useState(false)
 
@@ -192,7 +194,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
 
         <ResizableHandle />
 
-        {/* Right Sidebar - AI Chat / Git Panel */}
+        {/* Right Sidebar - AI Chat / Git Panel / Deploy */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
           <div className="h-full flex flex-col">
             {/* Tabs */}
@@ -221,6 +223,18 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
                 <GitBranch className="h-4 w-4 mr-2" />
                 Git
               </Button>
+              <Button
+                variant={rightView === 'deploy' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setRightView('deploy')}
+                className={rightView === 'deploy'
+                  ? 'h-9 gradient-primary text-white border-0 shadow-sm'
+                  : 'h-9 hover:bg-primary/10 hover:text-primary'
+                }
+              >
+                <Rocket className="h-4 w-4 mr-2" />
+                Deploy
+              </Button>
             </div>
 
             {/* Content */}
@@ -233,7 +247,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
                   onMessagesChange={setMessages}
                   onFilesChange={setFiles}
                 />
-              ) : (
+              ) : rightView === 'git' ? (
                 <GitPanel
                   project={project}
                   files={files}
@@ -242,6 +256,13 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
                     window.location.reload()
                   }}
                 />
+              ) : (
+                <div className="h-full overflow-auto p-4">
+                  <DeploymentPanel
+                    project={project}
+                    isVercelConnected={isVercelConnected}
+                  />
+                </div>
               )}
             </div>
           </div>
