@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { deployToVercel, getDeployments, checkDeploymentStatus } from '@/app/actions/vercel'
+import { deployToVercel, getDeployments, checkDeploymentStatus, cancelDeployment } from '@/app/actions/vercel'
 import { useToast } from '@/components/ui/use-toast'
-import { Loader2, ExternalLink, CheckCircle2, XCircle, Clock, Rocket } from 'lucide-react'
+import { Loader2, ExternalLink, CheckCircle2, XCircle, Clock, Rocket, X } from 'lucide-react'
+import { DeploymentLogsDialog } from './deployment-logs-dialog'
 import type { Project } from '@/types'
 
 interface DeploymentPanelProps {
@@ -27,6 +28,7 @@ export function DeploymentPanel({ project, isVercelConnected }: DeploymentPanelP
   const [deploying, setDeploying] = useState(false)
   const [deployments, setDeployments] = useState<Deployment[]>([])
   const [loading, setLoading] = useState(true)
+  const [canceling, setCanceling] = useState<Set<string>>(new Set())
   const { toast } = useToast()
 
   useEffect(() => {
@@ -104,6 +106,39 @@ export function DeploymentPanel({ project, isVercelConnected }: DeploymentPanelP
       })
     } finally {
       setDeploying(false)
+    }
+  }
+
+  const handleCancel = async (deploymentId: string) => {
+    setCanceling(prev => new Set(prev).add(deploymentId))
+    try {
+      const result = await cancelDeployment(deploymentId)
+
+      if (result.error) {
+        toast({
+          title: 'Failed to cancel',
+          description: result.error,
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Deployment canceled',
+          description: 'The deployment has been canceled',
+        })
+        await fetchDeployments()
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to cancel deployment',
+        variant: 'destructive',
+      })
+    } finally {
+      setCanceling(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(deploymentId)
+        return newSet
+      })
     }
   }
 
@@ -230,6 +265,27 @@ export function DeploymentPanel({ project, isVercelConnected }: DeploymentPanelP
                       {deployment.url.replace('https://', '')}
                       <ExternalLink className="h-3 w-3 flex-shrink-0" />
                     </a>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <DeploymentLogsDialog
+                      deploymentId={deployment.id}
+                      deploymentUrl={deployment.url}
+                    />
+                    {(deployment.status === 'BUILDING' || deployment.status === 'QUEUED') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCancel(deployment.id)}
+                        disabled={canceling.has(deployment.id)}
+                        className="h-8 px-2"
+                      >
+                        {canceling.has(deployment.id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

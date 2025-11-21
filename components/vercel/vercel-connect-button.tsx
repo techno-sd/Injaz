@@ -27,12 +27,11 @@ export function VercelConnectButton({ isConnected, teamName }: VercelConnectButt
   const { toast } = useToast()
 
   const handleConnect = () => {
-    const clientId = process.env.NEXT_PUBLIC_VERCEL_CLIENT_ID
     const redirectUri = `${window.location.origin}/api/vercel/auth/callback`
-    const vercelAuthUrl = `https://vercel.com/integrations/YOUR_INTEGRATION_ID/new`
 
-    // For actual OAuth flow
-    const authUrl = `https://vercel.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`
+    // Construct OAuth URL - client ID will be read from environment on the server side
+    // We use a data attribute to trigger the OAuth flow
+    const authUrl = `/api/vercel/auth/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
 
     window.location.href = authUrl
   }

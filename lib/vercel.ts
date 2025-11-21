@@ -235,6 +235,20 @@ export class VercelClient {
       throw new Error(error.error?.message || 'Failed to assign alias')
     }
   }
+
+  async getDeploymentLogs(deploymentId: string): Promise<string[]> {
+    const response = await fetch(this.getUrl(`/v2/deployments/${deploymentId}/events`), {
+      headers: this.getHeaders(),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch deployment logs: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    // Vercel returns logs as events, extract the text from each event
+    return data.map((event: any) => event.text || event.payload?.text || JSON.stringify(event))
+  }
 }
 
 /**

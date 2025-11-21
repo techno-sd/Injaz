@@ -311,3 +311,101 @@ export async function checkDeploymentStatus(deploymentId: string) {
     return { error: `Failed to check status: ${error.message}` }
   }
 }
+
+export async function cancelDeployment(deploymentId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  try {
+    // Get deployment from database
+    const { data: deployment } = await supabase
+      .from('vercel_deployments')
+      .select('*')
+      .eq('id', deploymentId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!deployment) {
+      return { error: 'Deployment not found' }
+    }
+
+    // Only allow canceling if deployment is in progress
+    if (deployment.status !== 'BUILDING' && deployment.status !== 'QUEUED') {
+      return { error: 'Can only cancel deployments that are building or queued' }
+    }
+
+    // Get Vercel token
+    const { data: tokenData } = await supabase
+      .from('vercel_tokens')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!tokenData) {
+      return { error: 'Vercel not connected' }
+    }
+
+    // Cancel deployment on Vercel
+    const vercelClient = new VercelClient(tokenData.access_token, tokenData.team_id)
+    await vercelClient.cancelDeployment(deployment.vercel_deployment_id)
+
+    // Update status in database
+    await supabase
+      .from('vercel_deployments')
+      .update({ status: 'CANCELED' })
+      .eq('id', deploymentId)
+
+    revalidatePath(`/workspace/${deployment.project_id}`)
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error canceling deployment:', error)
+    return { error: `Failed to cancel deployment: ${error.message}` }
+  }
+}
+
+export async function getDeploymentLogs(deploymentId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  try {
+    // Get deployment from database
+    const { data: deployment } = await supabase
+      .from('vercel_deployments')
+      .select('*')
+      .eq('id', deploymentId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!deployment) {
+      return { error: 'Deployment not found' }
+    }
+
+    // Get Vercel token
+    const { data: tokenData } = await supabase
+      .from('vercel_tokens')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!tokenData) {
+      return { error: 'Vercel not connected' }
+    }
+
+    // Get logs from Vercel
+    const vercelClient = new VercelClient(tokenData.access_token, tokenData.team_id)
+    const logs = await vercelClient.getDeploymentLogs(deployment.vercel_deployment_id)
+
+    return { data: logs }
+  } catch (error: any) {
+    console.error('Error fetching deployment logs:', error)
+    return { error: `Failed to fetch logs: ${error.message}` }
+  }
+}

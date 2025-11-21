@@ -32,9 +32,21 @@ export async function GET(request: NextRequest) {
     // Exchange code for access token
     const tokenData = await exchangeCodeForToken(code)
 
-    // Get user info from Vercel
+    // Get user info and team info from Vercel
     const vercelClient = new VercelClient(tokenData.access_token, tokenData.team_id)
     const vercelUser = await vercelClient.getUser()
+
+    // Fetch team name if team_id is present
+    let teamName: string | null = null
+    if (tokenData.team_id) {
+      try {
+        const teams = await vercelClient.listTeams()
+        const team = teams.find(t => t.id === tokenData.team_id)
+        teamName = team?.name || null
+      } catch (error) {
+        console.error('Error fetching team name:', error)
+      }
+    }
 
     // Store token in database
     const { error: dbError } = await supabase
@@ -43,7 +55,7 @@ export async function GET(request: NextRequest) {
         user_id: user.id,
         access_token: tokenData.access_token,
         team_id: tokenData.team_id || null,
-        team_name: null, // Can be fetched if needed
+        team_name: teamName,
       })
 
     if (dbError) {

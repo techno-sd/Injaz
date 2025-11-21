@@ -11,7 +11,9 @@ A production-ready AI-powered platform for building web applications, similar to
 - **Project Dashboard**: Manage multiple projects
 - **Authentication**: Secure auth with Supabase
 - **Database**: PostgreSQL with Row Level Security
-- **Deployment**: One-click deployment to Vercel
+- **GitHub Integration**: Import repositories and sync code
+- **Template System**: Browse, search, and favorite project templates
+- **Vercel Deployment**: One-click deployment with OAuth integration
 - **Real-Time Sync**: Supabase Realtime for collaborative features
 
 ## Tech Stack
@@ -57,8 +59,11 @@ NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 OPENAI_API_KEY=your-openai-api-key
-VERCEL_TOKEN=your-vercel-token
-VERCEL_TEAM_ID=your-team-id
+NEXT_PUBLIC_GITHUB_CLIENT_ID=your-github-oauth-client-id
+GITHUB_CLIENT_SECRET=your-github-oauth-client-secret
+NEXT_PUBLIC_VERCEL_CLIENT_ID=your-vercel-oauth-client-id
+VERCEL_CLIENT_ID=your-vercel-oauth-client-id
+VERCEL_CLIENT_SECRET=your-vercel-oauth-client-secret
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -256,9 +261,36 @@ Deploys project to Vercel.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
 | `OPENAI_API_KEY` | OpenAI API key | Yes |
-| `VERCEL_TOKEN` | Vercel API token | No |
-| `VERCEL_TEAM_ID` | Vercel team ID | No |
+| `NEXT_PUBLIC_GITHUB_CLIENT_ID` | GitHub OAuth client ID | For GitHub integration |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret | For GitHub integration |
+| `NEXT_PUBLIC_VERCEL_CLIENT_ID` | Vercel OAuth client ID | For Vercel deployment |
+| `VERCEL_CLIENT_ID` | Vercel OAuth client ID (duplicate) | For Vercel deployment |
+| `VERCEL_CLIENT_SECRET` | Vercel OAuth client secret | For Vercel deployment |
 | `NEXT_PUBLIC_APP_URL` | App base URL | Yes |
+
+### Setting up GitHub OAuth
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click "New OAuth App"
+3. Fill in the application details:
+   - **Application name**: iEditor (or your app name)
+   - **Homepage URL**: `http://localhost:3000` (or your production URL)
+   - **Authorization callback URL**: `http://localhost:3000/api/github/auth/callback`
+4. Click "Register application"
+5. Copy the **Client ID** and **Client Secret** to your `.env` file
+
+### Setting up Vercel OAuth
+
+1. Go to [Vercel Integrations Console](https://vercel.com/dashboard/integrations/console)
+2. Click "Create" to create a new integration
+3. Fill in the integration details:
+   - **Name**: iEditor Deployment (or your app name)
+   - **Redirect URL**: `http://localhost:3000/api/vercel/auth/callback` (add production URL when deploying)
+4. Under "Required Permissions", select:
+   - Deployments: Read and Write
+   - Projects: Read and Write
+5. Click "Create" and copy the **Client ID** and **Client Secret**
+6. Add these values to your `.env` file as both `NEXT_PUBLIC_VERCEL_CLIENT_ID` and `VERCEL_CLIENT_ID` (and `VERCEL_CLIENT_SECRET`)
 
 ## Deployment
 
@@ -313,14 +345,17 @@ npm run type-check
 
 ## Future Enhancements
 
-- [ ] GitHub integration
-- [ ] Template marketplace
-- [ ] Collaborative editing
-- [ ] Version control (git)
-- [ ] Custom domains
-- [ ] Usage analytics
-- [ ] Team workspaces
+- [x] GitHub integration
+- [x] Template marketplace with favorites and usage tracking
+- [x] Vercel deployment integration
+- [ ] Collaborative editing (real-time multi-user)
+- [ ] Version control (git branching and commits)
+- [ ] Custom domains for deployments
+- [ ] Usage analytics and insights
+- [ ] Team workspaces with shared projects
 - [ ] Export to GitHub repo
+- [ ] Environment variable management
+- [ ] Deployment rollback functionality
 
 ## Contributing
 
