@@ -34,19 +34,26 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-purple-50">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b glass sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2">
-            <Code2 className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">iEditor</span>
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="h-9 w-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+              <Code2 className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              iEditor
+            </span>
           </Link>
           <div className="flex items-center gap-3">
-            <DemoLoginButton variant="ghost" />
-            <Button asChild variant="ghost">
+            <DemoLoginButton variant="ghost" size="sm" />
+            <Button asChild variant="ghost" size="sm">
               <Link href="/login">Sign In</Link>
             </Button>
-            <Button asChild>
-              <Link href="/signup">Get Started</Link>
+            <Button asChild size="sm" className="gradient-primary text-white border-0 shadow-md hover:shadow-lg transition-shadow">
+              <Link href="/signup">
+                Get Started Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -69,22 +76,24 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl md:text-6xl font-bold tracking-tight"
+            className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight"
           >
-            Build apps by chatting <br />
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              with AI
+            Build apps with{' '}
+            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-pulse-slow">
+              AI
             </span>
+            <br />
+            in seconds
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-xl text-muted-foreground max-w-2xl mx-auto"
+            className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
           >
-            Describe your app idea and watch as AI transforms your words into working code.
-            No coding required.
+            Chat with AI to build full-stack applications. No coding experience needed.
+            Just describe what you want, and watch your app come to life.
           </motion.p>
         </div>
 
@@ -93,9 +102,9 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="max-w-3xl mx-auto"
+          className="max-w-4xl mx-auto"
         >
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden ring-1 ring-gray-200/50">
             {/* Chat Header */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
               <div className="flex items-center gap-2 text-white">
@@ -236,19 +245,50 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Stats Section */}
+        <div className="mt-32 mb-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+            {[
+              { label: 'Projects Created', value: '10,000+' },
+              { label: 'Active Users', value: '5,000+' },
+              { label: 'Lines of Code', value: '1M+' },
+              { label: 'Deployments', value: '15,000+' },
+            ].map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
+                className="text-center"
+              >
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
         {/* CTA Section */}
-        <div className="mt-20 text-center space-y-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 text-white">
-          <h2 className="text-3xl md:text-4xl font-bold">
+        <div className="mt-20 text-center space-y-8 gradient-primary rounded-3xl p-12 md:p-16 text-white shadow-2xl">
+          <h2 className="text-4xl md:text-5xl font-bold leading-tight">
             Ready to build something amazing?
           </h2>
-          <p className="text-xl text-white/90 max-w-2xl mx-auto">
-            Join thousands of developers building apps with AI
+          <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto">
+            Join thousands of developers building apps with AI. Start for free, no credit card required.
           </p>
-          <div className="flex gap-4 justify-center">
-            <Button asChild size="lg" variant="secondary">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button asChild size="lg" variant="secondary" className="shadow-lg hover:shadow-xl transition-shadow">
               <Link href="/signup">
                 Start Building Free
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+              <Link href="/login">
+                <Sparkles className="mr-2 h-5 w-5" />
+                Try Demo
               </Link>
             </Button>
           </div>
