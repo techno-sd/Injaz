@@ -67,25 +67,36 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
             <ResizablePanel defaultSize={40} minSize={20}>
               <div className="h-full flex flex-col">
                 {/* Tabs */}
-                <div className="flex items-center gap-1 bg-muted px-2 py-1 border-b">
+                <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 border-b">
                   <Button
-                    variant={bottomView === 'preview' ? 'secondary' : 'ghost'}
+                    variant={bottomView === 'preview' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setBottomView('preview')}
-                    className="h-8"
+                    className={bottomView === 'preview'
+                      ? 'h-9 gradient-primary text-white border-0 shadow-sm'
+                      : 'h-9 hover:bg-primary/10 hover:text-primary'
+                    }
                   >
                     <Globe className="h-4 w-4 mr-2" />
                     Preview
                   </Button>
                   <Button
-                    variant={bottomView === 'terminal' ? 'secondary' : 'ghost'}
+                    variant={bottomView === 'terminal' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setBottomView('terminal')}
-                    className="h-8"
+                    className={bottomView === 'terminal'
+                      ? 'h-9 gradient-primary text-white border-0 shadow-sm'
+                      : 'h-9 hover:bg-primary/10 hover:text-primary'
+                    }
                   >
                     <TerminalIcon className="h-4 w-4 mr-2" />
                     Terminal
                   </Button>
+                  <div className="flex-1"></div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                    <span>Live</span>
+                  </div>
                 </div>
 
                 {/* Content */}

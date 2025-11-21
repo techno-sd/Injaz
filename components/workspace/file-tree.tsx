@@ -176,36 +176,42 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
   }
 
   return (
-    <div className="h-full flex flex-col bg-muted/50">
-      <div className="border-b p-2 flex items-center justify-between">
-        <h3 className="font-semibold text-sm">Files</h3>
+    <div className="h-full flex flex-col bg-muted/30">
+      <div className="border-b bg-muted/50 p-3 flex items-center justify-between">
+        <h3 className="font-semibold text-sm flex items-center gap-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+          Files
+        </h3>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
           onClick={() => setIsCreating(!isCreating)}
         >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {isCreating && (
-          <div className="mb-2 flex gap-1">
-            <input
-              type="text"
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreateFile()
-                if (e.key === 'Escape') setIsCreating(false)
-              }}
-              placeholder="path/to/file.tsx"
-              className="flex-1 px-2 py-1 text-sm border rounded"
-              autoFocus
-            />
-            <Button size="sm" onClick={handleCreateFile}>
-              Add
-            </Button>
+          <div className="mb-3 p-2 bg-background border-2 border-primary/30 rounded-lg shadow-sm">
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateFile()
+                  if (e.key === 'Escape') setIsCreating(false)
+                }}
+                placeholder="path/to/file.tsx"
+                className="flex-1 px-2.5 py-1.5 text-sm border rounded-md focus:border-primary focus:ring-1 focus:ring-primary"
+                autoFocus
+              />
+              <Button size="sm" onClick={handleCreateFile} className="gradient-primary text-white border-0 shadow-sm">
+                Add
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5">Press Enter to create, Esc to cancel</p>
           </div>
         )}
         {fileTree.map(node => renderNode(node))}
