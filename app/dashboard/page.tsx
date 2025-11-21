@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,10 @@ import { UserNav } from '@/components/user-nav'
 import { ProjectCard } from '@/components/project-card'
 import { GitHubConnectButton } from '@/components/github/github-connect-button'
 import { RepoBrowser } from '@/components/github/repo-browser'
-import { Code2, Sparkles, LayoutTemplate } from 'lucide-react'
+import { DashboardSkeleton } from '@/components/loading-skeleton'
+import { EmptyState } from '@/components/empty-state'
+import { PageTransition } from '@/components/page-transition'
+import { Code2, Sparkles, LayoutTemplate, FolderPlus } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -60,6 +64,7 @@ export default async function DashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        <PageTransition>
         {/* Stats Section */}
         {totalProjects > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -219,6 +224,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         )}
+        </PageTransition>
       </main>
     </div>
   )

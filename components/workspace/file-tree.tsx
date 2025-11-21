@@ -15,6 +15,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 
 interface FileTreeProps {
   files: File[]
@@ -28,6 +29,8 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['/']))
   const [newFileName, setNewFileName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null)
   const { toast } = useToast()
 
   const fileTree = buildFileTree(files)
@@ -50,8 +53,15 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
     }
   }
 
-  async function handleDeleteFile(fileId: string) {
-    const result = await deleteFile(fileId, projectId)
+  function confirmDeleteFile(fileId: string) {
+    setFileToDelete(fileId)
+    setDeleteConfirmOpen(true)
+  }
+
+  async function handleDeleteFile() {
+    if (!fileToDelete) return
+
+    const result = await deleteFile(fileToDelete, projectId)
 
     if (result.error) {
       toast({
@@ -60,11 +70,17 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
         variant: 'destructive',
       })
     } else {
-      onFilesChange(files.filter(f => f.id !== fileId))
-      if (activeFileId === fileId) {
+      onFilesChange(files.filter(f => f.id !== fileToDelete))
+      if (activeFileId === fileToDelete) {
         onFileSelect(files[0]?.id || null)
       }
+      toast({
+        title: 'File deleted',
+        description: 'File has been successfully deleted',
+      })
     }
+    setDeleteConfirmOpen(false)
+    setFileToDelete(null)
   }
 
   function toggleDirectory(path: string) {
@@ -127,7 +143,7 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
               className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
               onClick={(e) => {
                 e.stopPropagation()
-                handleDeleteFile(file.id)
+                confirmDeleteFile(file.id)
               }}
             >
               <Trash className="h-3 w-3" />
@@ -164,7 +180,7 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
-            onClick={() => handleDeleteFile(file.id)}
+            onClick={() => confirmDeleteFile(file.id)}
             className="text-destructive focus:text-destructive"
           >
             <Trash className="mr-2 h-4 w-4" />
@@ -175,7 +191,22 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
     )
   }
 
+  const fileToDeleteName = fileToDelete
+    ? files.find(f => f.id === fileToDelete)?.path
+    : ''
+
   return (
+    <>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete File"
+        description={`Are you sure you want to delete "${fileToDeleteName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDeleteFile}
+        variant="destructive"
+      />
     <div className="h-full flex flex-col bg-muted/30">
       <div className="border-b bg-muted/50 p-3 flex items-center justify-between">
         <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -217,6 +248,7 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
         {fileTree.map(node => renderNode(node))}
       </div>
     </div>
+    </>
   )
 }
 
