@@ -52,15 +52,15 @@ export default async function DashboardPage() {
   }).length || 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50/50 via-white to-purple-50/50">
-      <header className="border-b glass">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-purple-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <header className="sticky top-0 z-50 border-b glass backdrop-blur-xl shadow-sm animate-fade-in">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="h-10 w-10 gradient-primary rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
               <Code2 className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">iEditor</h1>
-          </div>
+            <h1 className="text-xl font-bold text-gradient">iEditor</h1>
+          </Link>
           <div className="flex items-center gap-3">
             <GitHubConnectButton
               isConnected={!!githubToken}
@@ -79,63 +79,64 @@ export default async function DashboardPage() {
         <PageTransition>
         {/* Stats Section */}
         {totalProjects > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-slide-up">
+            <div className="glass-card border-2 rounded-2xl p-6 shadow-lg hover:shadow-xl hover-lift transition-all group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Projects</p>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Total Projects</p>
+                  <p className="text-4xl font-bold text-gradient">
                     {totalProjects}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <Code2 className="h-6 w-6 text-blue-600" />
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <Code2 className="h-7 w-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow">
+            <div className="glass-card border-2 rounded-2xl p-6 shadow-lg hover:shadow-xl hover-lift transition-all group animate-slide-up animate-delay-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active This Week</p>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Active This Week</p>
+                  <p className="text-4xl font-bold text-gradient">
                     {recentProjects}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-purple-600" />
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <Sparkles className="h-7 w-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-md hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
+            <div className="gradient-primary rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl hover-lift transition-all group relative overflow-hidden animate-slide-up animate-delay-200">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white/80">Quick Action</p>
-                  <p className="text-lg font-semibold mt-1">Start New Project</p>
+                  <p className="text-sm font-medium text-white/90 mb-2">Quick Action</p>
+                  <p className="text-lg font-bold">Start New Project</p>
                 </div>
-                <CreateProjectDialog variant="secondary" />
+                <CreateProjectDialog variant="secondary" className="shadow-lg hover:scale-105 transition-transform" />
               </div>
             </div>
           </div>
         )}
 
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 animate-fade-in">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Your Projects</h2>
-            <p className="text-muted-foreground mt-1">
+            <h2 className="text-4xl font-bold tracking-tight text-gradient mb-2">Your Projects</h2>
+            <p className="text-muted-foreground text-lg">
               Manage and create AI-powered applications
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button asChild variant="outline" className="shadow-sm">
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="outline" className="shadow-md hover:shadow-lg transition-shadow border-2">
               <Link href="/templates">
                 <LayoutTemplate className="mr-2 h-4 w-4" />
                 Browse Templates
               </Link>
             </Button>
             {githubToken && <RepoBrowser />}
-            <CreateProjectDialog />
+            <CreateProjectDialog className="shadow-md hover:shadow-lg transition-shadow" />
           </div>
         </div>
 
@@ -148,86 +149,92 @@ export default async function DashboardPage() {
             </div>
 
             {/* Quick Start Section */}
-            <div className="mt-12 gradient-primary rounded-3xl p-8 md:p-10 text-white shadow-xl">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="mt-16 gradient-primary rounded-3xl p-10 md:p-12 text-white shadow-2xl relative overflow-hidden group">
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-10 right-10 w-40 h-40 bg-white rounded-full blur-3xl animate-float"></div>
+                <div className="absolute bottom-10 left-10 w-56 h-56 bg-white rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+              </div>
+              <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
                 <div className="text-center md:text-left">
-                  <h3 className="text-3xl font-bold mb-2 flex items-center gap-2 justify-center md:justify-start">
-                    <Sparkles className="h-7 w-7" />
+                  <h3 className="text-4xl font-bold mb-3 flex items-center gap-3 justify-center md:justify-start">
+                    <Sparkles className="h-9 w-9 animate-pulse-slow" />
                     Start Something New
                   </h3>
-                  <p className="text-white/90 text-lg">
+                  <p className="text-white/90 text-xl leading-relaxed">
                     Choose from our templates or start from scratch with AI
                   </p>
                 </div>
-                <div className="flex gap-3">
-                  <Button asChild variant="secondary" size="lg" className="shadow-lg">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button asChild variant="secondary" size="lg" className="shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
                     <Link href="/templates">
                       <LayoutTemplate className="mr-2 h-5 w-5" />
                       View Templates
                     </Link>
                   </Button>
-                  <CreateProjectDialog variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20" />
+                  <CreateProjectDialog variant="outline" size="lg" className="bg-white/10 border-2 border-white/30 text-white hover:bg-white/20 shadow-xl hover:scale-105 transition-all" />
                 </div>
               </div>
             </div>
           </>
         ) : (
-          <div className="text-center py-16">
-            <div className="max-w-3xl mx-auto">
-              <div className="inline-flex items-center justify-center h-24 w-24 rounded-2xl gradient-primary mb-6 shadow-lg">
-                <Sparkles className="h-12 w-12 text-white" />
+          <div className="text-center py-20 animate-fade-in">
+            <div className="max-w-4xl mx-auto">
+              <div className="inline-flex items-center justify-center h-28 w-28 rounded-3xl gradient-primary mb-8 shadow-2xl animate-scale-in">
+                <Sparkles className="h-14 w-14 text-white animate-pulse-slow" />
               </div>
-              <h3 className="text-4xl font-bold mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h3 className="text-5xl font-bold mb-4 text-gradient animate-slide-up">
                 Welcome to iEditor!
               </h3>
-              <p className="text-muted-foreground mb-12 text-xl">
-                Start building your first AI-powered application in seconds
+              <p className="text-muted-foreground mb-16 text-xl leading-relaxed max-w-2xl mx-auto animate-slide-up animate-delay-100">
+                Start building your first AI-powered application in seconds. Choose your path below.
               </p>
 
               {/* Options Grid */}
-              <div className="grid md:grid-cols-2 gap-6 mb-10">
-                <Card className="text-left hover:shadow-xl hover:scale-105 transition-all cursor-pointer border-2 hover:border-primary/50">
-                  <CardHeader className="space-y-4">
-                    <div className="h-14 w-14 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
-                      <Sparkles className="h-7 w-7 text-white" />
+              <div className="grid md:grid-cols-2 gap-8 mb-12">
+                <Card className="text-left hover:shadow-2xl hover:scale-105 transition-all cursor-pointer border-2 hover:border-primary glass-card group animate-slide-up animate-delay-200">
+                  <CardHeader className="space-y-5 pb-6">
+                    <div className="h-16 w-16 rounded-2xl gradient-primary flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                      <Sparkles className="h-8 w-8 text-white" />
                     </div>
-                    <CardTitle className="text-2xl">Start from Scratch</CardTitle>
-                    <CardDescription className="text-base">
+                    <CardTitle className="text-2xl font-bold">Start from Scratch</CardTitle>
+                    <CardDescription className="text-base leading-relaxed">
                       Chat with AI to build your custom application from the ground up. Perfect for unique ideas.
                     </CardDescription>
                   </CardHeader>
                   <CardFooter>
-                    <CreateProjectDialog className="w-full" />
+                    <CreateProjectDialog className="w-full shadow-lg hover:shadow-xl transition-shadow" size="lg" />
                   </CardFooter>
                 </Card>
 
-                <Card className="text-left hover:shadow-xl hover:scale-105 transition-all cursor-pointer border-2 hover:border-purple-300">
-                  <CardHeader className="space-y-4">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg">
-                      <LayoutTemplate className="h-7 w-7 text-white" />
+                <Card className="text-left hover:shadow-2xl hover:scale-105 transition-all cursor-pointer border-2 hover:border-purple-400 glass-card group animate-slide-up animate-delay-300">
+                  <CardHeader className="space-y-5 pb-6">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                      <LayoutTemplate className="h-8 w-8 text-white" />
                     </div>
-                    <CardTitle className="text-2xl">Use a Template</CardTitle>
-                    <CardDescription className="text-base">
+                    <CardTitle className="text-2xl font-bold">Use a Template</CardTitle>
+                    <CardDescription className="text-base leading-relaxed">
                       Kickstart your project with ready-made templates for common use cases. Fast and easy.
                     </CardDescription>
                   </CardHeader>
                   <CardFooter>
-                    <Button asChild variant="outline" className="w-full shadow-sm">
+                    <Button asChild variant="outline" className="w-full shadow-lg hover:shadow-xl transition-shadow border-2" size="lg">
                       <Link href="/templates">
                         Browse Templates
+                        <LayoutTemplate className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   </CardFooter>
                 </Card>
               </div>
 
-              <div className="gradient-secondary rounded-2xl p-8 border-2 border-blue-200/50 shadow-lg">
-                <p className="text-base text-gray-700 mb-5 font-medium">
-                  <strong className="text-primary">Pro Tip:</strong> Describe your app idea in natural language, and our AI will build it for you!
+              <div className="gradient-secondary rounded-3xl p-10 border-2 border-blue-200/50 shadow-xl animate-slide-up animate-delay-400">
+                <p className="text-lg text-gray-700 mb-6 font-semibold">
+                  <Sparkles className="inline h-5 w-5 text-primary mr-2" />
+                  <strong className="text-gradient">Pro Tip:</strong> Describe your app idea in natural language, and our AI will build it for you!
                 </p>
-                <div className="flex gap-2 flex-wrap justify-center">
+                <div className="flex gap-3 flex-wrap justify-center">
                   {['Landing Pages', 'Dashboards', 'E-commerce', 'Blogs', 'Portfolios', 'SaaS Apps'].map((tag) => (
-                    <span key={tag} className="px-4 py-2 bg-white/80 rounded-full text-sm font-medium shadow-sm hover:shadow-md transition-shadow">
+                    <span key={tag} className="px-5 py-2.5 glass-card rounded-full text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all">
                       {tag}
                     </span>
                   ))}

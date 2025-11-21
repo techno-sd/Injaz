@@ -73,50 +73,55 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50/50 via-white to-purple-50/50">
-      <header className="border-b glass sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-purple-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <header className="sticky top-0 z-50 border-b glass backdrop-blur-xl shadow-sm animate-fade-in">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10">
+            <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10 hover:scale-105 transition-all">
               <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="h-10 w-10 gradient-primary rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
                 <Code2 className="h-5 w-5 text-white" />
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold text-gradient">
                 Project Templates
               </h1>
-            </div>
+            </Link>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl gradient-primary mb-6 shadow-2xl animate-scale-in">
+              <Code2 className="h-10 w-10 text-white" />
+            </div>
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 text-gradient animate-slide-up">
               Start with a Template
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Choose from {PROJECT_TEMPLATES.length} professional templates to kickstart your project, then customize with AI
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed animate-slide-up animate-delay-100">
+              Choose from <span className="font-bold text-gradient">{PROJECT_TEMPLATES.length}</span> professional templates to kickstart your project, then customize with AI
             </p>
           </div>
 
           {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-              <p className="mt-4 text-muted-foreground">Loading templates...</p>
+            <div className="text-center py-20 animate-fade-in">
+              <div className="inline-block h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-6"></div>
+              <p className="text-xl text-muted-foreground">Loading templates...</p>
             </div>
           ) : (
-            <TemplateBrowser
-              templates={PROJECT_TEMPLATES}
-              onSelectTemplate={handleSelectTemplate}
-              favoriteIds={favoriteIds}
-              templateStats={templateStats}
-            />
+            <div className="animate-slide-up animate-delay-200">
+              <TemplateBrowser
+                templates={PROJECT_TEMPLATES}
+                onSelectTemplate={handleSelectTemplate}
+                favoriteIds={favoriteIds}
+                templateStats={templateStats}
+              />
+            </div>
           )}
         </div>
       </main>

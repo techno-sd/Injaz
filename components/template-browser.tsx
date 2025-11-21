@@ -166,25 +166,25 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Search and Filters */}
-      <div className="space-y-4">
+      <div className="glass-card border-2 rounded-3xl p-6 shadow-xl space-y-6">
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search templates by name, description, or tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-12 h-14 text-base border-2 focus:border-primary transition-colors rounded-2xl"
           />
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-4">
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px] h-12 border-2 rounded-xl">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -197,7 +197,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
           </Select>
 
           <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px] h-12 border-2 rounded-xl">
               <SelectValue placeholder="Difficulty" />
             </SelectTrigger>
             <SelectContent>
@@ -211,10 +211,10 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
 
           {hasActiveFilters && (
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
+              size="lg"
               onClick={clearFilters}
-              className="gap-2"
+              className="gap-2 border-2 rounded-xl hover:bg-destructive/10 hover:border-destructive transition-all"
             >
               <X className="h-4 w-4" />
               Clear Filters
@@ -223,27 +223,31 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
         </div>
 
         {/* Tag Filters */}
-        <div className="flex flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3">
             <Filter className="h-4 w-4" />
-            Tags:
+            Filter by Tags:
           </div>
-          {allTags.map(tag => (
-            <Badge
-              key={tag}
-              variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-primary/20 transition-colors"
-              onClick={() => toggleTag(tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
+          <div className="flex flex-wrap gap-2">
+            {allTags.map(tag => (
+              <Badge
+                key={tag}
+                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                className="cursor-pointer hover:scale-105 transition-all px-4 py-2 text-sm rounded-xl"
+                onClick={() => toggleTag(tag)}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
-        {filteredTemplates.length} {filteredTemplates.length === 1 ? 'template' : 'templates'} found
+      <div className="flex items-center justify-between">
+        <div className="text-base font-semibold text-muted-foreground">
+          {filteredTemplates.length} {filteredTemplates.length === 1 ? 'template' : 'templates'} found
+        </div>
       </div>
 
       {/* Template Grid */}
@@ -256,68 +260,68 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
           return (
             <Card
               key={template.id}
-              className="hover:shadow-xl hover:scale-105 transition-all cursor-pointer group border-2 hover:border-primary/50 overflow-hidden"
+              className="hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group border-2 hover:border-primary glass-card overflow-hidden"
               onClick={() => onSelectTemplate(template)}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/50 group-hover:to-purple-50/50 transition-all pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/70 group-hover:to-purple-50/70 transition-all duration-300 pointer-events-none" />
 
-              <CardHeader className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-4xl shadow-sm">
+              <CardHeader className="relative pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-4xl shadow-lg group-hover:scale-110 transition-transform">
                     {template.icon}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className={getDifficultyColor(template.difficulty)}>
+                    <Badge className={`${getDifficultyColor(template.difficulty)} font-semibold px-3 py-1`}>
                       {template.difficulty}
                     </Badge>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 relative"
+                      className="h-9 w-9 rounded-xl hover:bg-red-50 transition-all"
                       onClick={(e) => handleToggleFavorite(template.id, e)}
                       disabled={isLoadingFavorite}
                     >
                       <Heart
-                        className={`h-4 w-4 transition-all ${
+                        className={`h-5 w-5 transition-all ${
                           isFavorited
-                            ? 'fill-red-500 text-red-500'
-                            : 'text-muted-foreground hover:text-red-500'
+                            ? 'fill-red-500 text-red-500 scale-110'
+                            : 'text-muted-foreground hover:text-red-500 hover:scale-110'
                         }`}
                       />
                     </Button>
                   </div>
                 </div>
-                <CardTitle className="text-xl">{template.name}</CardTitle>
-                <CardDescription className="text-base leading-relaxed">
+                <CardTitle className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">{template.name}</CardTitle>
+                <CardDescription className="text-base leading-relaxed line-clamp-2">
                   {template.description}
                 </CardDescription>
 
                 {/* Stats */}
                 {stats && (stats.usage_count > 0 || stats.favorite_count > 0) && (
-                  <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-4 mt-4 pt-4 border-t">
                     {stats.usage_count > 0 && (
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        <span>{stats.usage_count} uses</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        <span className="font-medium">{stats.usage_count} uses</span>
                       </div>
                     )}
                     {stats.favorite_count > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-3 w-3" />
-                        <span>{stats.favorite_count}</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Heart className="h-4 w-4 text-red-500" />
+                        <span className="font-medium">{stats.favorite_count}</span>
                       </div>
                     )}
                   </div>
                 )}
               </CardHeader>
 
-            <CardContent className="relative space-y-4">
+            <CardContent className="relative space-y-5 pt-0">
               {/* Tags */}
               <div className="flex flex-wrap gap-2">
                 {template.tags.map(tag => (
                   <span
                     key={tag}
-                    className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 text-primary text-xs font-medium rounded-full border border-primary/20"
+                    className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 text-primary text-xs font-semibold rounded-full border border-primary/30 hover:border-primary transition-colors"
                   >
                     {tag}
                   </span>
@@ -325,15 +329,15 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
               </div>
 
               {/* Tech Stack */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                   Tech Stack
                 </h4>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {template.techStack.map(tech => (
                     <span
                       key={tech}
-                      className="px-2 py-1 bg-muted text-xs rounded-md"
+                      className="px-3 py-1.5 bg-muted text-xs font-medium rounded-lg hover:bg-muted/80 transition-colors"
                     >
                       {tech}
                     </span>
@@ -342,26 +346,26 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
               </div>
 
               {/* Features */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                   Features
                 </h4>
-                <ul className="text-xs text-muted-foreground space-y-1">
+                <ul className="text-sm text-muted-foreground space-y-2">
                   {template.features.slice(0, 3).map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-1.5">
-                      <span className="text-primary">✓</span>
-                      {feature}
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-primary font-bold text-lg leading-none">✓</span>
+                      <span className="leading-tight">{feature}</span>
                     </li>
                   ))}
                   {template.features.length > 3 && (
-                    <li className="text-primary">
-                      +{template.features.length - 3} more
+                    <li className="text-primary font-semibold text-sm">
+                      +{template.features.length - 3} more features
                     </li>
                   )}
                 </ul>
               </div>
 
-              <Button className="w-full gradient-primary text-white border-0 shadow-md group-hover:shadow-lg transition-shadow">
+              <Button className="w-full h-12 gradient-primary text-white border-0 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all font-semibold text-base">
                 Use Template
               </Button>
             </CardContent>
@@ -372,15 +376,18 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
 
       {/* No Results */}
       {filteredTemplates.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-semibold mb-2">No templates found</h3>
-          <p className="text-muted-foreground mb-4">
-            Try adjusting your filters or search query
-          </p>
-          <Button onClick={clearFilters} variant="outline">
-            Clear Filters
-          </Button>
+        <div className="text-center py-20 animate-fade-in">
+          <div className="glass-card border-2 rounded-3xl p-12 max-w-2xl mx-auto shadow-xl">
+            <div className="text-8xl mb-6">🔍</div>
+            <h3 className="text-3xl font-bold mb-4 text-gradient">No templates found</h3>
+            <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
+              We couldn't find any templates matching your criteria. Try adjusting your filters or search query.
+            </p>
+            <Button onClick={clearFilters} size="lg" className="gradient-primary text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+              <X className="mr-2 h-5 w-5" />
+              Clear All Filters
+            </Button>
+          </div>
         </div>
       )}
     </div>
