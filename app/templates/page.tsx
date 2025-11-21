@@ -2,16 +2,49 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { PROJECT_TEMPLATES, type TemplateMetadata } from '@/lib/templates'
 import { TemplateBrowser } from '@/components/template-browser'
 import { Code2, ArrowLeft } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
-import { createProjectFromTemplate } from '@/app/actions/templates'
+import {
+  createProjectFromTemplate,
+  getTemplateFavorites,
+  getTemplateStats,
+} from '@/app/actions/templates'
 
 export default function TemplatesPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([])
+  const [templateStats, setTemplateStats] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [favoritesResult, statsResult] = await Promise.all([
+          getTemplateFavorites(),
+          getTemplateStats(),
+        ])
+
+        if (favoritesResult.data) {
+          setFavoriteIds(favoritesResult.data)
+        }
+
+        if (statsResult.data) {
+          setTemplateStats(statsResult.data)
+        }
+      } catch (error) {
+        console.error('Error fetching template data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   async function handleSelectTemplate(template: TemplateMetadata) {
     try {
@@ -72,10 +105,19 @@ export default function TemplatesPage() {
             </p>
           </div>
 
-          <TemplateBrowser
-            templates={PROJECT_TEMPLATES}
-            onSelectTemplate={handleSelectTemplate}
-          />
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+              <p className="mt-4 text-muted-foreground">Loading templates...</p>
+            </div>
+          ) : (
+            <TemplateBrowser
+              templates={PROJECT_TEMPLATES}
+              onSelectTemplate={handleSelectTemplate}
+              favoriteIds={favoriteIds}
+              templateStats={templateStats}
+            />
+          )}
         </div>
       </main>
     </div>

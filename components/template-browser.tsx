@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, Filter, X } from 'lucide-react'
+import { Search, Filter, X, Heart, TrendingUp, Clock } from 'lucide-react'
 import type { TemplateMetadata } from '@/lib/templates'
 import {
   Select,
@@ -14,17 +14,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { toggleTemplateFavorite } from '@/app/actions/templates'
+import { useToast } from '@/components/ui/use-toast'
 
 interface TemplateBrowserProps {
   templates: TemplateMetadata[]
   onSelectTemplate: (template: TemplateMetadata) => void
+  favoriteIds?: string[]
+  templateStats?: Array<{
+    template_id: string
+    usage_count: number
+    favorite_count: number
+    last_used_at: string | null
+  }>
 }
 
-export function TemplateBrowser({ templates, onSelectTemplate }: TemplateBrowserProps) {
+export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [], templateStats = [] }: TemplateBrowserProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [favorites, setFavorites] = useState<Set<string>>(new Set(favoriteIds))
+  const [favoriteLoading, setFavoriteLoading] = useState<Set<string>>(new Set())
+  const { toast } = useToast()
 
   // Get unique categories, difficulties, and tags
   const categories = useMemo(
@@ -81,6 +93,57 @@ export function TemplateBrowser({ templates, onSelectTemplate }: TemplateBrowser
     setSelectedCategory('all')
     setSelectedDifficulty('all')
     setSelectedTags([])
+  }
+
+  const handleToggleFavorite = async (templateId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    setFavoriteLoading(prev => new Set(prev).add(templateId))
+
+    try {
+      const result = await toggleTemplateFavorite(templateId)
+
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        })
+      } else if (result.data) {
+        setFavorites(prev => {
+          const newFavorites = new Set(prev)
+          if (result.data.favorited) {
+            newFavorites.add(templateId)
+          } else {
+            newFavorites.delete(templateId)
+          }
+          return newFavorites
+        })
+
+        toast({
+          title: result.data.favorited ? 'Added to favorites' : 'Removed from favorites',
+          description: result.data.favorited
+            ? 'Template added to your favorites'
+            : 'Template removed from your favorites',
+        })
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update favorite',
+        variant: 'destructive',
+      })
+    } finally {
+      setFavoriteLoading(prev => {
+        const newLoading = new Set(prev)
+        newLoading.delete(templateId)
+        return newLoading
+      })
+    }
+  }
+
+  const getTemplateStats = (templateId: string) => {
+    return templateStats.find(s => s.template_id === templateId)
   }
 
   const hasActiveFilters =
@@ -185,28 +248,68 @@ export function TemplateBrowser({ templates, onSelectTemplate }: TemplateBrowser
 
       {/* Template Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map(template => (
-          <Card
-            key={template.id}
-            className="hover:shadow-xl hover:scale-105 transition-all cursor-pointer group border-2 hover:border-primary/50 overflow-hidden"
-            onClick={() => onSelectTemplate(template)}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/50 group-hover:to-purple-50/50 transition-all pointer-events-none" />
+        {filteredTemplates.map(template => {
+          const stats = getTemplateStats(template.id)
+          const isFavorited = favorites.has(template.id)
+          const isLoadingFavorite = favoriteLoading.has(template.id)
 
-            <CardHeader className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-4xl shadow-sm">
-                  {template.icon}
+          return (
+            <Card
+              key={template.id}
+              className="hover:shadow-xl hover:scale-105 transition-all cursor-pointer group border-2 hover:border-primary/50 overflow-hidden"
+              onClick={() => onSelectTemplate(template)}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/50 group-hover:to-purple-50/50 transition-all pointer-events-none" />
+
+              <CardHeader className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-4xl shadow-sm">
+                    {template.icon}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getDifficultyColor(template.difficulty)}>
+                      {template.difficulty}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 relative"
+                      onClick={(e) => handleToggleFavorite(template.id, e)}
+                      disabled={isLoadingFavorite}
+                    >
+                      <Heart
+                        className={`h-4 w-4 transition-all ${
+                          isFavorited
+                            ? 'fill-red-500 text-red-500'
+                            : 'text-muted-foreground hover:text-red-500'
+                        }`}
+                      />
+                    </Button>
+                  </div>
                 </div>
-                <Badge className={getDifficultyColor(template.difficulty)}>
-                  {template.difficulty}
-                </Badge>
-              </div>
-              <CardTitle className="text-xl">{template.name}</CardTitle>
-              <CardDescription className="text-base leading-relaxed">
-                {template.description}
-              </CardDescription>
-            </CardHeader>
+                <CardTitle className="text-xl">{template.name}</CardTitle>
+                <CardDescription className="text-base leading-relaxed">
+                  {template.description}
+                </CardDescription>
+
+                {/* Stats */}
+                {stats && (stats.usage_count > 0 || stats.favorite_count > 0) && (
+                  <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                    {stats.usage_count > 0 && (
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        <span>{stats.usage_count} uses</span>
+                      </div>
+                    )}
+                    {stats.favorite_count > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-3 w-3" />
+                        <span>{stats.favorite_count}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardHeader>
 
             <CardContent className="relative space-y-4">
               {/* Tags */}
@@ -263,7 +366,8 @@ export function TemplateBrowser({ templates, onSelectTemplate }: TemplateBrowser
               </Button>
             </CardContent>
           </Card>
-        ))}
+          )
+        })}
       </div>
 
       {/* No Results */}

@@ -58,6 +58,20 @@ export async function createProjectFromTemplate(templateId: string) {
         return { error: 'Failed to create project files' }
       }
 
+      // Track template usage
+      const { error: usageError } = await supabase
+        .from('template_usage')
+        .insert({
+          user_id: user.id,
+          template_id: template.id,
+          project_id: project.id,
+        })
+
+      if (usageError) {
+        console.error('Error tracking template usage:', usageError)
+        // Don't fail the operation if usage tracking fails
+      }
+
       return { data: project }
     }
 
@@ -65,5 +79,105 @@ export async function createProjectFromTemplate(templateId: string) {
   } catch (error) {
     console.error('Error in createProjectFromTemplate:', error)
     return { error: 'An unexpected error occurred' }
+  }
+}
+
+export async function toggleTemplateFavorite(templateId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  try {
+    // Check if already favorited
+    const { data: existing } = await supabase
+      .from('template_favorites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('template_id', templateId)
+      .single()
+
+    if (existing) {
+      // Remove favorite
+      const { error } = await supabase
+        .from('template_favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('template_id', templateId)
+
+      if (error) {
+        console.error('Error removing favorite:', error)
+        return { error: 'Failed to remove favorite' }
+      }
+
+      return { data: { favorited: false } }
+    } else {
+      // Add favorite
+      const { error } = await supabase
+        .from('template_favorites')
+        .insert({
+          user_id: user.id,
+          template_id: templateId,
+        })
+
+      if (error) {
+        console.error('Error adding favorite:', error)
+        return { error: 'Failed to add favorite' }
+      }
+
+      return { data: { favorited: true } }
+    }
+  } catch (error) {
+    console.error('Error in toggleTemplateFavorite:', error)
+    return { error: 'An unexpected error occurred' }
+  }
+}
+
+export async function getTemplateFavorites() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { data: [] }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('template_favorites')
+      .select('template_id')
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Error fetching favorites:', error)
+      return { data: [] }
+    }
+
+    return { data: data.map(f => f.template_id) }
+  } catch (error) {
+    console.error('Error in getTemplateFavorites:', error)
+    return { data: [] }
+  }
+}
+
+export async function getTemplateStats() {
+  const supabase = await createClient()
+
+  try {
+    const { data, error } = await supabase
+      .from('template_stats')
+      .select('*')
+      .order('usage_count', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching template stats:', error)
+      return { data: [] }
+    }
+
+    return { data: data || [] }
+  } catch (error) {
+    console.error('Error in getTemplateStats:', error)
+    return { data: [] }
   }
 }

@@ -157,6 +157,72 @@ export interface Database {
           completed_at?: string | null
         }
       }
+      template_usage: {
+        Row: {
+          id: string
+          user_id: string
+          template_id: string
+          project_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          template_id: string
+          project_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          template_id?: string
+          project_id?: string | null
+          created_at?: string
+        }
+      }
+      template_favorites: {
+        Row: {
+          id: string
+          user_id: string
+          template_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          template_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          template_id?: string
+          created_at?: string
+        }
+      }
+      template_stats: {
+        Row: {
+          template_id: string
+          usage_count: number
+          favorite_count: number
+          last_used_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          template_id: string
+          usage_count?: number
+          favorite_count?: number
+          last_used_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          template_id?: string
+          usage_count?: number
+          favorite_count?: number
+          last_used_at?: string | null
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
