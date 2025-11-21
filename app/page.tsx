@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Code2, Sparkles, Send, ArrowRight, Zap, Layout, Rocket } from 'lucide-react'
 import { DemoLoginButton } from '@/components/demo-login-button'
+import { motion } from 'framer-motion'
 
 export default function HomePage() {
   const [chatInput, setChatInput] = useState('')
@@ -54,26 +55,46 @@ export default function HomePage() {
       {/* Hero Section with Chat Interface */}
       <main className="container mx-auto px-4 py-12 md:py-20">
         <div className="max-w-4xl mx-auto text-center space-y-6 mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium"
+          >
             <Sparkles className="h-4 w-4" />
             AI-Powered App Builder
-          </div>
+          </motion.div>
 
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-5xl md:text-6xl font-bold tracking-tight"
+          >
             Build apps by chatting <br />
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               with AI
             </span>
-          </h1>
+          </motion.h1>
 
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-xl text-muted-foreground max-w-2xl mx-auto"
+          >
             Describe your app idea and watch as AI transforms your words into working code.
             No coding required.
-          </p>
+          </motion.p>
         </div>
 
         {/* Interactive Chat Interface */}
-        <div className="max-w-3xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="max-w-3xl mx-auto"
+        >
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
             {/* Chat Header */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
@@ -153,7 +174,12 @@ export default function HomePage() {
           </div>
 
           {/* Trust Indicators */}
-          <div className="mt-8 flex items-center justify-center gap-8 text-sm text-muted-foreground">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="mt-8 flex items-center justify-center gap-8 text-sm text-muted-foreground"
+          >
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-yellow-500" />
               <span>Instant deployment</span>
@@ -166,8 +192,8 @@ export default function HomePage() {
               <Sparkles className="h-4 w-4 text-purple-500" />
               <span>AI-powered</span>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Features Section */}
         <div className="mt-24 mb-12">
