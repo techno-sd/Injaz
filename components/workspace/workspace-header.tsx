@@ -75,16 +75,20 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
 
   return (
     <>
-      <header className="border-b bg-background px-4 py-3 flex items-center justify-between">
+      <header className="border-b glass px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10">
             <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div className="flex items-center gap-2">
-            <Code2 className="h-5 w-5 text-primary" />
-            <h1 className="font-semibold text-lg">{project.name}</h1>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 gradient-primary rounded-lg flex items-center justify-center shadow-md">
+              <Code2 className="h-4 w-4 text-white" />
+            </div>
+            <h1 className="font-semibold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {project.name}
+            </h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -92,6 +96,7 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
             variant="outline"
             size="sm"
             onClick={() => setShareDialogOpen(true)}
+            className="hover:border-primary/50 shadow-sm hover:shadow-md transition-shadow"
           >
             <Share2 className="mr-2 h-4 w-4" />
             Share
@@ -99,7 +104,7 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="hover:border-primary/50 shadow-sm hover:shadow-md transition-shadow">
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
@@ -121,7 +126,7 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button size="sm" onClick={handleDeploy}>
+          <Button size="sm" onClick={handleDeploy} className="gradient-primary text-white border-0 shadow-md hover:shadow-lg transition-shadow">
             <Rocket className="mr-2 h-4 w-4" />
             Deploy
           </Button>

@@ -55,15 +55,26 @@ export function CodeEditor({ file, projectId, onFileUpdate }: CodeEditorProps) {
   if (!file) {
     return (
       <div className="h-full flex items-center justify-center bg-[#1e1e1e] text-gray-400">
-        <p>No file selected</p>
+        <div className="text-center space-y-2">
+          <p className="text-sm">No file selected</p>
+          <p className="text-xs text-gray-500">Select a file from the sidebar to start editing</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="h-full flex flex-col">
-      <div className="bg-muted px-4 py-2 border-b text-sm font-medium">
-        {file.path}
+      <div className="bg-muted/50 px-4 py-2.5 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
+          <span className="text-sm font-medium">{file.path}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+            {file.language}
+          </span>
+        </div>
       </div>
       <div className="flex-1">
         <Editor
@@ -83,7 +94,10 @@ export function CodeEditor({ file, projectId, onFileUpdate }: CodeEditorProps) {
           }}
           loading={
             <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-gray-400">Loading editor...</p>
+              </div>
             </div>
           }
         />
