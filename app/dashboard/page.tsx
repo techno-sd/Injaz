@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { CreateProjectDialog } from '@/components/create-project-dialog'
 import { UserNav } from '@/components/user-nav'
 import { ProjectCard } from '@/components/project-card'
+import { GitHubConnectButton } from '@/components/github/github-connect-button'
+import { RepoBrowser } from '@/components/github/repo-browser'
 import { Code2, Sparkles, LayoutTemplate } from 'lucide-react'
 
 export default async function DashboardPage() {
@@ -22,6 +24,13 @@ export default async function DashboardPage() {
     .select('*')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
+
+  // Check if user has GitHub connected
+  const { data: githubToken } = await supabase
+    .from('github_tokens')
+    .select('github_username')
+    .eq('user_id', user.id)
+    .single()
 
   // Calculate stats
   const totalProjects = projects?.length || 0
@@ -40,7 +49,13 @@ export default async function DashboardPage() {
             </div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">iEditor</h1>
           </div>
-          <UserNav user={user} />
+          <div className="flex items-center gap-3">
+            <GitHubConnectButton
+              isConnected={!!githubToken}
+              githubUsername={githubToken?.github_username}
+            />
+            <UserNav user={user} />
+          </div>
         </div>
       </header>
 
@@ -102,6 +117,7 @@ export default async function DashboardPage() {
                 Browse Templates
               </Link>
             </Button>
+            {githubToken && <RepoBrowser />}
             <CreateProjectDialog />
           </div>
         </div>

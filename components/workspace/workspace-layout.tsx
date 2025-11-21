@@ -5,12 +5,13 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { FileTree } from './file-tree'
 import { CodeEditor } from './code-editor'
 import { ChatPanel } from './chat-panel'
+import { GitPanel } from './git-panel'
 import { WebContainerPreview } from './webcontainer-preview'
 import { Terminal } from './terminal'
 import { WorkspaceHeader } from './workspace-header'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { Button } from '@/components/ui/button'
-import { Globe, Terminal as TerminalIcon } from 'lucide-react'
+import { Globe, Terminal as TerminalIcon, MessageSquare, GitBranch } from 'lucide-react'
 import type { Project, File, Message } from '@/types'
 
 interface WorkspaceLayoutProps {
@@ -26,6 +27,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
     initialFiles.length > 0 ? initialFiles[0].id : null
   )
   const [bottomView, setBottomView] = useState<'preview' | 'terminal'>('preview')
+  const [rightView, setRightView] = useState<'chat' | 'git'>('chat')
 
   const activeFile = files.find(f => f.id === activeFileId)
 
@@ -114,15 +116,59 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
 
         <ResizableHandle />
 
-        {/* Right Sidebar - AI Chat */}
+        {/* Right Sidebar - AI Chat / Git Panel */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
-          <ChatPanel
-            projectId={project.id}
-            files={files}
-            messages={messages}
-            onMessagesChange={setMessages}
-            onFilesChange={setFiles}
-          />
+          <div className="h-full flex flex-col">
+            {/* Tabs */}
+            <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 border-b">
+              <Button
+                variant={rightView === 'chat' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setRightView('chat')}
+                className={rightView === 'chat'
+                  ? 'h-9 gradient-primary text-white border-0 shadow-sm'
+                  : 'h-9 hover:bg-primary/10 hover:text-primary'
+                }
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                AI Chat
+              </Button>
+              <Button
+                variant={rightView === 'git' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setRightView('git')}
+                className={rightView === 'git'
+                  ? 'h-9 gradient-primary text-white border-0 shadow-sm'
+                  : 'h-9 hover:bg-primary/10 hover:text-primary'
+                }
+              >
+                <GitBranch className="h-4 w-4 mr-2" />
+                Git
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden">
+              {rightView === 'chat' ? (
+                <ChatPanel
+                  projectId={project.id}
+                  files={files}
+                  messages={messages}
+                  onMessagesChange={setMessages}
+                  onFilesChange={setFiles}
+                />
+              ) : (
+                <GitPanel
+                  project={project}
+                  files={files}
+                  onRefresh={() => {
+                    // Refresh files from server
+                    window.location.reload()
+                  }}
+                />
+              )}
+            </div>
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
