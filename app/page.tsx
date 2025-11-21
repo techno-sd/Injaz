@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Code2, Sparkles, Send, ArrowRight, Zap, Layout, Rocket } from 'lucide-react'
+import { Code2, Sparkles, Send, ArrowRight, Zap, Layout, Rocket, Check, Github, Play, Star, Users } from 'lucide-react'
 import { DemoLoginButton } from '@/components/demo-login-button'
 import { motion } from 'framer-motion'
 
@@ -13,10 +13,49 @@ export default function HomePage() {
   const [showPrompts, setShowPrompts] = useState(true)
 
   const examplePrompts = [
-    "Build a modern landing page with a hero section and pricing",
-    "Create a dashboard with analytics charts and tables",
-    "Design a blog with markdown support and dark mode",
-    "Make a todo app with drag and drop functionality"
+    "Build a modern SaaS dashboard with analytics",
+    "Create an e-commerce store with cart and checkout",
+    "Design a portfolio website with dark mode",
+    "Make a real-time chat application"
+  ]
+
+  const features = [
+    {
+      icon: Sparkles,
+      title: "AI-Powered Development",
+      description: "Chat with AI to build your app. Describe features in plain English and watch them come to life.",
+      color: "blue"
+    },
+    {
+      icon: Layout,
+      title: "Real-Time Editor",
+      description: "Professional Monaco editor with syntax highlighting. See your changes instantly in the live preview.",
+      color: "purple"
+    },
+    {
+      icon: Rocket,
+      title: "One-Click Deploy",
+      description: "Deploy to Vercel with a single click. Connect your GitHub and push updates seamlessly.",
+      color: "green"
+    },
+    {
+      icon: Zap,
+      title: "Lightning Fast",
+      description: "WebContainer technology runs your app instantly in the browser. No waiting for builds.",
+      color: "yellow"
+    },
+    {
+      icon: Github,
+      title: "GitHub Integration",
+      description: "Import repositories, sync code, and push changes directly from the editor.",
+      color: "gray"
+    },
+    {
+      icon: Users,
+      title: "Templates Library",
+      description: "Start from 10+ professional templates or create your own from scratch.",
+      color: "pink"
+    }
   ]
 
   const handlePromptClick = (prompt: string) => {
@@ -26,32 +65,42 @@ export default function HomePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Redirect to signup with the prompt as a query parameter
     const encodedPrompt = encodeURIComponent(chatInput)
     window.location.href = `/signup?prompt=${encodedPrompt}`
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
       {/* Header */}
-      <header className="border-b glass sticky top-0 z-50">
+      <header className="glass sticky top-0 z-50 border-b backdrop-blur-xl">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="h-9 w-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+            <div className="h-10 w-10 gradient-primary rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
               <Code2 className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="text-xl font-bold text-gradient">
               iEditor
             </span>
           </Link>
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/templates" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Templates
+            </Link>
+            <Link href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Features
+            </Link>
+            <Link href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Pricing
+            </Link>
+          </nav>
           <div className="flex items-center gap-3">
             <DemoLoginButton variant="ghost" size="sm" />
             <Button asChild variant="ghost" size="sm">
               <Link href="/login">Sign In</Link>
             </Button>
-            <Button asChild size="sm" className="gradient-primary text-white border-0 shadow-md hover:shadow-lg transition-shadow">
+            <Button asChild size="sm" className="gradient-primary text-white border-0 shadow-lg hover:shadow-xl hover-lift">
               <Link href="/signup">
-                Get Started Free
+                Get Started
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -59,246 +108,385 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section with Chat Interface */}
-      <main className="container mx-auto px-4 py-12 md:py-20">
-        <div className="max-w-4xl mx-auto text-center space-y-6 mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium"
-          >
-            <Sparkles className="h-4 w-4" />
-            AI-Powered App Builder
-          </motion.div>
+      {/* Hero Section */}
+      <main className="container mx-auto px-4 py-20 md:py-28">
+        <div className="max-w-6xl mx-auto">
+          {/* Hero Content */}
+          <div className="text-center space-y-8 mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-sm font-medium animate-fade-in"
+            >
+              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-gradient">AI-Powered App Builder</span>
+            </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight"
-          >
-            Build apps with{' '}
-            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-pulse-slow">
-              AI
-            </span>
-            <br />
-            in seconds
-          </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight animate-slide-up"
+            >
+              Build apps with{' '}
+              <span className="text-gradient animate-pulse-slow">
+                AI
+              </span>
+              <br />
+              in seconds
+            </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
-          >
-            Chat with AI to build full-stack applications. No coding experience needed.
-            Just describe what you want, and watch your app come to life.
-          </motion.p>
-        </div>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed animate-slide-up animate-delay-100"
+            >
+              The fastest way to build full-stack applications. Chat with AI, edit code in real-time,
+              and deploy to production—all in one platform.
+            </motion.p>
 
-        {/* Interactive Chat Interface */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="max-w-4xl mx-auto"
-        >
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden ring-1 ring-gray-200/50">
-            {/* Chat Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
-              <div className="flex items-center gap-2 text-white">
-                <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="font-medium">AI Assistant</span>
-                <span className="text-xs text-white/80">● Online</span>
+            {/* Social Proof */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="flex items-center justify-center gap-6 text-sm text-muted-foreground animate-fade-in animate-delay-200"
+            >
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 border-2 border-white"></div>
+                  ))}
+                </div>
+                <span>5,000+ developers</span>
               </div>
-            </div>
-
-            {/* Chat Body */}
-            <div className="p-6 md:p-8 min-h-[300px] flex flex-col justify-end">
-              {/* AI Welcome Message */}
-              <div className="mb-6">
-                <div className="flex gap-3 items-start">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="bg-gray-100 rounded-2xl rounded-tl-none px-4 py-3 max-w-[80%]">
-                    <p className="text-sm text-gray-800">
-                      Hi! 👋 I'm your AI development assistant. Tell me what you'd like to build,
-                      and I'll help you create it step by step.
-                    </p>
-                  </div>
-                </div>
+              <div className="flex items-center gap-1">
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                <span className="ml-1">5.0 rating</span>
               </div>
-
-              {/* Example Prompts */}
-              {showPrompts && (
-                <div className="mb-6 space-y-3">
-                  <p className="text-xs text-muted-foreground font-medium">Try asking:</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {examplePrompts.map((prompt, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handlePromptClick(prompt)}
-                        className="text-left p-3 rounded-lg border border-gray-200 hover:border-primary hover:bg-blue-50 transition-all text-sm group"
-                      >
-                        <div className="flex items-start gap-2">
-                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700 group-hover:text-gray-900">
-                            {prompt}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Chat Input Form */}
-              <form onSubmit={handleSubmit} className="relative">
-                <div className="flex items-center gap-2 p-2 border-2 border-gray-200 rounded-2xl focus-within:border-primary transition-colors bg-white">
-                  <Input
-                    value={chatInput}
-                    onChange={(e) => {
-                      setChatInput(e.target.value)
-                      if (e.target.value) setShowPrompts(false)
-                    }}
-                    placeholder="Describe the app you want to build..."
-                    className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-base"
-                  />
-                  <Button
-                    type="submit"
-                    size="icon"
-                    className="rounded-xl h-10 w-10 flex-shrink-0"
-                    disabled={!chatInput.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  Press Enter to start building · Free to try
-                </p>
-              </form>
-            </div>
+            </motion.div>
           </div>
 
-          {/* Trust Indicators */}
+          {/* Interactive Chat Interface */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            className="mt-8 flex items-center justify-center gap-8 text-sm text-muted-foreground"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="max-w-4xl mx-auto animate-scale-in animate-delay-300"
           >
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-yellow-500" />
-              <span>Instant deployment</span>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden ring-1 ring-gray-200/50 hover-lift">
+              {/* Chat Header */}
+              <div className="gradient-primary px-6 py-4">
+                <div className="flex items-center justify-between text-white">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="font-semibold">AI Assistant</span>
+                    <span className="text-xs text-white/80">● Online</span>
+                  </div>
+                  <div className="text-xs text-white/80">
+                    <Play className="h-4 w-4 inline mr-1" />
+                    Try it now
+                  </div>
+                </div>
+              </div>
+
+              {/* Chat Body */}
+              <div className="p-6 md:p-8 min-h-[350px] flex flex-col justify-end bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-800/50 dark:to-gray-800">
+                {/* AI Welcome Message */}
+                <div className="mb-8 animate-slide-in">
+                  <div className="flex gap-3 items-start">
+                    <div className="h-10 w-10 rounded-full gradient-primary flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <Sparkles className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="glass-card rounded-2xl rounded-tl-none px-5 py-4 max-w-[85%] shadow-md">
+                      <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                        Hi! 👋 I'm your AI development assistant. Tell me what you'd like to build,
+                        and I'll create it with production-ready code, instant preview, and deployment support.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Example Prompts */}
+                {showPrompts && (
+                  <div className="mb-6 space-y-3 animate-slide-up animate-delay-200">
+                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                      Popular requests:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {examplePrompts.map((prompt, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handlePromptClick(prompt)}
+                          className="text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all text-sm group hover-lift animate-slide-up"
+                          style={{ animationDelay: `${300 + index * 100}ms` }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white font-medium">
+                              {prompt}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Chat Input Form */}
+                <form onSubmit={handleSubmit} className="relative animate-slide-up animate-delay-400">
+                  <div className="flex items-center gap-2 p-2 border-2 border-gray-200 dark:border-gray-700 rounded-2xl focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all bg-white dark:bg-gray-800 shadow-lg">
+                    <Input
+                      value={chatInput}
+                      onChange={(e) => {
+                        setChatInput(e.target.value)
+                        if (e.target.value) setShowPrompts(false)
+                      }}
+                      placeholder="Describe the app you want to build..."
+                      className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-base bg-transparent"
+                    />
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="rounded-xl h-10 w-10 flex-shrink-0 gradient-primary shadow-lg hover:shadow-xl transition-all"
+                      disabled={!chatInput.trim()}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Press Enter to start building · Free to try · No credit card required
+                  </p>
+                </form>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Code2 className="h-4 w-4 text-blue-500" />
-              <span>Production-ready code</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              <span>AI-powered</span>
-            </div>
+
+            {/* Trust Indicators */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              className="mt-8 flex flex-wrap items-center justify-center gap-8 text-sm animate-fade-in animate-delay-500"
+            >
+              <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                <div className="h-8 w-8 rounded-lg bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                </div>
+                <span className="font-medium">Instant deployment</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                  <Code2 className="h-5 w-5 text-blue-600" />
+                </div>
+                <span className="font-medium">Production-ready code</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                </div>
+                <span className="font-medium">AI-powered</span>
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
 
         {/* Features Section */}
-        <div className="mt-24 mb-12">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Build faster with AI
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="text-center space-y-3">
-              <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-blue-100 text-blue-600 mb-2">
-                <Sparkles className="h-6 w-6" />
-              </div>
-              <h3 className="font-semibold text-lg">AI-Powered Development</h3>
-              <p className="text-muted-foreground text-sm">
-                Chat with AI to build your app. Describe features in plain English
-                and watch them come to life.
-              </p>
-            </div>
-
-            <div className="text-center space-y-3">
-              <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-purple-100 text-purple-600 mb-2">
-                <Layout className="h-6 w-6" />
-              </div>
-              <h3 className="font-semibold text-lg">Real-Time Editor</h3>
-              <p className="text-muted-foreground text-sm">
-                Edit code directly with Monaco editor. See changes instantly
-                in the live preview.
-              </p>
-            </div>
-
-            <div className="text-center space-y-3">
-              <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-green-100 text-green-600 mb-2">
-                <Rocket className="h-6 w-6" />
-              </div>
-              <h3 className="font-semibold text-lg">One-Click Deploy</h3>
-              <p className="text-muted-foreground text-sm">
-                Deploy your application to production with a single click.
-                Share your creation instantly.
-              </p>
-            </div>
+        <section id="features" className="mt-32 mb-20">
+          <div className="text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="inline-block px-4 py-2 rounded-full glass-card text-sm font-semibold text-primary mb-4"
+            >
+              Features
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-4xl md:text-5xl font-bold mb-4"
+            >
+              Everything you need to build
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-xl text-muted-foreground max-w-2xl mx-auto"
+            >
+              Professional developer tools powered by AI. From idea to deployment in minutes.
+            </motion.p>
           </div>
-        </div>
 
-        {/* Stats Section */}
-        <div className="mt-32 mb-20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-            {[
-              { label: 'Projects Created', value: '10,000+' },
-              { label: 'Active Users', value: '5,000+' },
-              { label: 'Lines of Code', value: '1M+' },
-              { label: 'Deployments', value: '15,000+' },
-            ].map((stat, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {features.map((feature, index) => (
               <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
-                className="text-center"
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="group p-6 rounded-2xl glass-card hover:shadow-xl transition-all hover-lift"
               >
-                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {stat.value}
+                <div className={`inline-flex items-center justify-center h-12 w-12 rounded-xl bg-${feature.color}-100 dark:bg-${feature.color}-900/20 text-${feature.color}-600 mb-4`}>
+                  <feature.icon className="h-6 w-6" />
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+                <h3 className="font-semibold text-xl mb-3 group-hover:text-primary transition-colors">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
-        </div>
+        </section>
+
+        {/* Stats Section */}
+        <section className="mt-32 mb-20">
+          <div className="rounded-3xl gradient-secondary p-12 md:p-16">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { label: 'Projects Created', value: '10,000+', icon: Code2 },
+                { label: 'Active Users', value: '5,000+', icon: Users },
+                { label: 'Lines of Code', value: '1M+', icon: Sparkles },
+                { label: 'Deployments', value: '15,000+', icon: Rocket },
+              ].map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="text-center group hover-lift p-6 rounded-2xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                >
+                  <stat.icon className="h-8 w-8 mx-auto mb-3 text-primary" />
+                  <div className="text-4xl md:text-5xl font-bold text-gradient mb-2">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* CTA Section */}
-        <div className="mt-20 text-center space-y-8 gradient-primary rounded-3xl p-12 md:p-16 text-white shadow-2xl">
-          <h2 className="text-4xl md:text-5xl font-bold leading-tight">
-            Ready to build something amazing?
-          </h2>
-          <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto">
-            Join thousands of developers building apps with AI. Start for free, no credit card required.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button asChild size="lg" variant="secondary" className="shadow-lg hover:shadow-xl transition-shadow">
-              <Link href="/signup">
-                Start Building Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-              <Link href="/login">
-                <Sparkles className="mr-2 h-5 w-5" />
-                Try Demo
-              </Link>
-            </Button>
+        <section className="mt-32 text-center space-y-8 gradient-primary rounded-3xl p-12 md:p-20 text-white shadow-2xl relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-10 right-10 w-40 h-40 bg-white rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
           </div>
-        </div>
+
+          <div className="relative z-10">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-4xl md:text-6xl font-bold leading-tight mb-6"
+            >
+              Ready to build something amazing?
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-10"
+            >
+              Join thousands of developers building apps with AI. Start for free, no credit card required.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            >
+              <Button asChild size="lg" variant="secondary" className="shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-lg px-8 py-6">
+                <Link href="/signup">
+                  Start Building Free
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20 shadow-xl text-lg px-8 py-6">
+                <Link href="/templates">
+                  <Layout className="mr-2 h-5 w-5" />
+                  Browse Templates
+                </Link>
+              </Button>
+            </motion.div>
+
+            {/* Feature bullets */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-white/80"
+            >
+              {['No credit card required', 'Free forever plan', 'Cancel anytime'].map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="border-t mt-20 py-8 bg-white">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 iEditor. Built with AI, for developers.</p>
+      <footer className="border-t mt-20 py-12 bg-white dark:bg-gray-900">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/templates" className="hover:text-foreground transition-colors">Templates</Link></li>
+                <li><Link href="#features" className="hover:text-foreground transition-colors">Features</Link></li>
+                <li><Link href="#pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="#" className="hover:text-foreground transition-colors">About</Link></li>
+                <li><Link href="#" className="hover:text-foreground transition-colors">Blog</Link></li>
+                <li><Link href="#" className="hover:text-foreground transition-colors">Careers</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Resources</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="#" className="hover:text-foreground transition-colors">Documentation</Link></li>
+                <li><Link href="#" className="hover:text-foreground transition-colors">API Reference</Link></li>
+                <li><Link href="#" className="hover:text-foreground transition-colors">Community</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="#" className="hover:text-foreground transition-colors">Privacy</Link></li>
+                <li><Link href="#" className="hover:text-foreground transition-colors">Terms</Link></li>
+                <li><Link href="#" className="hover:text-foreground transition-colors">Security</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 border-t text-center text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="h-8 w-8 gradient-primary rounded-lg flex items-center justify-center">
+                <Code2 className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-semibold text-gradient">iEditor</span>
+            </div>
+            <p>© 2024 iEditor. Built with AI, for developers. All rights reserved.</p>
+          </div>
         </div>
       </footer>
     </div>
