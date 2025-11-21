@@ -13,26 +13,84 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createProject } from '@/app/actions/projects'
-import { Plus } from 'lucide-react'
+import { createProjectFromTemplate } from '@/app/actions/templates'
+import { Plus, Sparkles } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import { useRouter } from 'next/navigation'
+import { PROJECT_TEMPLATES } from '@/lib/templates'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('blank')
+  const [projectName, setProjectName] = useState('')
+  const [description, setDescription] = useState('')
+  const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
-  async function handleSubmit(formData: FormData) {
-    const result = await createProject(formData)
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
 
-    if (result?.error) {
+    try {
+      if (selectedTemplate === 'blank') {
+        // Create blank project
+        const formData = new FormData()
+        formData.append('name', projectName)
+        formData.append('description', description)
+        const result = await createProject(formData)
+
+        if (result?.error) {
+          toast({
+            title: 'Error',
+            description: result.error,
+            variant: 'destructive',
+          })
+        } else {
+          setOpen(false)
+          toast({
+            title: 'Project created!',
+            description: 'Your blank project has been created successfully',
+          })
+        }
+      } else {
+        // Create from template
+        const result = await createProjectFromTemplate(selectedTemplate)
+
+        if (result?.error) {
+          toast({
+            title: 'Error',
+            description: result.error,
+            variant: 'destructive',
+          })
+        } else if (result?.data) {
+          setOpen(false)
+          toast({
+            title: 'Project created!',
+            description: 'Your project has been created from template',
+          })
+          router.push(`/workspace/${result.data.id}`)
+        }
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: result.error,
+        description: 'Failed to create project',
         variant: 'destructive',
       })
-    } else {
-      setOpen(false)
+    } finally {
+      setLoading(false)
     }
   }
+
+  const template = PROJECT_TEMPLATES.find(t => t.id === selectedTemplate)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -42,46 +100,111 @@ export function CreateProjectDialog() {
           New Project
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Create New Project
+          </DialogTitle>
           <DialogDescription>
-            Start building your application with AI assistance
+            Start from scratch or choose a template to kickstart your project
           </DialogDescription>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Project Name</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="My Awesome App"
-              required
-            />
+            <Label htmlFor="template">Choose a Template</Label>
+            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a template" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="blank">
+                  <div className="flex items-center gap-2">
+                    <span>📄</span>
+                    <span>Blank Project</span>
+                  </div>
+                </SelectItem>
+                {PROJECT_TEMPLATES.map(template => (
+                  <SelectItem key={template.id} value={template.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{template.icon}</span>
+                      <span>{template.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({template.difficulty})
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Input
-              id="description"
-              name="description"
-              placeholder="What does your app do?"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="template">Template</Label>
-            <select
-              id="template"
-              name="template"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+
+          {template && (
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="text-3xl">{template.icon}</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold mb-1">{template.name}</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {template.description}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {template.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="px-2 py-1 bg-background text-xs rounded-md border"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedTemplate === 'blank' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="name">Project Name</Label>
+                <Input
+                  id="name"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="My Awesome App"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Input
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What does your app do?"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="flex-1"
+              disabled={loading}
             >
-              <option value="blank">Blank</option>
-              <option value="nextjs">Next.js Starter</option>
-              <option value="react">React App</option>
-            </select>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 gradient-primary text-white border-0"
+              disabled={loading || (selectedTemplate === 'blank' && !projectName)}
+            >
+              {loading ? 'Creating...' : 'Create Project'}
+            </Button>
           </div>
-          <Button type="submit" className="w-full">
-            Create Project
-          </Button>
         </form>
       </DialogContent>
     </Dialog>
