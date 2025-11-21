@@ -17,18 +17,20 @@ export default async function TemplatesPage() {
   const categories = [...new Set(PROJECT_TEMPLATES.map(t => t.category))]
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50/50 via-white to-purple-50/50">
+      <header className="border-b glass sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10">
               <Link href="/dashboard">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div className="flex items-center gap-2">
-              <Code2 className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Project Templates</h1>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg">
+                <Code2 className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Project Templates</h1>
             </div>
           </div>
         </div>
@@ -37,8 +39,10 @@ export default async function TemplatesPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Start with a Template</h2>
-            <p className="text-xl text-muted-foreground">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Start with a Template
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Choose a template to kickstart your project, then customize with AI
             </p>
           </div>
@@ -47,24 +51,27 @@ export default async function TemplatesPage() {
             const categoryTemplates = PROJECT_TEMPLATES.filter(t => t.category === category)
 
             return (
-              <div key={category} className="mb-12">
-                <h3 className="text-2xl font-bold mb-6">{category}</h3>
+              <div key={category} className="mb-16">
+                <h3 className="text-3xl font-bold mb-8 text-gray-800">{category}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {categoryTemplates.map(template => (
-                    <Card key={template.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
-                      <CardHeader>
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="text-4xl">{template.icon}</div>
-                          <CardTitle>{template.name}</CardTitle>
+                    <Card key={template.id} className="hover:shadow-xl hover:scale-105 transition-all cursor-pointer group border-2 hover:border-primary/50 overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/50 group-hover:to-purple-50/50 transition-all pointer-events-none" />
+                      <CardHeader className="relative">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-4xl shadow-sm">
+                            {template.icon}
+                          </div>
+                          <CardTitle className="text-xl">{template.name}</CardTitle>
                         </div>
-                        <CardDescription>{template.description}</CardDescription>
+                        <CardDescription className="text-base leading-relaxed">{template.description}</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-wrap gap-2 mb-4">
+                      <CardContent className="relative">
+                        <div className="flex flex-wrap gap-2 mb-6">
                           {template.tags.map(tag => (
                             <span
                               key={tag}
-                              className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+                              className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 text-primary text-xs font-medium rounded-full border border-primary/20"
                             >
                               {tag}
                             </span>
@@ -103,7 +110,7 @@ export default async function TemplatesPage() {
                             redirect(`/workspace/${project.id}`)
                           }
                         }}>
-                          <Button type="submit" className="w-full group-hover:bg-primary">
+                          <Button type="submit" className="w-full gradient-primary text-white border-0 shadow-md group-hover:shadow-lg transition-shadow">
                             Use Template
                           </Button>
                         </form>
