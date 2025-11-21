@@ -3,10 +3,10 @@ import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { formatDate } from '@/lib/utils'
 import { CreateProjectDialog } from '@/components/create-project-dialog'
 import { UserNav } from '@/components/user-nav'
-import { Code2, FolderOpen, Sparkles, LayoutTemplate } from 'lucide-react'
+import { ProjectCard } from '@/components/project-card'
+import { Code2, Sparkles, LayoutTemplate } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -57,31 +57,8 @@ export default async function DashboardPage() {
         {projects && projects.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
-                <Link key={project.id} href={`/workspace/${project.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full group">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FolderOpen className="h-5 w-5 group-hover:text-primary transition-colors" />
-                        {project.name}
-                      </CardTitle>
-                      <CardDescription>
-                        {project.description || 'No description'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm text-muted-foreground">
-                        <p>Updated {formatDate(project.updated_at)}</p>
-                        <p className="mt-1 capitalize">Template: {project.template}</p>
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button variant="ghost" className="w-full group-hover:bg-primary/10 group-hover:text-primary">
-                        Open Project
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </Link>
+              {projects.map((project, index) => (
+                <ProjectCard key={project.id} project={project} index={index} />
               ))}
             </div>
 

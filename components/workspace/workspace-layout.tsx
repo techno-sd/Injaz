@@ -8,6 +8,7 @@ import { ChatPanel } from './chat-panel'
 import { WebContainerPreview } from './webcontainer-preview'
 import { Terminal } from './terminal'
 import { WorkspaceHeader } from './workspace-header'
+import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { Button } from '@/components/ui/button'
 import { Globe, Terminal as TerminalIcon } from 'lucide-react'
 import type { Project, File, Message } from '@/types'
@@ -31,6 +32,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages }: Work
   return (
     <div className="h-screen flex flex-col">
       <WorkspaceHeader project={project} />
+      <KeyboardShortcuts />
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left Sidebar - File Tree */}
         <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>

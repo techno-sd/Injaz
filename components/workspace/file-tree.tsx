@@ -3,10 +3,18 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { createFile, deleteFile } from '@/app/actions/files'
-import { ChevronDown, ChevronRight, FileIcon, FolderIcon, Plus, Trash } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Trash, Copy, Edit2, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { File, FileNode } from '@/types'
 import { useToast } from '@/components/ui/use-toast'
+import { getFileIcon, getFolderIcon } from '@/lib/file-icons'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 
 interface FileTreeProps {
   files: File[]
@@ -76,17 +84,17 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
       return (
         <div key={node.path}>
           <div
-            className="flex items-center gap-1 px-2 py-1 hover:bg-accent cursor-pointer rounded-sm"
+            className="flex items-center gap-1.5 px-2 py-1 hover:bg-accent cursor-pointer rounded-sm transition-colors"
             style={{ paddingLeft: `${level * 12 + 8}px` }}
             onClick={() => toggleDirectory(node.path)}
           >
             {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
             )}
-            <FolderIcon className="h-4 w-4 text-blue-500" />
-            <span className="text-sm">{node.name}</span>
+            {getFolderIcon(isExpanded)}
+            <span className="text-sm truncate">{node.name}</span>
           </div>
           {isExpanded && node.children?.map(child => renderNode(child, level + 1))}
         </div>
@@ -97,33 +105,73 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
     if (!file) return null
 
     return (
-      <div
-        key={node.path}
-        className={cn(
-          "flex items-center justify-between gap-1 px-2 py-1 hover:bg-accent cursor-pointer rounded-sm group",
-          activeFileId === file.id && "bg-accent"
-        )}
-        style={{ paddingLeft: `${level * 12 + 24}px` }}
-      >
-        <div
-          className="flex items-center gap-1 flex-1"
-          onClick={() => onFileSelect(file.id)}
-        >
-          <FileIcon className="h-4 w-4 text-gray-500" />
-          <span className="text-sm">{node.name}</span>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 opacity-0 group-hover:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleDeleteFile(file.id)
-          }}
-        >
-          <Trash className="h-3 w-3" />
-        </Button>
-      </div>
+      <ContextMenu key={node.path}>
+        <ContextMenuTrigger>
+          <div
+            className={cn(
+              "flex items-center justify-between gap-1.5 px-2 py-1 hover:bg-accent cursor-pointer rounded-sm group transition-colors",
+              activeFileId === file.id && "bg-accent"
+            )}
+            style={{ paddingLeft: `${level * 12 + 24}px` }}
+          >
+            <div
+              className="flex items-center gap-1.5 flex-1 min-w-0"
+              onClick={() => onFileSelect(file.id)}
+            >
+              {getFileIcon(file.path)}
+              <span className="text-sm truncate">{node.name}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDeleteFile(file.id)
+              }}
+            >
+              <Trash className="h-3 w-3" />
+            </Button>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => onFileSelect(file.id)}>
+            <Edit2 className="mr-2 h-4 w-4" />
+            Open
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => {
+              navigator.clipboard.writeText(file.path)
+              toast({ title: 'Path copied to clipboard' })
+            }}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copy Path
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => {
+              const blob = new Blob([file.content], { type: 'text/plain' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = node.name
+              a.click()
+              URL.revokeObjectURL(url)
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={() => handleDeleteFile(file.id)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash className="mr-2 h-4 w-4" />
+            Delete
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     )
   }
 
