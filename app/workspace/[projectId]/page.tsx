@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { WorkspaceLayout } from '@/components/workspace/workspace-layout'
+import { WebContainerProvider } from '@/lib/webcontainer-context'
 
 interface WorkspacePageProps {
   params: {
@@ -41,10 +42,12 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     .order('created_at', { ascending: true })
 
   return (
-    <WorkspaceLayout
-      project={project}
-      initialFiles={files || []}
-      initialMessages={messages || []}
-    />
+    <WebContainerProvider>
+      <WorkspaceLayout
+        project={project}
+        initialFiles={files || []}
+        initialMessages={messages || []}
+      />
+    </WebContainerProvider>
   )
 }
