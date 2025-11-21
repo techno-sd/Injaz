@@ -16,6 +16,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { FileSearch } from '@/components/file-search'
 
 interface FileTreeProps {
   files: File[]
@@ -218,10 +219,17 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
           size="icon"
           className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
           onClick={() => setIsCreating(!isCreating)}
+          data-action="new-file"
         >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* File Search */}
+      <div className="p-2 border-b">
+        <FileSearch files={files} onFileSelect={onFileSelect} />
+      </div>
+
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {isCreating && (
           <div className="mb-3 p-2 bg-background border-2 border-primary/30 rounded-lg shadow-sm">

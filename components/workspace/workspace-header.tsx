@@ -17,7 +17,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ArrowLeft, Code2, Rocket, Share2, Download, ExternalLink, Copy, Check } from 'lucide-react'
+import { ArrowLeft, MoreHorizontal, Rocket, Share2, Download, ExternalLink, Copy, Check } from 'lucide-react'
+import { Breadcrumbs } from '@/components/breadcrumbs'
+import { QuickActions } from '@/components/quick-actions'
 import type { Project } from '@/types'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -75,61 +77,69 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
 
   return (
     <>
-      <header className="border-b glass px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10">
+      <header className="border-b glass px-4 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10 flex-shrink-0">
             <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 gradient-primary rounded-lg flex items-center justify-center shadow-md">
-              <Code2 className="h-4 w-4 text-white" />
-            </div>
-            <h1 className="font-semibold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {project.name}
-            </h1>
-          </div>
+          <Breadcrumbs
+            items={[
+              { label: 'Projects', href: '/dashboard' },
+              { label: project.name }
+            ]}
+          />
         </div>
         <div className="flex items-center gap-2">
+          <QuickActions onAction={(action) => {
+            switch (action) {
+              case 'new-file':
+                document.querySelector('[data-action="new-file"]')?.dispatchEvent(new Event('click'))
+                break
+              case 'git-sync':
+                toast({
+                  title: 'Syncing changes...',
+                  description: 'Pulling latest changes from repository',
+                })
+                break
+              case 'shortcuts':
+                // This will be handled by the command palette keyboard shortcut
+                const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
+                window.dispatchEvent(event)
+                break
+            }
+          }} />
           <Button
-            variant="outline"
             size="sm"
-            onClick={() => setShareDialogOpen(true)}
-            className="hover:border-primary/50 shadow-sm hover:shadow-md transition-shadow"
+            onClick={handleDeploy}
+            className="gradient-primary text-white border-0 shadow-sm"
           >
-            <Share2 className="mr-2 h-4 w-4" />
-            Share
+            <Rocket className="mr-2 h-4 w-4" />
+            Deploy
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="hover:border-primary/50 shadow-sm hover:shadow-md transition-shadow">
-                <Download className="mr-2 h-4 w-4" />
-                Export
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Share Project
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Download className="mr-2 h-4 w-4" />
                 Download as ZIP
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Code2 className="mr-2 h-4 w-4" />
-                Export to GitHub
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <ExternalLink className="mr-2 h-4 w-4" />
                 View Code
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Button size="sm" onClick={handleDeploy} className="gradient-primary text-white border-0 shadow-md hover:shadow-lg transition-shadow">
-            <Rocket className="mr-2 h-4 w-4" />
-            Deploy
-          </Button>
         </div>
       </header>
 
