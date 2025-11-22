@@ -2,13 +2,23 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useWebContainer } from '@/lib/webcontainer-context'
-import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle } from 'lucide-react'
+import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import type { File } from '@/types'
+
+type DeviceMode = 'desktop' | 'tablet' | 'mobile'
 
 interface WebContainerPreviewProps {
   projectId: string
   files: File[]
+}
+
+const deviceModes = {
+  desktop: { width: '100%', icon: Monitor, label: 'Desktop' },
+  tablet: { width: '768px', icon: Tablet, label: 'Tablet' },
+  mobile: { width: '375px', icon: Smartphone, label: 'Mobile' },
 }
 
 export function WebContainerPreview({ projectId, files }: WebContainerPreviewProps) {
@@ -19,6 +29,7 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
   const [logs, setLogs] = useState<string[]>([])
   const [showTerminal, setShowTerminal] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const hasStarted = useRef(false)
 
@@ -232,58 +243,138 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
     )
   }
 
+  const handleRefresh = () => {
+    if (iframeRef.current) {
+      iframeRef.current.src = iframeRef.current.src
+    }
+  }
+
   return (
-    <div className="h-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between bg-muted px-4 py-2 border-b">
-        <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4" />
-          <span className="text-sm font-medium">Live Preview</span>
-          {previewUrl && (
-            <a
-              href={previewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline"
-            >
-              Open in new tab
-            </a>
-          )}
+    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
+      {/* Enhanced Header */}
+      <div className="glass-card border-b px-4 py-2.5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Globe className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">Live Preview</span>
+          <Badge variant="secondary" className="gap-1 text-xs">
+            <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+            Live
+          </Badge>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowTerminal(!showTerminal)}
-        >
-          <TerminalIcon className="h-4 w-4" />
-        </Button>
+
+        <div className="flex items-center gap-2">
+          {/* Device Mode Switcher */}
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            {(Object.keys(deviceModes) as DeviceMode[]).map((mode) => {
+              const DeviceIcon = deviceModes[mode].icon
+              return (
+                <Button
+                  key={mode}
+                  variant={deviceMode === mode ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setDeviceMode(mode)}
+                  className={cn(
+                    'h-8 w-8 p-0',
+                    deviceMode === mode && 'gradient-primary shadow-md'
+                  )}
+                  title={deviceModes[mode].label}
+                >
+                  <DeviceIcon className="h-4 w-4" />
+                </Button>
+              )
+            })}
+          </div>
+
+          {/* Refresh Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            className="h-8 w-8"
+            title="Refresh preview"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+
+          {/* Open in New Tab */}
+          {previewUrl && (
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="h-8 w-8"
+              title="Open in new tab"
+            >
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+
+          {/* Terminal Toggle */}
+          <Button
+            variant={showTerminal ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => setShowTerminal(!showTerminal)}
+            className={cn('h-8 w-8', showTerminal && 'gradient-primary')}
+            title="Toggle terminal"
+          >
+            <TerminalIcon className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Preview iframe */}
-      {previewUrl && !showTerminal && (
-        <iframe
-          ref={iframeRef}
-          src={previewUrl}
-          className="flex-1 w-full border-0"
-          title="Preview"
-          sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-        />
-      )}
+      {/* Preview Content */}
+      <div className="flex-1 overflow-hidden flex items-center justify-center bg-muted/20 p-4">
+        {previewUrl && !showTerminal && (
+          <div
+            className={cn(
+              'h-full transition-all duration-300 ease-out bg-background shadow-2xl rounded-lg overflow-hidden',
+              deviceMode === 'mobile' && 'max-w-[375px]',
+              deviceMode === 'tablet' && 'max-w-[768px]',
+              deviceMode === 'desktop' && 'w-full'
+            )}
+            style={{ width: deviceModes[deviceMode].width }}
+          >
+            <iframe
+              ref={iframeRef}
+              src={previewUrl}
+              className="w-full h-full border-0"
+              title="Preview"
+              sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+            />
+          </div>
+        )}
 
-      {/* Terminal logs */}
-      {showTerminal && (
-        <div className="flex-1 bg-black text-green-400 font-mono text-xs p-4 overflow-y-auto">
-          {logs.map((log, i) => (
-            <div key={i}>{log}</div>
-          ))}
-        </div>
-      )}
+        {/* Terminal logs */}
+        {showTerminal && (
+          <div className="w-full h-full bg-black text-green-400 font-mono text-sm p-6 overflow-y-auto rounded-lg shadow-2xl">
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-green-800">
+              <TerminalIcon className="h-4 w-4" />
+              <span className="font-semibold">Console Output</span>
+            </div>
+            {logs.map((log, i) => (
+              <div key={i} className="mb-1 leading-relaxed">{log}</div>
+            ))}
+          </div>
+        )}
 
-      {!previewUrl && !showTerminal && (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          <p className="text-sm">Waiting for preview...</p>
-        </div>
-      )}
+        {!previewUrl && !showTerminal && (
+          <div className="flex flex-col items-center justify-center text-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+              <Globe className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Waiting for preview...</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Dev server is starting</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

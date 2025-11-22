@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Send, Loader2, CheckCircle2, Sparkles, FileCode, Lightbulb } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Send, Loader2, CheckCircle2, Sparkles, FileCode, Lightbulb, Zap, Code2, Paintbrush, Database, Shield, Bug, Rocket } from 'lucide-react'
 import type { File, Message } from '@/types'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Badge } from '@/components/ui/badge'
 
 interface ChatPanelProps {
   projectId: string
@@ -21,16 +23,20 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [contextFiles, setContextFiles] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const { toast } = useToast()
 
   const suggestedPrompts = [
-    "Add a dark mode toggle",
-    "Create a contact form",
-    "Add authentication",
-    "Improve the styling",
-    "Add error handling",
-    "Create an API endpoint"
+    { icon: Paintbrush, text: "Add a dark mode toggle", category: "UI" },
+    { icon: FileCode, text: "Create a contact form with validation", category: "Feature" },
+    { icon: Shield, text: "Add authentication with JWT", category: "Security" },
+    { icon: Zap, text: "Optimize performance and loading", category: "Performance" },
+    { icon: Bug, text: "Review code for potential bugs", category: "Quality" },
+    { icon: Database, text: "Add database integration", category: "Backend" },
+    { icon: Rocket, text: "Improve SEO and meta tags", category: "SEO" },
+    { icon: Code2, text: "Refactor code for best practices", category: "Quality" }
   ]
 
   useEffect(() => {
@@ -199,27 +205,35 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="space-y-2"
+                className="space-y-3"
               >
-                <p className="text-xs font-medium text-muted-foreground">Quick actions:</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Smart Suggestions</p>
                 <div className="grid gap-2">
-                  {suggestedPrompts.slice(0, 3).map((prompt, index) => (
+                  {suggestedPrompts.slice(0, 6).map((prompt, index) => (
                     <motion.button
                       key={index}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 + index * 0.1 }}
                       onClick={() => {
-                        setInput(prompt)
+                        setInput(prompt.text)
                         setShowSuggestions(false)
+                        inputRef.current?.focus()
                       }}
-                      className="text-left p-3 rounded-lg border bg-background hover:bg-accent hover:border-primary transition-all text-sm group"
+                      className="text-left p-3 rounded-xl border-2 glass-card hover:border-primary transition-all group hover:scale-105 hover:shadow-lg"
                     >
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
-                        <span className="text-muted-foreground group-hover:text-foreground">
-                          {prompt}
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center group-hover:from-blue-500/20 group-hover:to-purple-500/20 transition-all">
+                          <prompt.icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium group-hover:text-primary transition-colors">
+                            {prompt.text}
+                          </p>
+                          <Badge variant="outline" className="mt-1 text-xs">
+                            {prompt.category}
+                          </Badge>
+                        </div>
                       </div>
                     </motion.button>
                   ))}
@@ -296,22 +310,41 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="border-t p-4 bg-background/80 backdrop-blur-sm">
-        <div className="flex gap-2">
+      <form onSubmit={handleSubmit} className="border-t p-4 bg-background/80 backdrop-blur-sm space-y-3">
+        {/* Context indicators */}
+        {files.length > 0 && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <FileCode className="h-3 w-3" />
+            <span>Context: {files.length} file{files.length !== 1 ? 's' : ''}</span>
+            <Badge variant="secondary" className="text-xs">
+              AI-aware
+            </Badge>
+          </div>
+        )}
+
+        <div className="flex gap-2 items-end">
           <div className="flex-1 relative">
-            <Input
+            <Textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => {
                 setInput(e.target.value)
                 if (e.target.value) setShowSuggestions(false)
               }}
-              placeholder="Describe what you want to build..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSubmit(e)
+                }
+              }}
+              placeholder="Describe what you want to build... (Shift+Enter for new line)"
               disabled={isLoading}
-              className="pr-10"
+              className="min-h-[44px] max-h-32 resize-none pr-10 rounded-xl border-2 focus:border-primary transition-colors"
+              rows={1}
             />
             {input && !isLoading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                ↵
+              <div className="absolute right-3 bottom-3 text-xs text-muted-foreground flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">↵</kbd>
               </div>
             )}
           </div>
@@ -319,18 +352,22 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
             type="submit"
             size="icon"
             disabled={isLoading || !input.trim()}
-            className="flex-shrink-0"
+            className="h-11 w-11 flex-shrink-0 gradient-primary shadow-lg hover:shadow-xl hover:scale-105 transition-all"
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <Send className="h-5 w-5" />
             )}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 text-center">
-          AI can make mistakes. Review important code changes.
-        </p>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <p>AI can make mistakes. Review code changes carefully.</p>
+          <div className="flex items-center gap-1">
+            <Sparkles className="h-3 w-3" />
+            <span className="font-medium">Powered by AI</span>
+          </div>
+        </div>
       </form>
     </div>
   )

@@ -77,21 +77,31 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
 
   return (
     <>
-      <header className="border-b glass px-4 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10 flex-shrink-0">
+      <header className="border-b glass-card backdrop-blur-xl px-6 py-3 flex items-center justify-between shadow-sm animate-fade-in">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10 hover:scale-105 transition-all flex-shrink-0 rounded-xl">
             <Link href="/dashboard">
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <Breadcrumbs
-            items={[
-              { label: 'Projects', href: '/dashboard' },
-              { label: project.name }
-            ]}
-          />
+
+          <div className="flex flex-col min-w-0">
+            <Breadcrumbs
+              items={[
+                { label: 'Projects', href: '/dashboard' },
+                { label: project.name }
+              ]}
+            />
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-muted-foreground">Template:</span>
+              <span className="text-xs font-medium text-primary capitalize">{project.template}</span>
+              <div className="h-1 w-1 bg-muted-foreground/40 rounded-full" />
+              <span className="text-xs text-muted-foreground">Last saved: just now</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-3">
           <QuickActions onAction={(action) => {
             switch (action) {
               case 'new-file':
@@ -104,39 +114,50 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
                 })
                 break
               case 'shortcuts':
-                // This will be handled by the command palette keyboard shortcut
                 const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
                 window.dispatchEvent(event)
                 break
             }
           }} />
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShareDialogOpen(true)}
+            className="gap-2 border-2 hover:border-primary transition-colors"
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+
           <Button
             size="sm"
             onClick={handleDeploy}
-            className="gradient-primary text-white border-0 shadow-sm"
+            className="gradient-primary text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all gap-2"
           >
-            <Rocket className="mr-2 h-4 w-4" />
+            <Rocket className="h-4 w-4" />
             Deploy
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10">
+                <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
-                <Share2 className="mr-2 h-4 w-4" />
+                <Share2 className="mr-3 h-4 w-4" />
                 Share Project
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="mr-3 h-4 w-4" />
                 Download as ZIP
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View Code
+                <ExternalLink className="mr-3 h-4 w-4" />
+                View Live Preview
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
