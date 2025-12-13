@@ -208,32 +208,44 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
         onConfirm={handleDeleteFile}
         variant="destructive"
       />
-    <div className="h-full flex flex-col bg-muted/30">
-      <div className="border-b bg-muted/50 p-3 flex items-center justify-between">
-        <h3 className="font-semibold text-sm flex items-center gap-2">
-          <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
-          Files
+    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/20">
+      {/* Enhanced Header */}
+      <div className="border-b glass-card backdrop-blur-sm p-3 flex items-center justify-between shadow-sm">
+        <h3 className="font-bold text-sm flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse"></div>
+          Explorer
         </h3>
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
+          className="h-8 w-8 hover:bg-primary/10 hover:text-primary hover:scale-105 transition-all rounded-lg"
           onClick={() => setIsCreating(!isCreating)}
           data-action="new-file"
+          title="New File"
         >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
 
       {/* File Search */}
-      <div className="p-2 border-b">
+      <div className="p-3 border-b bg-muted/30">
         <FileSearch files={files} onFileSelect={onFileSelect} />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      {/* File Count Badge */}
+      <div className="px-3 py-2 border-b bg-muted/20">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground font-medium">{files.length} files</span>
+          {files.length > 0 && (
+            <span className="text-muted-foreground">{expandedDirs.size - 1} folders</span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {isCreating && (
-          <div className="mb-3 p-2 bg-background border-2 border-primary/30 rounded-lg shadow-sm">
-            <div className="flex gap-1.5">
+          <div className="mb-3 p-3 glass-card border-2 border-primary/50 rounded-xl shadow-lg animate-slide-up">
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={newFileName}
@@ -243,17 +255,32 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
                   if (e.key === 'Escape') setIsCreating(false)
                 }}
                 placeholder="path/to/file.tsx"
-                className="flex-1 px-2.5 py-1.5 text-sm border rounded-md focus:border-primary focus:ring-1 focus:ring-primary"
+                className="flex-1 px-3 py-2 text-sm border-2 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 autoFocus
               />
-              <Button size="sm" onClick={handleCreateFile} className="gradient-primary text-white border-0 shadow-sm">
+              <Button
+                size="sm"
+                onClick={handleCreateFile}
+                className="gradient-primary text-white border-0 shadow-md hover:shadow-lg hover:scale-105 transition-all px-4"
+              >
                 Add
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-1.5">Press Enter to create, Esc to cancel</p>
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">↵</kbd> to create,
+              <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Esc</kbd> to cancel
+            </p>
           </div>
         )}
-        {fileTree.map(node => renderNode(node))}
+        {files.length === 0 ? (
+          <div className="text-center py-8 px-4">
+            <div className="text-4xl mb-3">📁</div>
+            <p className="text-sm text-muted-foreground">No files yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Click + to create your first file</p>
+          </div>
+        ) : (
+          fileTree.map(node => renderNode(node))
+        )}
       </div>
     </div>
     </>
