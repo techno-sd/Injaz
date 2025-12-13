@@ -36,19 +36,32 @@ export function AIChatbot({ projectId, files, onFilesChange }: AIChatbotProps) {
     }
   }, [messages])
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return
-
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      project_id: projectId,
-      role: 'user',
-      content: input.trim(),
-      created_at: new Date().toISOString(),
+  // Check for initial prompt from home page
+  useEffect(() => {
+    const initialPrompt = sessionStorage.getItem('initialPrompt')
+    if (initialPrompt) {
+      // Clear it so it doesn't trigger again on refresh
+      sessionStorage.removeItem('initialPrompt')
+      // Set the input and auto-send
+      setInput(initialPrompt)
+      // Use a small delay to ensure component is fully mounted
+      setTimeout(() => {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          project_id: projectId,
+          role: 'user',
+          content: initialPrompt,
+          created_at: new Date().toISOString(),
+        }
+        setMessages([userMessage])
+        setInput('')
+        sendMessage(userMessage, [])
+      }, 100)
     }
+  }, [projectId])
 
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
+  // Core function to send a message to the AI
+  const sendMessage = async (userMessage: Message, existingMessages: Message[]) => {
     setIsLoading(true)
 
     try {
@@ -57,7 +70,7 @@ export function AIChatbot({ projectId, files, onFilesChange }: AIChatbotProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId,
-          messages: [...messages, userMessage],
+          messages: [...existingMessages, userMessage],
           files,
         }),
       })
@@ -161,6 +174,22 @@ export function AIChatbot({ projectId, files, onFilesChange }: AIChatbotProps) {
     }
   }
 
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      project_id: projectId,
+      role: 'user',
+      content: input.trim(),
+      created_at: new Date().toISOString(),
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInput('')
+    await sendMessage(userMessage, messages)
+  }
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -178,7 +207,7 @@ export function AIChatbot({ projectId, files, onFilesChange }: AIChatbotProps) {
           </div>
           <div>
             <h3 className="font-bold text-white">AI Assistant</h3>
-            <p className="text-xs text-white/80">Powered by GPT-4o Mini</p>
+            <p className="text-xs text-white/80">AI Powered</p>
           </div>
         </div>
       </div>

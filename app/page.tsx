@@ -64,8 +64,16 @@ export default function HomePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Go directly to demo workspace - no sign up required
-    window.location.href = '/workspace/demo'
+    if (!chatInput.trim()) return
+
+    // Store prompt in sessionStorage for the workspace to pick up
+    sessionStorage.setItem('initialPrompt', chatInput.trim())
+
+    // Create a new project with unique ID
+    const projectId = `new-${Date.now()}`
+
+    // Redirect to workspace - it will process the initial prompt
+    window.location.href = `/workspace/${projectId}`
   }
 
   return (

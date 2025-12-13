@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel } from '@/lib/ai/providers'
+import { DEFAULT_MODEL } from '@/lib/ai/types'
 import type { File } from '@/types'
 
 export const runtime = 'edge'
 
-// Use a fast model for completions
-const COMPLETION_MODEL = 'gpt-4o-mini'
+// Model from .env (or fallback)
+const COMPLETION_MODEL = process.env.COMPLETION_AI_MODEL || DEFAULT_MODEL
 
 interface CompletionRequest {
   projectId: string

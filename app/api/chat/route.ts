@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel, isModelAvailable } from '@/lib/ai/providers'
 import { buildContext } from '@/lib/ai/context-manager'
+import { DEFAULT_MODEL as FALLBACK_MODEL } from '@/lib/ai/types'
 import type { Message, File, AIAction } from '@/types'
 
 export const runtime = 'edge'
 
-// Default model to use
-const DEFAULT_MODEL = 'gpt-4o-mini'
+// Model from .env (or fallback)
+const DEFAULT_MODEL = process.env.DEFAULT_AI_MODEL || FALLBACK_MODEL
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
       temperature = 0.7,
     } = await req.json()
 
-    const isDemoProject = projectId === 'demo' || projectId === 'new'
+    const isDemoProject = projectId === 'demo' || projectId === 'new' || projectId.startsWith('new-')
     const supabase = isDemoProject ? null : await createClient()
     let userId: string | null = null
 
@@ -130,12 +131,38 @@ export async function POST(req: Request) {
           }
 
           // Try to extract JSON actions from the response
-          const actionsMatch = fullResponse.match(/```json\n([\s\S]*?)\n```/)
-          if (actionsMatch) {
+          // Support multiple formats: ```json, ``` or just raw JSON
+          let jsonContent = null
+
+          // Try ```json format first
+          const jsonBlockMatch = fullResponse.match(/```json\s*([\s\S]*?)\s*```/)
+          if (jsonBlockMatch) {
+            jsonContent = jsonBlockMatch[1].trim()
+          } else {
+            // Try plain ``` code block
+            const codeBlockMatch = fullResponse.match(/```\s*([\s\S]*?)\s*```/)
+            if (codeBlockMatch) {
+              const content = codeBlockMatch[1].trim()
+              if (content.startsWith('{')) {
+                jsonContent = content
+              }
+            }
+          }
+
+          // If still no match, try to find raw JSON object
+          if (!jsonContent) {
+            const rawJsonMatch = fullResponse.match(/\{[\s\S]*"actions"[\s\S]*\}/)
+            if (rawJsonMatch) {
+              jsonContent = rawJsonMatch[0]
+            }
+          }
+
+          if (jsonContent) {
             try {
-              const parsed = JSON.parse(actionsMatch[1])
-              if (parsed.actions) {
+              const parsed = JSON.parse(jsonContent)
+              if (parsed.actions && Array.isArray(parsed.actions)) {
                 actions = parsed.actions
+                console.log(`[Chat API] Parsed ${actions.length} actions from AI response`)
 
                 // Apply actions to database
                 if (supabase && !isDemoProject) {
@@ -166,8 +193,11 @@ export async function POST(req: Request) {
                 controller.enqueue(encoder.encode(`data: ${actionsData}\n\n`))
               }
             } catch (error) {
-              console.error('Error parsing actions:', error)
+              console.error('Error parsing actions JSON:', error)
+              console.error('JSON content was:', jsonContent?.substring(0, 500))
             }
+          } else {
+            console.log('[Chat API] No JSON actions found in response')
           }
 
           // Save assistant message to database for authenticated projects

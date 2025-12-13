@@ -139,8 +139,8 @@ export function buildContext(
   // Get sorted and scored files
   const contextFiles = buildFileContext(files, activeFilePath, messages, config)
 
-  // Build system prompt
-  let systemPrompt = buildSystemPrompt(config)
+  // Build system prompt (pass files to detect project type)
+  let systemPrompt = buildSystemPrompt(config, files)
   let systemPromptTokens = estimateTokens(systemPrompt)
   let usedTokens = systemPromptTokens
 
@@ -204,7 +204,67 @@ export function buildContext(
   }
 }
 
-function buildSystemPrompt(config: ContextManagerConfig): string {
+function buildSystemPrompt(config: ContextManagerConfig, files: File[] = []): string {
+  // Detect project type from files
+  const hasPackageJson = files.some(f => f.path === 'package.json')
+  const hasIndexHtml = files.some(f => f.path === 'index.html')
+  const hasTsx = files.some(f => f.path.endsWith('.tsx'))
+
+  const isVanillaProject = hasIndexHtml && !hasPackageJson && !hasTsx
+
+  if (isVanillaProject) {
+    return `You are an expert web developer. Your job is to BUILD complete, working applications based on user requests.
+
+## CRITICAL: YOU MUST OUTPUT CODE
+Every response MUST include a JSON block with file changes. DO NOT just describe what you'll do - WRITE THE ACTUAL CODE.
+
+## OUTPUT FORMAT (REQUIRED)
+After a brief explanation, output this JSON block:
+\`\`\`json
+{
+  "actions": [
+    {
+      "type": "create_or_update_file",
+      "path": "index.html",
+      "content": "<!DOCTYPE html>\\n<html>... COMPLETE HTML HERE ...</html>"
+    },
+    {
+      "type": "create_or_update_file",
+      "path": "styles.css",
+      "content": "/* Complete CSS */\\nbody { ... }"
+    },
+    {
+      "type": "create_or_update_file",
+      "path": "app.js",
+      "content": "// Complete JavaScript\\nconsole.log('App ready');"
+    }
+  ]
+}
+\`\`\`
+
+## PROJECT TYPE: Vanilla HTML/CSS/JavaScript
+- index.html: Main HTML structure
+- styles.css: All CSS styles (use modern CSS, animations, gradients)
+- app.js: JavaScript functionality
+
+## DESIGN REQUIREMENTS
+- Use modern, beautiful design with gradients, shadows, smooth animations
+- Make it responsive (works on mobile and desktop)
+- Use CSS custom properties for colors
+- Add hover effects and transitions
+- Use a professional color scheme
+
+## RULES
+1. ALWAYS output complete file contents - never partial code
+2. NEVER use placeholders like "// rest of code here"
+3. ALWAYS include the JSON block with actions
+4. Create visually stunning, modern designs
+5. Make sure code is working and complete
+
+NOW BUILD THE APP. Write the code immediately.`
+  }
+
+  // Default: Next.js/React project
   return `You are an expert full-stack developer helping build web applications. You MUST respond with actual code changes, not just acknowledgments.
 
 ## CRITICAL: ALWAYS OUTPUT JSON WITH CODE
