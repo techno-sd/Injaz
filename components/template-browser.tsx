@@ -214,7 +214,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
               variant="outline"
               size="lg"
               onClick={clearFilters}
-              className="gap-2 border-2 rounded-xl hover:bg-destructive/10 hover:border-destructive transition-all"
+              className="gap-2 border-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:shadow-lg transition-all"
             >
               <X className="h-4 w-4" />
               Clear Filters
@@ -233,7 +233,11 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
               <Badge
                 key={tag}
                 variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-                className="cursor-pointer hover:scale-105 transition-all px-4 py-2 text-sm rounded-xl"
+                className={`cursor-pointer hover:scale-105 transition-all px-4 py-2 text-sm rounded-xl ${
+                  selectedTags.includes(tag)
+                    ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white border-0 shadow-md'
+                    : 'hover:bg-purple-100 dark:hover:bg-purple-500/20 hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400'
+                }`}
                 onClick={() => toggleTag(tag)}
               >
                 {tag}
@@ -260,14 +264,14 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
           return (
             <Card
               key={template.id}
-              className="hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group border-2 hover:border-primary glass-card overflow-hidden"
+              className="hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer group border-2 hover:border-purple-500/50 glass-card overflow-hidden"
               onClick={() => onSelectTemplate(template)}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/70 group-hover:to-purple-50/70 transition-all duration-300 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-violet-500/0 group-hover:from-purple-500/10 group-hover:to-violet-500/10 transition-all duration-300 pointer-events-none" />
 
               <CardHeader className="relative pb-4">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-4xl shadow-lg group-hover:scale-110 transition-transform">
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-500/20 dark:to-violet-500/20 flex items-center justify-center text-4xl shadow-lg group-hover:shadow-purple-500/30 group-hover:scale-110 transition-all">
                     {template.icon}
                   </div>
                   <div className="flex items-center gap-2">
@@ -291,7 +295,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                     </Button>
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">{template.name}</CardTitle>
+                <CardTitle className="text-2xl font-bold mb-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{template.name}</CardTitle>
                 <CardDescription className="text-base leading-relaxed line-clamp-2">
                   {template.description}
                 </CardDescription>
@@ -321,7 +325,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                 {template.tags.map(tag => (
                   <span
                     key={tag}
-                    className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 text-primary text-xs font-semibold rounded-full border border-primary/30 hover:border-primary transition-colors"
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-500/10 dark:to-violet-500/10 text-purple-600 dark:text-purple-400 text-xs font-semibold rounded-full border border-purple-200 dark:border-purple-500/30 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all"
                   >
                     {tag}
                   </span>
@@ -337,7 +341,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                   {template.techStack.map(tech => (
                     <span
                       key={tech}
-                      className="px-3 py-1.5 bg-muted text-xs font-medium rounded-lg hover:bg-muted/80 transition-colors"
+                      className="px-3 py-1.5 bg-muted text-xs font-medium rounded-lg hover:bg-purple-100 dark:hover:bg-purple-500/20 hover:text-purple-600 dark:hover:text-purple-400 hover:border hover:border-purple-300 dark:hover:border-purple-500/50 transition-all"
                     >
                       {tech}
                     </span>
@@ -365,7 +369,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                 </ul>
               </div>
 
-              <Button className="w-full h-12 gradient-primary text-white border-0 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all font-semibold text-base">
+              <Button className="w-full h-12 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0 shadow-lg group-hover:shadow-xl group-hover:shadow-purple-500/30 group-hover:scale-105 transition-all font-semibold text-base">
                 Use Template
               </Button>
             </CardContent>

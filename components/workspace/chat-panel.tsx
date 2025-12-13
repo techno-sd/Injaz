@@ -73,7 +73,8 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || `Server error: ${response.status}`)
       }
 
       const reader = response.body?.getReader()
@@ -152,10 +153,11 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Chat error:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to communicate with AI',
+        title: 'AI Chat Error',
+        description: error.message || 'Failed to communicate with AI. Check console for details.',
         variant: 'destructive',
       })
     } finally {

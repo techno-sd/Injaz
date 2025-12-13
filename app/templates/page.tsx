@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { PROJECT_TEMPLATES, type TemplateMetadata } from '@/lib/templates'
+import { GUEST_TEMPLATES } from '@/lib/guest-templates'
 import { TemplateBrowser } from '@/components/template-browser'
 import { Code2, ArrowLeft } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
@@ -13,6 +14,7 @@ import {
   getTemplateFavorites,
   getTemplateStats,
 } from '@/app/actions/templates'
+import { createClient } from '@/lib/supabase/client'
 
 export default function TemplatesPage() {
   const router = useRouter()
@@ -20,21 +22,30 @@ export default function TemplatesPage() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([])
   const [templateStats, setTemplateStats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [favoritesResult, statsResult] = await Promise.all([
-          getTemplateFavorites(),
-          getTemplateStats(),
-        ])
+        // Check authentication
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        setIsAuthenticated(!!user)
 
-        if (favoritesResult.data) {
-          setFavoriteIds(favoritesResult.data)
-        }
+        // Only fetch favorites/stats if authenticated
+        if (user) {
+          const [favoritesResult, statsResult] = await Promise.all([
+            getTemplateFavorites(),
+            getTemplateStats(),
+          ])
 
-        if (statsResult.data) {
-          setTemplateStats(statsResult.data)
+          if (favoritesResult.data) {
+            setFavoriteIds(favoritesResult.data)
+          }
+
+          if (statsResult.data) {
+            setTemplateStats(statsResult.data)
+          }
         }
       } catch (error) {
         console.error('Error fetching template data:', error)
@@ -47,6 +58,27 @@ export default function TemplatesPage() {
   }, [])
 
   async function handleSelectTemplate(template: TemplateMetadata) {
+    // For unauthenticated users, redirect to demo workspace
+    if (!isAuthenticated) {
+      // Check if there's a matching guest template
+      const guestTemplate = GUEST_TEMPLATES[template.id]
+      if (guestTemplate) {
+        toast({
+          title: 'Demo Mode',
+          description: `Starting with ${guestTemplate.name} template. Sign in to save your projects!`,
+        })
+        router.push(`/workspace/demo?template=${template.id}`)
+      } else {
+        // For templates without guest versions, redirect to blank demo
+        toast({
+          title: 'Demo Mode',
+          description: 'Sign in to access all templates. Starting with blank project.',
+        })
+        router.push('/workspace/demo?template=blank')
+      }
+      return
+    }
+
     try {
       const result = await createProjectFromTemplate(template.id)
 
@@ -77,16 +109,16 @@ export default function TemplatesPage() {
       <header className="sticky top-0 z-50 border-b glass backdrop-blur-xl shadow-sm animate-fade-in">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10 hover:scale-105 transition-all">
+            <Button variant="ghost" size="icon" asChild className="hover:bg-purple-100 dark:hover:bg-purple-500/20 hover:scale-105 transition-all">
               <Link href="/dashboard">
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="h-10 w-10 gradient-primary rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
+              <div className="h-10 w-10 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-purple-500/30 group-hover:scale-105 transition-all">
                 <Code2 className="h-5 w-5 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-gradient">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
                 Project Templates
               </h1>
             </Link>
@@ -97,15 +129,20 @@ export default function TemplatesPage() {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 animate-fade-in">
-            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl gradient-primary mb-6 shadow-2xl animate-scale-in">
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-gradient-to-br from-purple-600 to-violet-600 mb-6 shadow-2xl shadow-purple-500/20 animate-scale-in">
               <Code2 className="h-10 w-10 text-white" />
             </div>
-            <h2 className="text-5xl md:text-6xl font-bold mb-6 text-gradient animate-slide-up">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-violet-600 to-purple-600 bg-clip-text text-transparent animate-slide-up">
               Start with a Template
             </h2>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed animate-slide-up animate-delay-100">
-              Choose from <span className="font-bold text-gradient">{PROJECT_TEMPLATES.length}</span> professional templates to kickstart your project, then customize with AI
+              Choose from <span className="font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">{PROJECT_TEMPLATES.length}</span> professional templates to kickstart your project, then customize with AI
             </p>
+            {isAuthenticated === false && (
+              <p className="mt-4 text-sm text-amber-600 dark:text-amber-400 animate-slide-up animate-delay-200">
+                Demo mode - Sign in to save your projects and access all templates
+              </p>
+            )}
           </div>
 
           {loading ? (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,9 +30,13 @@ interface WorkspaceHeaderProps {
 export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [shareUrl, setShareUrl] = useState('')
   const { toast } = useToast()
 
-  const shareUrl = `${window.location.origin}/preview/${project.id}`
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setShareUrl(`${window.location.origin}/preview/${project.id}`)
+  }, [project.id])
 
   const handleCopyUrl = async () => {
     await navigator.clipboard.writeText(shareUrl)

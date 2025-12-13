@@ -1,29 +1,64 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
+import dynamic from 'next/dynamic'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { FileTree } from './file-tree'
-import { CodeEditor } from './code-editor'
-import { ChatPanel } from './chat-panel'
-import { GitPanel } from './git-panel'
-import { WebContainerPreview } from './webcontainer-preview'
-import { Terminal } from './terminal'
 import { WorkspaceHeader } from './workspace-header'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { CommandPalette } from '@/components/command-palette'
 import { Button } from '@/components/ui/button'
 import { Globe, Terminal as TerminalIcon, MessageSquare, GitBranch, Rocket } from 'lucide-react'
-import { DeploymentPanel } from '@/components/vercel/deployment-panel'
+import {
+  EditorSkeleton,
+  PreviewSkeleton,
+  TerminalSkeleton,
+  ChatSkeleton,
+  GitPanelSkeleton,
+  DeploymentSkeleton,
+} from './loading-skeleton'
 import type { Project, File, Message } from '@/types'
+
+// Lazy load heavy components
+const CodeEditor = dynamic(() => import('./code-editor').then(mod => ({ default: mod.CodeEditor })), {
+  loading: () => <EditorSkeleton />,
+  ssr: false,
+})
+
+const ChatPanel = dynamic(() => import('./chat-panel').then(mod => ({ default: mod.ChatPanel })), {
+  loading: () => <ChatSkeleton />,
+  ssr: false,
+})
+
+const GitPanel = dynamic(() => import('./git-panel').then(mod => ({ default: mod.GitPanel })), {
+  loading: () => <GitPanelSkeleton />,
+  ssr: false,
+})
+
+const WebContainerPreview = dynamic(() => import('./webcontainer-preview').then(mod => ({ default: mod.WebContainerPreview })), {
+  loading: () => <PreviewSkeleton />,
+  ssr: false,
+})
+
+const Terminal = dynamic(() => import('./terminal').then(mod => ({ default: mod.Terminal })), {
+  loading: () => <TerminalSkeleton />,
+  ssr: false,
+})
+
+const DeploymentPanel = dynamic(() => import('@/components/vercel/deployment-panel').then(mod => ({ default: mod.DeploymentPanel })), {
+  loading: () => <DeploymentSkeleton />,
+  ssr: false,
+})
 
 interface WorkspaceLayoutProps {
   project: Project
   initialFiles: File[]
   initialMessages: Message[]
   isVercelConnected: boolean
+  isGuestMode?: boolean
 }
 
-export function WorkspaceLayout({ project, initialFiles, initialMessages, isVercelConnected }: WorkspaceLayoutProps) {
+export function WorkspaceLayout({ project, initialFiles, initialMessages, isVercelConnected, isGuestMode = false }: WorkspaceLayoutProps) {
   const [files, setFiles] = useState<File[]>(initialFiles)
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [activeFileId, setActiveFileId] = useState<string | null>(

@@ -28,46 +28,127 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       {
         path: 'app/page.tsx',
         content: `export default function Home() {
+  const features = [
+    { icon: '⚡', title: 'Lightning Fast', desc: 'Optimized for speed and performance', gradient: 'from-amber-500 to-orange-600' },
+    { icon: '🔒', title: 'Enterprise Security', desc: 'Bank-grade encryption built-in', gradient: 'from-emerald-500 to-teal-600' },
+    { icon: '🎨', title: 'Beautiful Design', desc: 'Stunning visuals out of the box', gradient: 'from-violet-500 to-purple-600' },
+  ]
+
+  const stats = [
+    { value: '10K+', label: 'Active Users' },
+    { value: '99.9%', label: 'Uptime' },
+    { value: '50K+', label: 'Projects' },
+    { value: '4.9★', label: 'Rating' },
+  ]
+
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-slate-950 text-white overflow-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 border-b border-white/5">
+        <nav className="container mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-xl flex items-center justify-center text-xl">✨</div>
+            <span className="text-xl font-bold">Lumina</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Features</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Pricing</a>
+            <button className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-lg font-medium hover:shadow-lg hover:shadow-purple-500/25 transition-all">
+              Get Started
+            </button>
+          </div>
+        </nav>
+      </header>
+
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-blue-50 to-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-6">
-            Welcome to Your App
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Build something amazing with our platform
-          </p>
-          <button className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700">
-            Get Started
+      <section className="relative container mx-auto px-6 py-24 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          <span className="text-sm text-gray-300">Now with AI-powered features</span>
+        </div>
+
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+          Build the future
+          <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+            with AI magic
+          </span>
+        </h1>
+
+        <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
+          Create stunning web applications without writing code. Our AI understands your vision and brings it to life.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+          <button className="px-8 py-4 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-purple-500/25 transition-all hover:scale-105">
+            Start Building Free →
           </button>
+          <button className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all">
+            Watch Demo
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+          {stats.map((stat, i) => (
+            <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+              <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">{stat.value}</div>
+              <div className="text-sm text-gray-400 mt-1">{stat.label}</div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="text-4xl mb-4">⚡</div>
-              <h3 className="text-xl font-semibold mb-2">Fast</h3>
-              <p className="text-gray-600">Lightning-fast performance</p>
+      <section className="container mx-auto px-6 py-24">
+        <h2 className="text-4xl font-bold text-center mb-4">
+          Everything you need
+        </h2>
+        <p className="text-xl text-gray-400 text-center mb-16 max-w-2xl mx-auto">
+          Powerful features that help you build, deploy, and scale effortlessly.
+        </p>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {features.map((feature, i) => (
+            <div key={i} className="group p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300 hover:-translate-y-1">
+              <div className={\`w-14 h-14 rounded-2xl bg-gradient-to-br \${feature.gradient} flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform\`}>
+                {feature.icon}
+              </div>
+              <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+              <p className="text-gray-400">{feature.desc}</p>
             </div>
-            <div className="text-center">
-              <div className="text-4xl mb-4">🔒</div>
-              <h3 className="text-xl font-semibold mb-2">Secure</h3>
-              <p className="text-gray-600">Enterprise-grade security</p>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl mb-4">🎨</div>
-              <h3 className="text-xl font-semibold mb-2">Beautiful</h3>
-              <p className="text-gray-600">Stunning design</p>
-            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="container mx-auto px-6 py-24">
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-cyan-600" />
+          <div className="relative p-12 md:p-20 text-center">
+            <h2 className="text-4xl font-bold mb-6">Ready to get started?</h2>
+            <p className="text-xl text-white/80 mb-10 max-w-xl mx-auto">
+              Join thousands of creators building the future today.
+            </p>
+            <button className="px-10 py-5 bg-white text-purple-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all hover:scale-105">
+              Start Free Trial →
+            </button>
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-12">
+        <div className="container mx-auto px-6 text-center text-gray-500">
+          <p>© 2024 Lumina. All rights reserved.</p>
+        </div>
+      </footer>
     </main>
   )
 }`
@@ -81,7 +162,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   )
 }`
@@ -103,49 +184,121 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       {
         path: 'app/page.tsx',
         content: `export default function Dashboard() {
+  const stats = [
+    { label: 'Total Revenue', value: '$45,231', change: '+20.1%', up: true, gradient: 'from-emerald-500 to-teal-600' },
+    { label: 'Active Users', value: '2,345', change: '+15.3%', up: true, gradient: 'from-blue-500 to-indigo-600' },
+    { label: 'Total Orders', value: '1,234', change: '+8.2%', up: true, gradient: 'from-violet-500 to-purple-600' },
+    { label: 'Conversion', value: '3.2%', change: '-2.5%', up: false, gradient: 'from-amber-500 to-orange-600' },
+  ]
+
+  const chartData = [
+    { day: 'Mon', value: 65 },
+    { day: 'Tue', value: 78 },
+    { day: 'Wed', value: 55 },
+    { day: 'Thu', value: 90 },
+    { day: 'Fri', value: 82 },
+    { day: 'Sat', value: 95 },
+    { day: 'Sun', value: 70 },
+  ]
+
+  const activities = [
+    { user: 'Sarah Chen', action: 'completed purchase', amount: '$249.00', time: '2m ago', status: 'success' },
+    { user: 'Mike Johnson', action: 'started trial', amount: 'Pro Plan', time: '5m ago', status: 'info' },
+    { user: 'Emma Davis', action: 'upgraded plan', amount: '$99.00/mo', time: '12m ago', status: 'success' },
+    { user: 'Alex Kim', action: 'submitted ticket', amount: '#4521', time: '25m ago', status: 'warning' },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900/50 backdrop-blur-xl border-r border-white/5 p-6 hidden lg:block">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">📊</div>
+          <span className="text-xl font-bold">Nexus</span>
         </div>
-      </header>
+        <nav className="space-y-1">
+          {['Dashboard', 'Customers', 'Orders', 'Analytics', 'Settings'].map((item, i) => (
+            <button key={i} className={\`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all \${i === 0 ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-white border border-violet-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}\`}>
+              {item}
+            </button>
+          ))}
+        </nav>
+      </aside>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Stats Grid */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-gray-500 text-sm">Total Users</div>
-            <div className="text-3xl font-bold mt-2">1,234</div>
-            <div className="text-green-500 text-sm mt-2">+12.5%</div>
+      <div className="lg:pl-64">
+        {/* Header */}
+        <header className="sticky top-0 z-10 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div>
+              <h1 className="text-2xl font-bold">Dashboard</h1>
+              <p className="text-sm text-gray-400">Welcome back, here's what's happening</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center font-semibold text-sm">JD</div>
+            </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-gray-500 text-sm">Revenue</div>
-            <div className="text-3xl font-bold mt-2">$12,345</div>
-            <div className="text-green-500 text-sm mt-2">+8.2%</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-gray-500 text-sm">Active Projects</div>
-            <div className="text-3xl font-bold mt-2">42</div>
-            <div className="text-blue-500 text-sm mt-2">+3</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-gray-500 text-sm">Completion Rate</div>
-            <div className="text-3xl font-bold mt-2">94%</div>
-            <div className="text-green-500 text-sm mt-2">+2.1%</div>
-          </div>
-        </div>
+        </header>
 
-        {/* Chart Section */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Activity Overview</h2>
-          <div className="h-64 flex items-center justify-center text-gray-400">
-            Chart goes here
+        <main className="p-6 space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {stats.map((stat, i) => (
+              <div key={i} className="group relative p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 hover:-translate-y-1">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={\`w-12 h-12 rounded-xl bg-gradient-to-br \${stat.gradient} flex items-center justify-center shadow-lg\`}>
+                    {i === 0 ? '💰' : i === 1 ? '👥' : i === 2 ? '📦' : '📈'}
+                  </div>
+                  <div className={\`flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-full \${stat.up ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}\`}>
+                    {stat.up ? '↑' : '↓'} {stat.change}
+                  </div>
+                </div>
+                <div className="text-3xl font-bold mb-1">{stat.value}</div>
+                <div className="text-sm text-gray-400">{stat.label}</div>
+              </div>
+            ))}
           </div>
-        </div>
-      </main>
+
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Chart */}
+            <div className="lg:col-span-2 p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10">
+              <h2 className="text-lg font-semibold mb-6">Revenue Analytics</h2>
+              <div className="relative h-64 flex items-end justify-between gap-4 px-2">
+                {chartData.map((item, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                    <div
+                      className="w-full rounded-t-lg bg-gradient-to-t from-violet-600 to-purple-500 hover:from-violet-500 hover:to-purple-400 transition-all"
+                      style={{ height: \`\${item.value * 2}px\` }}
+                    />
+                    <span className="text-xs text-gray-500">{item.day}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Activity */}
+            <div className="p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10">
+              <h2 className="text-lg font-semibold mb-6">Recent Activity</h2>
+              <div className="space-y-4">
+                {activities.map((activity, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors">
+                    <div className={\`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold \${activity.status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : activity.status === 'info' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'}\`}>
+                      {activity.user.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm"><span className="font-medium">{activity.user}</span> <span className="text-gray-400">{activity.action}</span></p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-medium text-violet-400">{activity.amount}</span>
+                        <span className="text-xs text-gray-500">{activity.time}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }`
@@ -167,50 +320,132 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       {
         path: 'app/page.tsx',
         content: `export default function Blog() {
+  const featuredPost = {
+    title: 'The Future of Web Development: AI-Powered Design',
+    excerpt: 'Explore how artificial intelligence is revolutionizing web development and what it means for the future of digital design.',
+    date: '2024-01-20',
+    author: 'Sarah Chen',
+    readTime: '12 min',
+    category: 'Featured',
+  }
+
   const posts = [
-    {
-      title: "Getting Started with Next.js",
-      excerpt: "Learn the basics of building modern web applications",
-      date: "2024-01-15",
-      author: "John Doe"
-    },
-    {
-      title: "The Future of Web Development",
-      excerpt: "Exploring upcoming trends and technologies",
-      date: "2024-01-10",
-      author: "Jane Smith"
-    }
+    { title: 'Mastering React Server Components', excerpt: 'Deep dive into RSC and build blazing-fast apps.', date: '2024-01-18', author: 'Alex Kim', readTime: '8 min', category: 'React', gradient: 'from-cyan-500 to-blue-600' },
+    { title: 'TypeScript 5.0: Game-Changing Features', excerpt: 'Discover powerful new features in TypeScript 5.0.', date: '2024-01-16', author: 'Emma Davis', readTime: '6 min', category: 'TypeScript', gradient: 'from-blue-500 to-indigo-600' },
+    { title: 'Building Beautiful UIs with Tailwind', excerpt: 'Learn advanced Tailwind techniques for stunning interfaces.', date: '2024-01-14', author: 'Marcus Johnson', readTime: '10 min', category: 'CSS', gradient: 'from-teal-500 to-emerald-600' },
+    { title: 'Next.js 14 App Router Deep Dive', excerpt: 'Everything about the new App Router and migration.', date: '2024-01-12', author: 'Lisa Wang', readTime: '15 min', category: 'Next.js', gradient: 'from-gray-700 to-gray-900' },
+    { title: 'State Management in 2024', excerpt: 'Comparing Zustand, Jotai, and Redux Toolkit.', date: '2024-01-10', author: 'David Park', readTime: '9 min', category: 'Architecture', gradient: 'from-orange-500 to-red-600' },
+    { title: 'Performance Optimization Secrets', excerpt: 'Advanced techniques for faster web applications.', date: '2024-01-08', author: 'Nina Patel', readTime: '11 min', category: 'Performance', gradient: 'from-amber-500 to-orange-600' },
   ]
 
+  const categories = ['All', 'React', 'TypeScript', 'CSS', 'Next.js', 'Architecture']
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950/10 to-slate-950" />
+        <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[150px]" />
+      </div>
+
       {/* Header */}
-      <header className="border-b py-12">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold mb-2">My Blog</h1>
-          <p className="text-gray-600">Thoughts, stories, and ideas</p>
-        </div>
+      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+        <nav className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">✨</div>
+            <span className="text-xl font-bold">DevBlog</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Home</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Articles</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">About</a>
+            <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">Subscribe</button>
+          </div>
+        </nav>
       </header>
 
-      {/* Posts */}
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <div className="space-y-12">
-          {posts.map((post, i) => (
-            <article key={i} className="border-b pb-8">
-              <h2 className="text-3xl font-bold mb-2 hover:text-blue-600 cursor-pointer">
-                {post.title}
-              </h2>
-              <div className="text-sm text-gray-500 mb-4">
-                {post.date} · {post.author}
+      {/* Featured Post */}
+      <section className="container mx-auto px-6 py-16">
+        <div className="relative group rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 overflow-hidden p-8 lg:p-12">
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="px-3 py-1 rounded-full bg-violet-500/20 text-violet-400 text-sm font-medium">{featuredPost.category}</span>
+              <span className="flex items-center gap-1 text-amber-400 text-sm">🔥 Trending</span>
+            </div>
+            <h1 className="text-3xl lg:text-4xl font-bold mb-4">{featuredPost.title}</h1>
+            <p className="text-lg text-gray-400 mb-8 max-w-2xl">{featuredPost.excerpt}</p>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center font-bold text-sm">SC</div>
+                <div>
+                  <div className="font-medium">{featuredPost.author}</div>
+                  <div className="text-sm text-gray-500">{featuredPost.date} · {featuredPost.readTime}</div>
+                </div>
               </div>
-              <p className="text-gray-700 text-lg mb-4">{post.excerpt}</p>
-              <button className="text-blue-600 hover:underline">
-                Read more →
-              </button>
+              <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">Read Article →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section className="container mx-auto px-6 mb-12">
+        <div className="flex flex-wrap items-center gap-2">
+          {categories.map((cat, i) => (
+            <button key={i} className={\`px-5 py-2.5 rounded-xl font-medium transition-all \${i === 0 ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white' : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white'}\`}>{cat}</button>
+          ))}
+        </div>
+      </section>
+
+      {/* Blog Posts Grid */}
+      <section className="container mx-auto px-6 pb-20">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.map((post, i) => (
+            <article key={i} className="group rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 overflow-hidden hover:border-white/20 transition-all duration-300 hover:-translate-y-1">
+              <div className={\`h-32 bg-gradient-to-r \${post.gradient} flex items-center justify-center relative\`}>
+                <div className="absolute inset-0 bg-black/20" />
+                <span className="relative text-4xl group-hover:scale-110 transition-transform">{post.category === 'React' ? '⚛️' : post.category === 'TypeScript' ? '📘' : post.category === 'CSS' ? '🎨' : post.category === 'Next.js' ? '▲' : post.category === 'Architecture' ? '🏗️' : '⚡'}</span>
+              </div>
+              <div className="p-6">
+                <span className="px-3 py-1 rounded-full bg-white/10 text-sm font-medium">{post.category}</span>
+                <h2 className="text-xl font-bold mt-4 mb-3 group-hover:text-violet-400 transition-colors">{post.title}</h2>
+                <p className="text-gray-400 text-sm mb-4">{post.excerpt}</p>
+                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/50 to-purple-500/50 flex items-center justify-center text-xs font-bold">{post.author.split(' ').map(n => n[0]).join('')}</div>
+                    <span className="text-sm text-gray-400">{post.author}</span>
+                  </div>
+                  <span className="text-xs text-gray-500">{post.readTime}</span>
+                </div>
+              </div>
             </article>
           ))}
         </div>
-      </main>
+      </section>
+
+      {/* Newsletter */}
+      <section className="container mx-auto px-6 pb-20">
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600" />
+          <div className="relative p-12 text-center">
+            <h2 className="text-3xl font-bold mb-4">Stay ahead of the curve</h2>
+            <p className="text-white/80 mb-8 max-w-xl mx-auto">Get weekly insights on web development delivered to your inbox.</p>
+            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <input type="email" placeholder="Enter your email" className="flex-1 px-6 py-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40" />
+              <button className="px-8 py-4 bg-white text-purple-600 rounded-xl font-semibold hover:bg-white/90 transition-colors">Subscribe</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-12">
+        <div className="container mx-auto px-6 text-center text-gray-500">
+          <p>© 2024 DevBlog. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   )
 }`
@@ -233,46 +468,105 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
         path: 'app/page.tsx',
         content: `export default function Shop() {
   const products = [
-    { id: 1, name: "Product 1", price: 29.99, image: "🎨" },
-    { id: 2, name: "Product 2", price: 39.99, image: "🎮" },
-    { id: 3, name: "Product 3", price: 49.99, image: "📱" },
-    { id: 4, name: "Product 4", price: 59.99, image: "💻" }
+    { id: 1, name: 'Premium Sneakers', price: 129.99, oldPrice: 179.99, image: '👟', category: 'Footwear', gradient: 'from-rose-100 to-pink-100', rating: 4.8, reviews: 234 },
+    { id: 2, name: 'Smart Watch Pro', price: 299.99, image: '⌚', category: 'Electronics', gradient: 'from-blue-100 to-cyan-100', rating: 4.9, reviews: 567 },
+    { id: 3, name: 'Wireless Headphones', price: 199.99, oldPrice: 249.99, image: '🎧', category: 'Audio', gradient: 'from-violet-100 to-purple-100', rating: 4.7, reviews: 432 },
+    { id: 4, name: 'Designer Backpack', price: 89.99, image: '🎒', category: 'Accessories', gradient: 'from-amber-100 to-orange-100', rating: 4.6, reviews: 189 },
+    { id: 5, name: 'Fitness Tracker', price: 79.99, oldPrice: 99.99, image: '💪', category: 'Fitness', gradient: 'from-emerald-100 to-teal-100', rating: 4.5, reviews: 321 },
+    { id: 6, name: 'Portable Speaker', price: 149.99, image: '🔊', category: 'Audio', gradient: 'from-indigo-100 to-blue-100', rating: 4.8, reviews: 278 },
+    { id: 7, name: 'Leather Wallet', price: 59.99, image: '👛', category: 'Accessories', gradient: 'from-yellow-100 to-amber-100', rating: 4.4, reviews: 156 },
+    { id: 8, name: 'Sunglasses', price: 119.99, oldPrice: 159.99, image: '🕶️', category: 'Fashion', gradient: 'from-gray-100 to-slate-100', rating: 4.7, reviews: 298 },
   ]
 
+  const categories = ['All', 'Footwear', 'Electronics', 'Audio', 'Accessories', 'Fitness', 'Fashion']
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950/10 to-slate-950" />
+      </div>
+
       {/* Header */}
-      <header className="bg-white shadow">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">My Shop</h1>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded">
-            Cart (0)
-          </button>
+      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xl">🛍️</div>
+            <span className="text-xl font-bold">Luxe Store</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-8">
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Home</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Shop</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">About</a>
+          </nav>
+          <div className="flex items-center gap-4">
+            <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">🔍</button>
+            <button className="relative px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">
+              🛒 Cart
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full text-xs flex items-center justify-center">3</span>
+            </button>
+          </div>
         </div>
       </header>
 
+      {/* Hero Banner */}
+      <section className="container mx-auto px-6 py-16">
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600" />
+          <div className="relative p-12 md:p-16 text-center">
+            <span className="inline-block px-4 py-2 rounded-full bg-white/20 text-sm font-medium mb-6">🔥 Limited Time Offer</span>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Summer Collection 2024</h1>
+            <p className="text-xl text-white/80 mb-8 max-w-xl mx-auto">Up to 50% off on selected items. Free shipping on orders over $100.</p>
+            <button className="px-8 py-4 bg-white text-purple-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all hover:scale-105">Shop Now →</button>
+          </div>
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section className="container mx-auto px-6 mb-12">
+        <div className="flex flex-wrap items-center gap-2">
+          {categories.map((cat, i) => (
+            <button key={i} className={\`px-5 py-2.5 rounded-xl font-medium transition-all \${i === 0 ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white' : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white'}\`}>{cat}</button>
+          ))}
+        </div>
+      </section>
+
       {/* Products */}
-      <main className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold mb-8">Products</h2>
-        <div className="grid md:grid-cols-4 gap-6">
+      <main className="container mx-auto px-6 pb-20">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {products.map(product => (
-            <div key={product.id} className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="h-48 bg-gray-100 flex items-center justify-center text-6xl">
-                {product.image}
+            <div key={product.id} className="group rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 overflow-hidden hover:border-white/20 transition-all duration-300 hover:-translate-y-1">
+              <div className={\`h-48 bg-gradient-to-br \${product.gradient} flex items-center justify-center relative\`}>
+                <span className="text-6xl group-hover:scale-110 transition-transform duration-300">{product.image}</span>
+                {product.oldPrice && <span className="absolute top-3 left-3 px-2 py-1 bg-rose-500 text-white text-xs font-medium rounded-lg">SALE</span>}
+                <button className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity">❤️</button>
               </div>
-              <div className="p-4">
-                <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                <p className="text-2xl font-bold text-blue-600 mb-4">
-                  \${product.price}
-                </p>
-                <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
-                  Add to Cart
-                </button>
+              <div className="p-5">
+                <span className="text-xs text-gray-400">{product.category}</span>
+                <h3 className="font-semibold text-lg mt-1 mb-2">{product.name}</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-amber-400 text-sm">★ {product.rating}</span>
+                  <span className="text-xs text-gray-500">({product.reviews})</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-violet-400">\${product.price}</span>
+                    {product.oldPrice && <span className="text-sm text-gray-500 line-through">\${product.oldPrice}</span>}
+                  </div>
+                </div>
+                <button className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">Add to Cart</button>
               </div>
             </div>
           ))}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-12">
+        <div className="container mx-auto px-6 text-center text-gray-500">
+          <p>© 2024 Luxe Store. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   )
 }`
@@ -294,43 +588,102 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       {
         path: 'app/page.tsx',
         content: `export default function Portfolio() {
+  const skills = [
+    { name: 'React', color: 'from-cyan-500 to-blue-600' },
+    { name: 'TypeScript', color: 'from-blue-500 to-indigo-600' },
+    { name: 'Node.js', color: 'from-emerald-500 to-teal-600' },
+    { name: 'Python', color: 'from-amber-500 to-orange-600' },
+    { name: 'Next.js', color: 'from-gray-600 to-gray-800' },
+    { name: 'Tailwind', color: 'from-cyan-400 to-blue-500' },
+  ]
+
+  const projects = [
+    { title: 'AI Dashboard', desc: 'Real-time analytics platform with ML predictions', gradient: 'from-violet-500 to-purple-600', tags: ['React', 'Python', 'ML'] },
+    { title: 'E-Commerce App', desc: 'Full-stack shopping platform with payments', gradient: 'from-emerald-500 to-teal-600', tags: ['Next.js', 'Stripe'] },
+    { title: 'Social Network', desc: 'Real-time chat and social features', gradient: 'from-rose-500 to-pink-600', tags: ['React', 'Firebase'] },
+    { title: 'SaaS Platform', desc: 'Multi-tenant application with billing', gradient: 'from-amber-500 to-orange-600', tags: ['Node.js', 'PostgreSQL'] },
+  ]
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950/10 to-slate-950" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[150px]" />
+      </div>
+
       {/* Hero */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-6"></div>
-        <h1 className="text-5xl font-bold mb-4">John Doe</h1>
-        <p className="text-xl text-gray-300 mb-8">Full-Stack Developer</p>
-        <div className="flex gap-4 justify-center">
-          <button className="bg-blue-600 px-6 py-3 rounded-lg hover:bg-blue-700">
-            View Work
-          </button>
-          <button className="border border-white px-6 py-3 rounded-lg hover:bg-white hover:text-gray-900">
-            Contact Me
-          </button>
+      <section className="container mx-auto px-6 py-24 text-center">
+        <div className="relative inline-block mb-8">
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-2xl opacity-50" />
+          <div className="relative w-32 h-32 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-full flex items-center justify-center text-5xl">👨‍💻</div>
+        </div>
+
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6">
+          <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+          <span className="text-sm text-gray-300">Available for work</span>
+        </div>
+
+        <h1 className="text-5xl md:text-6xl font-bold mb-4">John Doe</h1>
+        <p className="text-xl text-gray-400 mb-8 max-w-xl mx-auto">Full-Stack Developer crafting beautiful, performant web experiences with modern technologies.</p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <button className="px-8 py-4 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-violet-500/25 transition-all hover:scale-105">View Projects →</button>
+          <button className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all">Contact Me</button>
+        </div>
+
+        {/* Skills */}
+        <div className="flex flex-wrap justify-center gap-3">
+          {skills.map((skill, i) => (
+            <span key={i} className={\`px-4 py-2 rounded-xl bg-gradient-to-r \${skill.color} text-sm font-medium\`}>{skill.name}</span>
+          ))}
         </div>
       </section>
 
       {/* Projects */}
-      <section className="container mx-auto px-4 py-20">
-        <h2 className="text-3xl font-bold mb-12 text-center">Featured Projects</h2>
-        <div className="grid md:grid-cols-2 gap-8">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition">
-              <div className="h-48 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+      <section className="container mx-auto px-6 py-24">
+        <h2 className="text-4xl font-bold text-center mb-4">Featured Projects</h2>
+        <p className="text-xl text-gray-400 text-center mb-16 max-w-2xl mx-auto">A selection of my recent work</p>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {projects.map((project, i) => (
+            <div key={i} className="group rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 overflow-hidden hover:border-white/20 transition-all duration-300 hover:-translate-y-1">
+              <div className={\`h-48 bg-gradient-to-r \${project.gradient} flex items-center justify-center relative\`}>
+                <span className="text-6xl group-hover:scale-110 transition-transform duration-300">{i === 0 ? '📊' : i === 1 ? '🛒' : i === 2 ? '💬' : '🚀'}</span>
+              </div>
               <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">Project {i}</h3>
-                <p className="text-gray-400 mb-4">
-                  A description of this amazing project
-                </p>
-                <button className="text-blue-400 hover:underline">
-                  Learn more →
-                </button>
+                <h3 className="text-xl font-bold mb-2">{project.title}</h3>
+                <p className="text-gray-400 mb-4">{project.desc}</p>
+                <div className="flex flex-wrap gap-2">
+                  {project.tags.map((tag, j) => (
+                    <span key={j} className="px-3 py-1 bg-white/10 rounded-lg text-sm">{tag}</span>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      {/* Contact */}
+      <section className="container mx-auto px-6 py-24">
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600" />
+          <div className="relative p-12 md:p-20 text-center">
+            <h2 className="text-4xl font-bold mb-6">Let's Work Together</h2>
+            <p className="text-xl text-white/80 mb-10 max-w-xl mx-auto">Have a project in mind? I'd love to hear about it.</p>
+            <button className="px-10 py-5 bg-white text-purple-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all hover:scale-105">Get In Touch →</button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-12">
+        <div className="container mx-auto px-6 text-center text-gray-500">
+          <p>© 2024 John Doe. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   )
 }`
@@ -342,7 +695,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     name: 'SaaS App',
     description: 'SaaS application with pricing, features, and signup',
     category: 'Business',
-    icon: '🚀',
+    icon: '☁️',
     tags: ['saas', 'startup', 'business'],
     previewImage: '/templates/saas.png',
     difficulty: 'Intermediate',
@@ -353,55 +706,112 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
         path: 'app/page.tsx',
         content: `export default function SaaS() {
   const plans = [
-    { name: "Starter", price: 9, features: ["5 Projects", "1GB Storage", "Email Support"] },
-    { name: "Pro", price: 29, features: ["Unlimited Projects", "10GB Storage", "Priority Support", "Advanced Analytics"] },
-    { name: "Enterprise", price: 99, features: ["Everything in Pro", "Custom Domain", "24/7 Support", "SLA"] }
+    { name: 'Starter', price: 9, features: ['5 Team Members', '10 Projects', 'Basic Analytics', 'Email Support'], icon: '🚀', gradient: 'from-gray-500 to-gray-700' },
+    { name: 'Pro', price: 29, features: ['25 Team Members', 'Unlimited Projects', 'Advanced Analytics', 'Priority Support', 'API Access'], icon: '⚡', gradient: 'from-violet-500 to-purple-600', popular: true },
+    { name: 'Enterprise', price: 99, features: ['Unlimited Members', 'Unlimited Projects', 'Custom Analytics', '24/7 Support', 'Custom Integrations', 'SLA'], icon: '🏢', gradient: 'from-cyan-500 to-blue-600' },
+  ]
+
+  const features = [
+    { icon: '⚡', title: 'Lightning Fast', desc: 'Optimized for performance' },
+    { icon: '🔒', title: 'Secure', desc: 'Enterprise-grade security' },
+    { icon: '📊', title: 'Analytics', desc: 'Real-time insights' },
+    { icon: '🔌', title: 'Integrations', desc: '100+ apps supported' },
   ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950/10 to-slate-950" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-500/20 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[150px]" />
+      </div>
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+        <nav className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xl">☁️</div>
+            <span className="text-xl font-bold">CloudFlow</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Features</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Pricing</a>
+            <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">Start Free</button>
+          </div>
+        </nav>
+      </header>
+
       {/* Hero */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-6">
-            The All-in-One Platform for Your Business
-          </h1>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Everything you need to manage and grow your business
-          </p>
-          <button className="bg-white text-blue-600 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100">
-            Start Free Trial
-          </button>
+      <section className="container mx-auto px-6 py-24 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 mb-8">
+          <span className="w-2 h-2 bg-violet-400 rounded-full animate-pulse" />
+          <span className="text-sm text-violet-300">New: AI-powered automation</span>
+        </div>
+
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+          Supercharge your
+          <span className="block bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">workflow today</span>
+        </h1>
+
+        <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">The all-in-one platform that helps modern teams collaborate, automate, and scale faster.</p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button className="px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-violet-500/25 transition-all hover:scale-105">Start Free Trial →</button>
+          <button className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all">Watch Demo</button>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="container mx-auto px-6 py-24">
+        <div className="grid md:grid-cols-4 gap-6">
+          {features.map((f, i) => (
+            <div key={i} className="group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300 hover:-translate-y-1 text-center">
+              <span className="text-4xl mb-4 block group-hover:scale-110 transition-transform">{f.icon}</span>
+              <h3 className="font-bold mb-2">{f.title}</h3>
+              <p className="text-sm text-gray-400">{f.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Pricing */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Simple Pricing</h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {plans.map((plan, i) => (
-              <div key={i} className="border rounded-lg p-8 hover:shadow-lg transition">
+      <section className="container mx-auto px-6 py-24">
+        <h2 className="text-4xl font-bold text-center mb-4">Simple, Transparent Pricing</h2>
+        <p className="text-xl text-gray-400 text-center mb-16 max-w-2xl mx-auto">No hidden fees. Cancel anytime.</p>
+
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {plans.map((plan, i) => (
+            <div key={i} className={\`relative rounded-2xl bg-white/5 backdrop-blur-sm border \${plan.popular ? 'border-violet-500/50 scale-105' : 'border-white/10'} overflow-hidden transition-all duration-300 hover:-translate-y-1\`}>
+              {plan.popular && <div className="absolute top-0 left-0 right-0 py-1 bg-gradient-to-r from-violet-500 to-purple-600 text-center text-sm font-medium">Most Popular</div>}
+              <div className={\`p-8 \${plan.popular ? 'pt-12' : ''}\`}>
+                <div className={\`w-14 h-14 rounded-2xl bg-gradient-to-br \${plan.gradient} flex items-center justify-center text-2xl mb-6\`}>{plan.icon}</div>
                 <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                <div className="text-4xl font-bold mb-6">
-                  \${plan.price}<span className="text-lg text-gray-500">/mo</span>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="text-5xl font-bold">\${plan.price}</span>
+                  <span className="text-gray-400">/mo</span>
                 </div>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, j) => (
-                    <li key={j} className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      {feature}
+                    <li key={j} className="flex items-center gap-2 text-sm">
+                      <span className="text-emerald-400">✓</span>
+                      <span className="text-gray-300">{feature}</span>
                     </li>
                   ))}
                 </ul>
-                <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700">
-                  Get Started
-                </button>
+                <button className={\`w-full py-4 rounded-xl font-semibold transition-all \${plan.popular ? 'bg-gradient-to-r from-violet-500 to-purple-600 hover:shadow-lg hover:shadow-violet-500/25' : 'bg-white/5 border border-white/10 hover:bg-white/10'}\`}>Get Started</button>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-12">
+        <div className="container mx-auto px-6 text-center text-gray-500">
+          <p>© 2024 CloudFlow. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   )
 }`
@@ -424,59 +834,72 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
         path: 'app/login/page.tsx',
         content: `export default function Login() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <div className="h-16 w-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-              A
-            </div>
-            <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-            <p className="text-gray-600">Sign in to your account</p>
+    <div className="min-h-screen bg-slate-950 text-white flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/20 rounded-full blur-[100px]" />
+        <div className="relative z-10 flex flex-col justify-center items-center w-full p-12">
+          <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center text-4xl mb-8">✨</div>
+          <h1 className="text-4xl font-bold mb-4 text-center">Welcome to Lumina</h1>
+          <p className="text-xl text-white/80 text-center max-w-md">The all-in-one platform for building amazing products.</p>
+        </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-12">
+            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center text-2xl">✨</div>
+            <span className="text-2xl font-bold">Lumina</span>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold mb-2">Welcome back</h2>
+            <p className="text-gray-400">Enter your credentials to access your account</p>
           </div>
 
           <form className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                placeholder="you@example.com"
-              />
+              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+              <input type="email" className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/50 transition-colors" placeholder="you@example.com" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
-              <input
-                type="password"
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                placeholder="••••••••"
-              />
+              <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+              <input type="password" className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/50 transition-colors" placeholder="••••••••" />
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-2" />
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 rounded border-white/20 bg-white/5" />
                 Remember me
               </label>
-              <a href="#" className="text-blue-600 hover:underline">
-                Forgot password?
-              </a>
+              <a href="#" className="text-sm text-violet-400 hover:text-violet-300 transition-colors">Forgot password?</a>
             </div>
 
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition"
-            >
-              Sign In
-            </button>
+            <button type="submit" className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold text-lg hover:shadow-lg hover:shadow-violet-500/25 transition-all hover:scale-[1.02]">Sign In</button>
           </form>
 
-          <p className="text-center text-sm text-gray-600 mt-6">
-            Don't have an account?{' '}
-            <a href="/signup" className="text-blue-600 font-semibold hover:underline">
-              Sign up
-            </a>
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
+            <div className="relative flex justify-center text-sm"><span className="px-4 bg-slate-950 text-gray-500">Or continue with</span></div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors">
+              <span className="text-xl">🔵</span>
+              <span className="font-medium">Google</span>
+            </button>
+            <button className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors">
+              <span className="text-xl">⚫</span>
+              <span className="font-medium">GitHub</span>
+            </button>
+          </div>
+
+          <p className="text-center text-sm text-gray-400 mt-8">
+            Don't have an account? <a href="/signup" className="text-violet-400 font-semibold hover:text-violet-300 transition-colors">Sign up</a>
           </p>
         </div>
       </div>
@@ -501,73 +924,116 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       {
         path: 'app/page.tsx',
         content: `export default function AdminPanel() {
+  const navItems = ['Dashboard', 'Users', 'Products', 'Analytics', 'Settings']
   const users = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin', status: 'Active' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'User', status: 'Active' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'User', status: 'Inactive' }
+    { id: 1, name: 'Sarah Chen', email: 'sarah@example.com', role: 'Admin', status: 'Active', avatar: 'SC' },
+    { id: 2, name: 'Mike Johnson', email: 'mike@example.com', role: 'Editor', status: 'Active', avatar: 'MJ' },
+    { id: 3, name: 'Emma Davis', email: 'emma@example.com', role: 'Viewer', status: 'Active', avatar: 'ED' },
+    { id: 4, name: 'Alex Kim', email: 'alex@example.com', role: 'Editor', status: 'Inactive', avatar: 'AK' },
+    { id: 5, name: 'Lisa Wang', email: 'lisa@example.com', role: 'Viewer', status: 'Active', avatar: 'LW' },
   ]
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-slate-950 text-white flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white p-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Admin</h1>
+      <aside className="w-64 bg-slate-900/50 backdrop-blur-xl border-r border-white/5 p-6 hidden lg:block">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xl">⚙️</div>
+          <span className="text-xl font-bold">AdminX</span>
         </div>
-        <nav className="space-y-2">
-          <a href="#" className="block px-4 py-3 bg-blue-600 rounded-lg">Dashboard</a>
-          <a href="#" className="block px-4 py-3 hover:bg-gray-800 rounded-lg">Users</a>
-          <a href="#" className="block px-4 py-3 hover:bg-gray-800 rounded-lg">Analytics</a>
-          <a href="#" className="block px-4 py-3 hover:bg-gray-800 rounded-lg">Settings</a>
+        <nav className="space-y-1">
+          {navItems.map((item, i) => (
+            <button key={i} className={\`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left \${i === 1 ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-white border border-violet-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}\`}>{item}</button>
+          ))}
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
-        <header className="mb-8">
-          <h2 className="text-3xl font-bold">User Management</h2>
-          <p className="text-gray-600">Manage users and permissions</p>
+      <div className="flex-1">
+        {/* Header */}
+        <header className="sticky top-0 z-10 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">User Management</h1>
+              <p className="text-sm text-gray-400">Manage users and permissions</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">+ Add User</button>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center font-semibold text-sm">AD</div>
+            </div>
+          </div>
         </header>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Name</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Role</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(user => (
-                <tr key={user.id} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-4">{user.name}</td>
-                  <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={\`px-3 py-1 text-sm rounded-full \${
-                      user.status === 'Active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }\`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="text-blue-600 hover:underline text-sm">Edit</button>
-                  </td>
+        <main className="p-6">
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {[
+              { label: 'Total Users', value: '1,234', change: '+12%', up: true },
+              { label: 'Active Now', value: '42', change: '+5%', up: true },
+              { label: 'New Today', value: '18', change: '+8%', up: true },
+              { label: 'Pending', value: '7', change: '-2%', up: false },
+            ].map((stat, i) => (
+              <div key={i} className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                <div className="text-sm text-gray-400 mb-1">{stat.label}</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{stat.value}</span>
+                  <span className={\`text-xs font-medium \${stat.up ? 'text-emerald-400' : 'text-red-400'}\`}>{stat.change}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+            <div className="p-4 border-b border-white/5 flex items-center justify-between">
+              <input type="text" placeholder="Search users..." className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-violet-500/50 w-64" />
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                Showing <span className="text-white font-medium">5</span> of <span className="text-white font-medium">1,234</span>
+              </div>
+            </div>
+            <table className="w-full">
+              <thead className="bg-white/5 border-b border-white/5">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">User</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Role</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </main>
+              </thead>
+              <tbody>
+                {users.map(user => (
+                  <tr key={user.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={\`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold \${user.status === 'Active' ? 'bg-violet-500/20 text-violet-400' : 'bg-gray-500/20 text-gray-400'}\`}>{user.avatar}</div>
+                        <div>
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={\`px-3 py-1 text-xs font-medium rounded-full \${user.role === 'Admin' ? 'bg-violet-500/20 text-violet-400' : user.role === 'Editor' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}\`}>{user.role}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={\`flex items-center gap-2 text-sm \${user.status === 'Active' ? 'text-emerald-400' : 'text-gray-500'}\`}>
+                        <span className={\`w-2 h-2 rounded-full \${user.status === 'Active' ? 'bg-emerald-400' : 'bg-gray-500'}\`}></span>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white">✏️</button>
+                        <button className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-gray-400 hover:text-red-400">🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }`
@@ -589,112 +1055,118 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       {
         path: 'app/page.tsx',
         content: `export default function TaskManager() {
-  const columns = {
-    todo: [
-      { id: 1, title: 'Design new landing page', priority: 'High' },
-      { id: 2, title: 'Update documentation', priority: 'Low' }
-    ],
-    inProgress: [
-      { id: 3, title: 'Build authentication', priority: 'High' }
-    ],
-    done: [
-      { id: 4, title: 'Setup project', priority: 'Medium' },
-      { id: 5, title: 'Install dependencies', priority: 'Low' }
-    ]
+  const columns = [
+    { id: 'todo', title: 'To Do', color: 'amber', tasks: [
+      { id: 1, title: 'Design new landing page', priority: 'High', assignee: 'SC', dueDate: 'Jan 25' },
+      { id: 2, title: 'Update API documentation', priority: 'Low', assignee: 'MJ', dueDate: 'Jan 28' },
+      { id: 3, title: 'Review PRs', priority: 'Medium', assignee: 'ED', dueDate: 'Jan 24' },
+    ]},
+    { id: 'progress', title: 'In Progress', color: 'violet', tasks: [
+      { id: 4, title: 'Build authentication system', priority: 'High', assignee: 'AK', dueDate: 'Jan 22' },
+      { id: 5, title: 'Implement dark mode', priority: 'Medium', assignee: 'LW', dueDate: 'Jan 26' },
+    ]},
+    { id: 'review', title: 'In Review', color: 'cyan', tasks: [
+      { id: 6, title: 'Payment integration', priority: 'High', assignee: 'SC', dueDate: 'Jan 21' },
+    ]},
+    { id: 'done', title: 'Done', color: 'emerald', tasks: [
+      { id: 7, title: 'Setup project structure', priority: 'Medium', assignee: 'MJ', dueDate: 'Jan 15' },
+      { id: 8, title: 'Install dependencies', priority: 'Low', assignee: 'ED', dueDate: 'Jan 14' },
+    ]},
+  ]
+
+  const getPriorityStyles = (priority: string) => {
+    switch (priority) {
+      case 'High': return 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+      case 'Medium': return 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+    }
   }
 
+  const getColumnColor = (color: string) => ({
+    amber: 'from-amber-500 to-orange-600',
+    violet: 'from-violet-500 to-purple-600',
+    cyan: 'from-cyan-500 to-blue-600',
+    emerald: 'from-emerald-500 to-teal-600',
+  }[color])
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-purple-50 p-8">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Task Manager</h1>
-        <p className="text-gray-600">Organize your work efficiently</p>
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950/10 to-slate-950" />
+      </div>
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xl">✅</div>
+            <span className="text-xl font-bold">TaskFlow</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">+ New Task</button>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center font-semibold text-sm">JD</div>
+          </div>
+        </div>
       </header>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* To Do Column */}
-        <div className="bg-white rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <span className="h-3 w-3 bg-yellow-500 rounded-full"></span>
-              To Do
-            </h2>
-            <span className="text-sm text-gray-500">{columns.todo.length}</span>
-          </div>
-          <div className="space-y-3">
-            {columns.todo.map(task => (
-              <div key={task.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-yellow-500 hover:shadow-md transition cursor-pointer">
-                <p className="font-medium mb-2">{task.title}</p>
-                <span className={\`text-xs px-2 py-1 rounded \${
-                  task.priority === 'High'
-                    ? 'bg-red-100 text-red-700'
-                    : task.priority === 'Medium'
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'bg-gray-200 text-gray-700'
-                }\`}>
-                  {task.priority}
-                </span>
+      <main className="container mx-auto px-6 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'Total Tasks', value: '24', icon: '📋' },
+            { label: 'In Progress', value: '8', icon: '🔄' },
+            { label: 'Completed', value: '12', icon: '✅' },
+            { label: 'Due Today', value: '3', icon: '⚡' },
+          ].map((stat, i) => (
+            <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-4">
+              <span className="text-2xl">{stat.icon}</span>
+              <div>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-sm text-gray-400">{stat.label}</div>
               </div>
-            ))}
-            <button className="w-full py-3 border-2 border-dashed rounded-lg text-gray-400 hover:border-gray-400 hover:text-gray-600">
-              + Add Task
-            </button>
-          </div>
+            </div>
+          ))}
         </div>
 
-        {/* In Progress Column */}
-        <div className="bg-white rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <span className="h-3 w-3 bg-blue-500 rounded-full"></span>
-              In Progress
-            </h2>
-            <span className="text-sm text-gray-500">{columns.inProgress.length}</span>
-          </div>
-          <div className="space-y-3">
-            {columns.inProgress.map(task => (
-              <div key={task.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500 hover:shadow-md transition cursor-pointer">
-                <p className="font-medium mb-2">{task.title}</p>
-                <span className={\`text-xs px-2 py-1 rounded \${
-                  task.priority === 'High'
-                    ? 'bg-red-100 text-red-700'
-                    : task.priority === 'Medium'
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'bg-gray-200 text-gray-700'
-                }\`}>
-                  {task.priority}
-                </span>
+        {/* Kanban Board */}
+        <div className="grid grid-cols-4 gap-6">
+          {columns.map(column => (
+            <div key={column.id} className="rounded-2xl bg-white/5 border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className={\`w-3 h-3 rounded-full bg-gradient-to-r \${getColumnColor(column.color)}\`}></div>
+                  <h2 className="font-semibold">{column.title}</h2>
+                  <span className="px-2 py-0.5 bg-white/10 rounded-full text-xs">{column.tasks.length}</span>
+                </div>
+                <button className="p-1 hover:bg-white/10 rounded-lg transition-colors text-gray-400">+</button>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Done Column */}
-        <div className="bg-white rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <span className="h-3 w-3 bg-green-500 rounded-full"></span>
-              Done
-            </h2>
-            <span className="text-sm text-gray-500">{columns.done.length}</span>
-          </div>
-          <div className="space-y-3">
-            {columns.done.map(task => (
-              <div key={task.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-green-500 hover:shadow-md transition cursor-pointer opacity-75">
-                <p className="font-medium mb-2 line-through">{task.title}</p>
-                <span className={\`text-xs px-2 py-1 rounded \${
-                  task.priority === 'High'
-                    ? 'bg-red-100 text-red-700'
-                    : task.priority === 'Medium'
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'bg-gray-200 text-gray-700'
-                }\`}>
-                  {task.priority}
-                </span>
+              <div className="space-y-3">
+                {column.tasks.map(task => (
+                  <div key={task.id} className={\`group p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer \${column.id === 'done' ? 'opacity-60' : ''}\`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <p className={\`font-medium \${column.id === 'done' ? 'line-through text-gray-500' : ''}\`}>{task.title}</p>
+                      <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-gray-400">⋮</button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className={\`text-xs px-2 py-1 rounded-full border \${getPriorityStyles(task.priority)}\`}>{task.priority}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{task.dueDate}</span>
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500/50 to-purple-500/50 flex items-center justify-center text-[10px] font-bold">{task.assignee}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {column.id === 'todo' && (
+                  <button className="w-full py-3 border border-dashed border-white/10 rounded-xl text-gray-500 hover:border-white/30 hover:text-gray-300 transition-colors">+ Add Task</button>
+                )}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      </div>
+      </main>
     </div>
   )
 }`
@@ -716,85 +1188,147 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       {
         path: 'app/page.tsx',
         content: `export default function Docs() {
+  const navSections = [
+    { title: 'Getting Started', items: [
+      { name: 'Introduction', active: true },
+      { name: 'Installation' },
+      { name: 'Quick Start' },
+      { name: 'Configuration' },
+    ]},
+    { title: 'Core Concepts', items: [
+      { name: 'Components' },
+      { name: 'Routing' },
+      { name: 'State Management' },
+      { name: 'API Reference' },
+    ]},
+    { title: 'Advanced', items: [
+      { name: 'Performance' },
+      { name: 'Testing' },
+      { name: 'Deployment' },
+    ]},
+  ]
+
+  const tocItems = ['Overview', 'Installation', 'Quick Start', 'Example', 'Next Steps']
+
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-slate-950 text-white flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r p-6 overflow-y-auto">
-        <div className="mb-8">
-          <h1 className="text-xl font-bold">Documentation</h1>
-          <input
-            type="search"
-            placeholder="Search docs..."
-            className="w-full mt-4 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600"
-          />
+      <aside className="w-64 bg-slate-900/50 backdrop-blur-xl border-r border-white/5 p-6 hidden lg:block fixed left-0 top-0 bottom-0 overflow-y-auto">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xl">📚</div>
+          <span className="text-xl font-bold">Docs</span>
         </div>
+
+        <div className="relative mb-8">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
+          <input type="search" placeholder="Search docs..." className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-violet-500/50 transition-colors" />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-white/10 rounded text-xs text-gray-500">⌘K</kbd>
+        </div>
+
         <nav className="space-y-6">
-          <div>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Getting Started</h3>
-            <ul className="space-y-1">
-              <li><a href="#" className="block py-1 text-blue-600 font-medium">Introduction</a></li>
-              <li><a href="#" className="block py-1 hover:text-blue-600">Installation</a></li>
-              <li><a href="#" className="block py-1 hover:text-blue-600">Quick Start</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Core Concepts</h3>
-            <ul className="space-y-1">
-              <li><a href="#" className="block py-1 hover:text-blue-600">Components</a></li>
-              <li><a href="#" className="block py-1 hover:text-blue-600">Routing</a></li>
-              <li><a href="#" className="block py-1 hover:text-blue-600">State Management</a></li>
-            </ul>
-          </div>
+          {navSections.map((section, i) => (
+            <div key={i}>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{section.title}</h3>
+              <ul className="space-y-1">
+                {section.items.map((item, j) => (
+                  <li key={j}>
+                    <a href="#" className={\`block py-2 px-3 rounded-lg transition-colors \${item.active ? 'bg-violet-500/20 text-violet-400 border-l-2 border-violet-500' : 'text-gray-400 hover:text-white hover:bg-white/5'}\`}>{item.name}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
       </aside>
 
       {/* Content */}
-      <main className="flex-1 max-w-4xl p-12">
-        <article className="prose prose-lg">
-          <h1>Introduction</h1>
-          <p className="text-xl text-gray-600">
-            Welcome to our documentation. Learn how to build amazing applications.
-          </p>
-
-          <h2>Installation</h2>
-          <p>Get started by installing the package:</p>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-            <code>npm install my-package</code>
-          </pre>
-
-          <h2>Quick Start</h2>
-          <p>Here's a simple example to get you started:</p>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-            <code>{\`import { Component } from 'my-package'
-
-function App() {
-  return <Component />
-}\`}</code>
-          </pre>
-
-          <div className="bg-blue-50 border-l-4 border-blue-600 p-4 my-6">
-            <p className="font-semibold text-blue-900">Pro Tip</p>
-            <p className="text-blue-800 mt-1">
-              Check out our examples repository for more advanced use cases.
-            </p>
+      <main className="flex-1 lg:pl-64 lg:pr-64">
+        <div className="max-w-3xl mx-auto px-8 py-16">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-8">
+            <a href="#" className="hover:text-white transition-colors">Docs</a>
+            <span>→</span>
+            <a href="#" className="hover:text-white transition-colors">Getting Started</a>
+            <span>→</span>
+            <span className="text-violet-400">Introduction</span>
           </div>
 
-          <h2>Next Steps</h2>
-          <ul>
-            <li>Read about <a href="#" className="text-blue-600 hover:underline">Components</a></li>
-            <li>Learn about <a href="#" className="text-blue-600 hover:underline">Routing</a></li>
-            <li>Explore <a href="#" className="text-blue-600 hover:underline">Best Practices</a></li>
-          </ul>
-        </article>
+          <article>
+            <h1 className="text-4xl font-bold mb-4">Introduction</h1>
+            <p className="text-xl text-gray-400 mb-8">Welcome to the documentation. Learn how to build amazing applications with our platform.</p>
+
+            <h2 className="text-2xl font-bold mt-12 mb-4 flex items-center gap-2">
+              <span className="text-violet-400">#</span> Installation
+            </h2>
+            <p className="text-gray-300 mb-4">Get started by installing the package using your preferred package manager:</p>
+            <div className="relative group rounded-xl bg-gray-900/50 border border-white/10 overflow-hidden mb-8">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-white/5">
+                <span className="text-xs text-gray-500">Terminal</span>
+                <button className="text-xs text-gray-400 hover:text-white transition-colors">Copy</button>
+              </div>
+              <pre className="p-4 overflow-x-auto text-sm"><code className="text-emerald-400">npm install @lumina/core</code></pre>
+            </div>
+
+            <h2 className="text-2xl font-bold mt-12 mb-4 flex items-center gap-2">
+              <span className="text-violet-400">#</span> Quick Start
+            </h2>
+            <p className="text-gray-300 mb-4">Here's a simple example to get you started:</p>
+            <div className="relative group rounded-xl bg-gray-900/50 border border-white/10 overflow-hidden mb-8">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-white/5">
+                <span className="text-xs text-gray-500">app.tsx</span>
+                <button className="text-xs text-gray-400 hover:text-white transition-colors">Copy</button>
+              </div>
+              <pre className="p-4 overflow-x-auto text-sm"><code><span className="text-violet-400">import</span> <span className="text-cyan-400">{'{ Component }'}</span> <span className="text-violet-400">from</span> <span className="text-emerald-400">'@lumina/core'</span>
+
+<span className="text-violet-400">export default function</span> <span className="text-cyan-400">App</span>() {'{'}
+  <span className="text-violet-400">return</span> {'<'}<span className="text-cyan-400">Component</span> {'/>'}
+{'}'}</code></pre>
+            </div>
+
+            {/* Callout */}
+            <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 p-6 my-8">
+              <div className="flex items-start gap-4">
+                <span className="text-2xl">💡</span>
+                <div>
+                  <p className="font-semibold text-violet-400 mb-1">Pro Tip</p>
+                  <p className="text-gray-300">Check out our examples repository for more advanced use cases and patterns.</p>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold mt-12 mb-4 flex items-center gap-2">
+              <span className="text-violet-400">#</span> Next Steps
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {['Learn Components', 'Explore Routing', 'State Management', 'Best Practices'].map((item, i) => (
+                <a key={i} href="#" className="group p-4 rounded-xl bg-white/5 border border-white/10 hover:border-violet-500/30 transition-all">
+                  <div className="font-semibold group-hover:text-violet-400 transition-colors">{item}</div>
+                  <div className="text-sm text-gray-500">Learn more →</div>
+                </a>
+              ))}
+            </div>
+          </article>
+
+          {/* Footer Nav */}
+          <div className="flex items-center justify-between mt-16 pt-8 border-t border-white/5">
+            <div></div>
+            <a href="#" className="group flex items-center gap-2 text-violet-400 hover:text-violet-300 transition-colors">
+              Next: Installation
+              <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </a>
+          </div>
+        </div>
       </main>
 
       {/* Table of Contents */}
-      <aside className="w-64 border-l p-6 hidden lg:block">
-        <h3 className="text-sm font-semibold mb-4">On This Page</h3>
+      <aside className="w-64 border-l border-white/5 p-6 hidden lg:block fixed right-0 top-0 bottom-0 overflow-y-auto">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">On This Page</h3>
         <ul className="space-y-2 text-sm">
-          <li><a href="#" className="text-blue-600 hover:underline">Installation</a></li>
-          <li><a href="#" className="hover:text-blue-600">Quick Start</a></li>
-          <li><a href="#" className="hover:text-blue-600">Next Steps</a></li>
+          {tocItems.map((item, i) => (
+            <li key={i}>
+              <a href="#" className={\`block py-1 transition-colors \${i === 0 ? 'text-violet-400' : 'text-gray-400 hover:text-white'}\`}>{item}</a>
+            </li>
+          ))}
         </ul>
       </aside>
     </div>

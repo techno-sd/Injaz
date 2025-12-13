@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useWebContainer } from '@/lib/webcontainer-context'
-import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink } from 'lucide-react'
+import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -21,8 +21,17 @@ const deviceModes = {
   mobile: { width: '375px', icon: Smartphone, label: 'Mobile' },
 }
 
+// Debounce helper
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timeoutId: NodeJS.Timeout
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn(...args), delay)
+  }
+}
+
 export function WebContainerPreview({ projectId, files }: WebContainerPreviewProps) {
-  const { webcontainer, isBooting, error: bootError } = useWebContainer()
+  const { webcontainer, isBooting, error: bootError, restart } = useWebContainer()
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [isInstalling, setIsInstalling] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
@@ -30,8 +39,10 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
   const [showTerminal, setShowTerminal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
+  const [isHotReloading, setIsHotReloading] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const hasStarted = useRef(false)
+  const previousFilesRef = useRef<Map<string, string>>(new Map())
 
   // Build file tree from files array
   function buildFileTree(files: File[]) {
@@ -79,10 +90,18 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
       addLog('Files mounted successfully')
 
       // Check if package.json exists
-      const hasPackageJson = files.some(f => f.path === 'package.json')
+      const packageJsonFile = files.find(f => f.path === 'package.json')
+      const hasPackageJson = !!packageJsonFile
+
+      // Listen for server ready event
+      webcontainer.on('server-ready', (port, url) => {
+        addLog(`Server ready at ${url}`)
+        setPreviewUrl(url)
+        setIsStarting(false)
+      })
 
       if (hasPackageJson) {
-        // Install dependencies
+        // npm-based project: Install dependencies and run dev server
         setIsInstalling(true)
         addLog('Installing dependencies...')
 
@@ -104,17 +123,14 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
 
         setIsInstalling(false)
         addLog('Dependencies installed successfully')
-      }
 
-      // Start dev server
-      setIsStarting(true)
-      addLog('Starting dev server...')
+        // Start dev server
+        setIsStarting(true)
+        addLog('Starting dev server...')
 
-      // Try to find the dev script in package.json
-      const packageJsonFile = files.find(f => f.path === 'package.json')
-      let devCommand = 'dev'
+        // Try to find the dev script in package.json
+        let devCommand = 'dev'
 
-      if (packageJsonFile) {
         try {
           const packageJson = JSON.parse(packageJsonFile.content)
           if (packageJson.scripts) {
@@ -126,24 +142,62 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
         } catch (e) {
           console.warn('Failed to parse package.json:', e)
         }
+
+        const devProcess = await webcontainer.spawn('npm', ['run', devCommand])
+
+        devProcess.output.pipeTo(
+          new WritableStream({
+            write(data) {
+              addLog(data)
+            },
+          })
+        )
+      } else {
+        // Static HTML project: Use a simple HTTP server
+        setIsStarting(true)
+        addLog('Starting static file server...')
+
+        // Check if index.html exists
+        const hasIndexHtml = files.some(f => f.path === 'index.html')
+
+        if (!hasIndexHtml) {
+          // Create a simple index.html if not present
+          addLog('No index.html found, creating one...')
+          await webcontainer.fs.writeFile('index.html', `<!DOCTYPE html>
+<html>
+<head>
+  <title>Preview</title>
+  <style>
+    body { font-family: system-ui; padding: 2rem; text-align: center; }
+    h1 { color: #333; }
+  </style>
+</head>
+<body>
+  <h1>Add an index.html to see your preview</h1>
+</body>
+</html>`)
+        }
+
+        // Create a simple package.json for serve
+        await webcontainer.fs.writeFile('package.json', JSON.stringify({
+          name: 'static-preview',
+          scripts: {
+            start: 'npx -y serve -l 3000'
+          }
+        }, null, 2))
+
+        // Run npx serve to serve static files (use -y to auto-accept installation)
+        addLog('Starting server with npx serve...')
+        const serveProcess = await webcontainer.spawn('npx', ['-y', 'serve', '-l', '3000'])
+
+        serveProcess.output.pipeTo(
+          new WritableStream({
+            write(data) {
+              addLog(data)
+            },
+          })
+        )
       }
-
-      const devProcess = await webcontainer.spawn('npm', ['run', devCommand])
-
-      devProcess.output.pipeTo(
-        new WritableStream({
-          write(data) {
-            addLog(data)
-          },
-        })
-      )
-
-      // Wait for server to be ready
-      webcontainer.on('server-ready', (port, url) => {
-        addLog(`Server ready at ${url}`)
-        setPreviewUrl(url)
-        setIsStarting(false)
-      })
     } catch (err) {
       console.error('Failed to start dev server:', err)
       setError(err instanceof Error ? err.message : 'Failed to start dev server')
@@ -164,22 +218,63 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
     }
   }, [webcontainer, isBooting, files.length])
 
-  // Update files when they change
-  useEffect(() => {
-    if (!webcontainer || !previewUrl) return
+  // Debounced file update function
+  const updateChangedFiles = useCallback(
+    debounce(async (filesToUpdate: File[]) => {
+      if (!webcontainer || !previewUrl) return
 
-    async function updateFiles() {
       try {
-        for (const file of files) {
-          await webcontainer.fs.writeFile(file.path, file.content)
+        setIsHotReloading(true)
+        const changedFiles: string[] = []
+
+        for (const file of filesToUpdate) {
+          const previousContent = previousFilesRef.current.get(file.path)
+
+          // Only update files that have actually changed
+          if (previousContent !== file.content) {
+            await webcontainer.fs.writeFile(file.path, file.content)
+            previousFilesRef.current.set(file.path, file.content)
+            changedFiles.push(file.path)
+          }
+        }
+
+        if (changedFiles.length > 0) {
+          addLog(`Hot reload: Updated ${changedFiles.join(', ')}`)
+
+          // For static HTML projects, refresh the iframe
+          const hasPackageJson = filesToUpdate.some(f => f.path === 'package.json')
+          if (!hasPackageJson && iframeRef.current) {
+            // Small delay to ensure file is written
+            setTimeout(() => {
+              if (iframeRef.current) {
+                iframeRef.current.src = iframeRef.current.src
+              }
+            }, 100)
+          }
         }
       } catch (err) {
         console.error('Failed to update files:', err)
+      } finally {
+        setIsHotReloading(false)
       }
-    }
+    }, 300),
+    [webcontainer, previewUrl]
+  )
 
-    updateFiles()
-  }, [files, webcontainer, previewUrl])
+  // Update files when they change
+  useEffect(() => {
+    if (!webcontainer || !previewUrl) return
+    updateChangedFiles(files)
+  }, [files, webcontainer, previewUrl, updateChangedFiles])
+
+  // Initialize previous files map when server starts
+  useEffect(() => {
+    if (previewUrl && files.length > 0) {
+      files.forEach(file => {
+        previousFilesRef.current.set(file.path, file.content)
+      })
+    }
+  }, [previewUrl])
 
   if (bootError) {
     return (
@@ -190,15 +285,44 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
         <p className="text-xs text-muted-foreground mt-4">
           WebContainers require a modern browser with SharedArrayBuffer support
         </p>
+        <Button
+          onClick={async () => {
+            await restart()
+          }}
+          className="mt-4"
+          variant="outline"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Restart WebContainer
+        </Button>
       </div>
     )
   }
 
   if (isBooting) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-sm text-muted-foreground">Booting WebContainer...</p>
+      <div className="h-full flex flex-col items-center justify-center bg-background p-6 text-center">
+        <div className="relative">
+          <div className="h-16 w-16 rounded-full border-4 border-muted animate-pulse" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        </div>
+        <p className="text-sm font-medium mt-4">Booting WebContainer...</p>
+        <p className="text-xs text-muted-foreground mt-2 max-w-xs">
+          First boot may take 30-60 seconds to download required assets
+        </p>
+        <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
+          <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+          <span>Initializing secure environment</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-6 text-xs"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw className="h-3 w-3 mr-1.5" />
+          Taking too long? Refresh page
+        </Button>
       </div>
     )
   }
@@ -256,10 +380,17 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
         <div className="flex items-center gap-3">
           <Globe className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Live Preview</span>
-          <Badge variant="secondary" className="gap-1 text-xs">
-            <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-            Live
-          </Badge>
+          {isHotReloading ? (
+            <Badge variant="secondary" className="gap-1 text-xs bg-yellow-500/20 text-yellow-600">
+              <Zap className="h-3 w-3 animate-pulse" />
+              Updating...
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+              Live
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

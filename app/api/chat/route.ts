@@ -1,63 +1,94 @@
 import { createClient } from '@/lib/supabase/server'
-import { OpenAIStream, StreamingTextResponse } from 'ai'
-import OpenAI from 'openai'
+import { getProviderForModel, isModelAvailable } from '@/lib/ai/providers'
+import { buildContext } from '@/lib/ai/context-manager'
 import type { Message, File, AIAction } from '@/types'
 
 export const runtime = 'edge'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Default model to use
+const DEFAULT_MODEL = 'gpt-4o-mini'
 
 export async function POST(req: Request) {
   try {
-    const { projectId, messages, files } = await req.json()
+    const {
+      projectId,
+      messages,
+      files,
+      model = DEFAULT_MODEL,
+      activeFilePath = null,
+      temperature = 0.7,
+    } = await req.json()
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const isDemoProject = projectId === 'demo' || projectId === 'new'
+    const supabase = isDemoProject ? null : await createClient()
+    let userId: string | null = null
 
-    if (!user) {
+    if (supabase) {
+      const { data } = await supabase.auth.getUser()
+      userId = data.user?.id ?? null
+    }
+
+    if (!isDemoProject && !userId) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    // Verify user owns the project
-    const { data: project } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('id', projectId)
-      .eq('user_id', user.id)
-      .single()
+    if (supabase) {
+      // Verify user owns the project
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('id', projectId)
+        .eq('user_id', userId!)
+        .single()
 
-    if (!project) {
-      return new Response('Project not found', { status: 404 })
+      if (!project) {
+        return new Response('Project not found', { status: 404 })
+      }
     }
 
-    // Build the system prompt
-    const systemPrompt = buildSystemPrompt(files)
+    // Get the provider for the selected model
+    const provider = getProviderForModel(model)
+    if (!provider) {
+      return new Response(JSON.stringify({ error: 'Invalid model selected' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
-    // Prepare messages for OpenAI
-    const openAIMessages = [
-      { role: 'system' as const, content: systemPrompt },
+    if (!provider.isConfigured()) {
+      return new Response(JSON.stringify({
+        error: `${provider.name} API key is not configured`,
+        provider: provider.type
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Build optimized context
+    const context = buildContext(files, messages, activeFilePath, {
+      maxContextTokens: 100000,
+      includeFileContents: true,
+      prioritizeActiveFile: true,
+    })
+
+    // Prepare messages for the AI
+    const aiMessages = [
+      { role: 'system' as const, content: context.systemPrompt },
       ...messages.map((m: Message) => ({
-        role: m.role as 'user' | 'assistant' | 'system',
+        role: m.role as 'user' | 'assistant',
         content: m.content,
       })),
     ]
 
-    // Stream response from OpenAI
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: openAIMessages,
-      stream: true,
-      temperature: 0.7,
-    })
-
-    // Save user message to database
-    await supabase.from('messages').insert({
-      project_id: projectId,
-      role: 'user',
-      content: messages[messages.length - 1].content,
-    })
+    // Save user message to database for authenticated projects
+    if (supabase && !isDemoProject) {
+      await supabase.from('messages').insert({
+        project_id: projectId,
+        role: 'user',
+        content: messages[messages.length - 1].content,
+      })
+    }
 
     let fullResponse = ''
     let actions: AIAction[] = []
@@ -67,13 +98,35 @@ export async function POST(req: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of response) {
-            const content = chunk.choices[0]?.delta?.content || ''
-            fullResponse += content
+          // Send context info to client
+          const contextInfo = JSON.stringify({
+            type: 'context',
+            filesIncluded: context.files.length,
+            totalTokens: context.totalTokens,
+            truncated: context.truncated,
+            model: model,
+          })
+          controller.enqueue(encoder.encode(`data: ${contextInfo}\n\n`))
 
-            // Send content to client
-            const data = JSON.stringify({ type: 'content', content })
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+          // Stream from the provider
+          const streamGenerator = provider.streamChat({
+            model,
+            messages: aiMessages,
+            temperature,
+          })
+
+          for await (const chunk of streamGenerator) {
+            if (chunk.type === 'content' && chunk.content) {
+              fullResponse += chunk.content
+
+              // Send content to client
+              const data = JSON.stringify({ type: 'content', content: chunk.content })
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+            } else if (chunk.type === 'error') {
+              const errorData = JSON.stringify({ type: 'error', error: chunk.error })
+              controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+              break
+            }
           }
 
           // Try to extract JSON actions from the response
@@ -85,24 +138,26 @@ export async function POST(req: Request) {
                 actions = parsed.actions
 
                 // Apply actions to database
-                for (const action of actions) {
-                  if (action.type === 'create_or_update_file') {
-                    await supabase
-                      .from('files')
-                      .upsert({
-                        project_id: projectId,
-                        path: action.path,
-                        content: action.content,
-                        language: getLanguageFromPath(action.path),
-                      }, {
-                        onConflict: 'project_id,path',
-                      })
-                  } else if (action.type === 'delete_file') {
-                    await supabase
-                      .from('files')
-                      .delete()
-                      .eq('project_id', projectId)
-                      .eq('path', action.path)
+                if (supabase && !isDemoProject) {
+                  for (const action of actions) {
+                    if (action.type === 'create_or_update_file') {
+                      await supabase
+                        .from('files')
+                        .upsert({
+                          project_id: projectId,
+                          path: action.path,
+                          content: action.content,
+                          language: getLanguageFromPath(action.path),
+                        }, {
+                          onConflict: 'project_id,path',
+                        })
+                    } else if (action.type === 'delete_file') {
+                      await supabase
+                        .from('files')
+                        .delete()
+                        .eq('project_id', projectId)
+                        .eq('path', action.path)
+                    }
                   }
                 }
 
@@ -115,17 +170,28 @@ export async function POST(req: Request) {
             }
           }
 
-          // Save assistant message to database
-          await supabase.from('messages').insert({
-            project_id: projectId,
-            role: 'assistant',
-            content: fullResponse,
-          })
+          // Save assistant message to database for authenticated projects
+          if (supabase && !isDemoProject) {
+            await supabase.from('messages').insert({
+              project_id: projectId,
+              role: 'assistant',
+              content: fullResponse,
+            })
+          }
+
+          // Send done signal
+          const doneData = JSON.stringify({ type: 'done' })
+          controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
 
           controller.close()
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error in stream:', error)
-          controller.error(error)
+          const errorData = JSON.stringify({
+            type: 'error',
+            error: error.message || 'An error occurred while processing your request'
+          })
+          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+          controller.close()
         }
       },
     })
@@ -137,58 +203,34 @@ export async function POST(req: Request) {
         'Connection': 'keep-alive',
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in chat API:', error)
-    return new Response('Internal Server Error', { status: 500 })
+    return new Response(JSON.stringify({
+      error: error.message || 'Internal Server Error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }
 
-function buildSystemPrompt(files: File[]): string {
-  const filesList = files.map(f => `${f.path} (${f.language})`).join('\n')
+// API endpoint to get available models
+export async function GET(req: Request) {
+  const { getAvailableModels, getConfiguredProviders } = await import('@/lib/ai/providers')
 
-  return `You are an expert full-stack developer and AI assistant helping users build web applications.
+  const models = getAvailableModels()
+  const providers = getConfiguredProviders().map(p => ({
+    type: p.type,
+    name: p.name,
+  }))
 
-CURRENT PROJECT FILES:
-${filesList}
-
-You can see and modify all project files. When the user asks you to create or update code, you should:
-
-1. Analyze the request and the current project structure
-2. Provide a helpful explanation of what you're doing
-3. Output the file changes in this exact JSON format:
-
-\`\`\`json
-{
-  "actions": [
-    {
-      "type": "create_or_update_file",
-      "path": "path/to/file.tsx",
-      "content": "FULL FILE CONTENT HERE"
-    }
-  ],
-  "messages": [
-    "Explanation of what was changed"
-  ]
-}
-\`\`\`
-
-CRITICAL RULES:
-- Always provide COMPLETE file contents, never partial or truncated
-- Never use placeholders or comments like "// rest of the code"
-- Always use proper TypeScript/JavaScript syntax
-- For Next.js 14, use App Router conventions
-- Use "use client" directive when needed (event handlers, hooks, etc.)
-- Ensure all imports are correct and complete
-- Follow React and Next.js best practices
-- Make code production-ready
-
-When creating new components:
-- Use TypeScript with proper types
-- Use Tailwind CSS for styling
-- Follow shadcn/ui patterns if creating UI components
-- Ensure accessibility (ARIA attributes, keyboard navigation)
-
-Be concise but thorough. Focus on writing clean, working code.`
+  return new Response(JSON.stringify({
+    models,
+    providers,
+    defaultModel: DEFAULT_MODEL,
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 function getLanguageFromPath(path: string): string {
@@ -203,6 +245,12 @@ function getLanguageFromPath(path: string): string {
     scss: 'scss',
     html: 'html',
     md: 'markdown',
+    py: 'python',
+    rs: 'rust',
+    go: 'go',
+    java: 'java',
+    vue: 'vue',
+    svelte: 'svelte',
   }
   return languageMap[ext || ''] || 'plaintext'
 }

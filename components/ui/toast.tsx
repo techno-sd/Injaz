@@ -1,7 +1,7 @@
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { X, CheckCircle2, AlertCircle, AlertTriangle, Info, Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -30,6 +30,14 @@ const toastVariants = cva(
         default: "border bg-background text-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
+        success:
+          "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400",
+        warning:
+          "border-yellow-500/50 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+        info:
+          "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+        loading:
+          "border-primary/50 bg-primary/10 text-foreground",
       },
     },
     defaultVariants: {
@@ -37,6 +45,24 @@ const toastVariants = cva(
     },
   }
 )
+
+// Toast icon component based on variant
+const ToastIcon = ({ variant }: { variant?: string }) => {
+  switch (variant) {
+    case "success":
+      return <CheckCircle2 className="h-5 w-5 text-green-500" />
+    case "destructive":
+      return <AlertCircle className="h-5 w-5 text-destructive" />
+    case "warning":
+      return <AlertTriangle className="h-5 w-5 text-yellow-500" />
+    case "info":
+      return <Info className="h-5 w-5 text-blue-500" />
+    case "loading":
+      return <Loader2 className="h-5 w-5 animate-spin text-primary" />
+    default:
+      return null
+  }
+}
 
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
@@ -124,4 +150,5 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
+  ToastIcon,
 }

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect } from 'react'
+import { Button, type ButtonProps } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import { Plus, Sparkles } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { useRouter } from 'next/navigation'
 import { PROJECT_TEMPLATES } from '@/lib/templates'
+import { GUEST_TEMPLATES } from '@/lib/guest-templates'
 import {
   Select,
   SelectContent,
@@ -25,8 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { createClient } from '@/lib/supabase/client'
 
-export function CreateProjectDialog() {
+interface CreateProjectDialogProps {
+  variant?: ButtonProps['variant']
+  size?: ButtonProps['size']
+  className?: string
+}
+
+export function CreateProjectDialog({ variant, size, className }: CreateProjectDialogProps) {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [open, setOpen] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank')
   const [projectName, setProjectName] = useState('')
@@ -35,11 +44,33 @@ export function CreateProjectDialog() {
   const { toast } = useToast()
   const router = useRouter()
 
+  // Check authentication on mount
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      setIsAuthenticated(!!user)
+    }
+    checkAuth()
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
     try {
+      // If not authenticated, redirect to demo workspace with template
+      if (!isAuthenticated) {
+        setOpen(false)
+        const guestTemplate = GUEST_TEMPLATES[selectedTemplate] || GUEST_TEMPLATES.blank
+        toast({
+          title: 'Demo Mode',
+          description: `Starting with ${guestTemplate.name} template. Sign in to save your projects!`,
+        })
+        router.push(`/workspace/demo?template=${selectedTemplate}`)
+        return
+      }
+
       if (selectedTemplate === 'blank') {
         // Create blank project
         const formData = new FormData()
@@ -90,12 +121,19 @@ export function CreateProjectDialog() {
     }
   }
 
-  const template = PROJECT_TEMPLATES.find(t => t.id === selectedTemplate)
+  // Use guest templates for unauthenticated users, project templates for authenticated
+  const availableTemplates = isAuthenticated === false
+    ? Object.values(GUEST_TEMPLATES).filter(t => t.id !== 'blank')
+    : PROJECT_TEMPLATES
+
+  const template = isAuthenticated === false
+    ? GUEST_TEMPLATES[selectedTemplate]
+    : PROJECT_TEMPLATES.find(t => t.id === selectedTemplate)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button variant={variant} size={size} className={className}>
           <Plus className="mr-2 h-4 w-4" />
           New Project
         </Button>
@@ -107,7 +145,9 @@ export function CreateProjectDialog() {
             Create New Project
           </DialogTitle>
           <DialogDescription>
-            Start from scratch or choose a template to kickstart your project
+            {isAuthenticated === false
+              ? 'Try templates in demo mode - sign in to save your projects'
+              : 'Start from scratch or choose a template to kickstart your project'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -124,14 +164,16 @@ export function CreateProjectDialog() {
                     <span>Blank Project</span>
                   </div>
                 </SelectItem>
-                {PROJECT_TEMPLATES.map(template => (
-                  <SelectItem key={template.id} value={template.id}>
+                {availableTemplates.map((t: any) => (
+                  <SelectItem key={t.id} value={t.id}>
                     <div className="flex items-center gap-2">
-                      <span>{template.icon}</span>
-                      <span>{template.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({template.difficulty})
-                      </span>
+                      <span>{t.icon}</span>
+                      <span>{t.name}</span>
+                      {t.difficulty && (
+                        <span className="text-xs text-muted-foreground">
+                          ({t.difficulty})
+                        </span>
+                      )}
                     </div>
                   </SelectItem>
                 ))}
@@ -148,16 +190,18 @@ export function CreateProjectDialog() {
                   <p className="text-sm text-muted-foreground mb-3">
                     {template.description}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {template.tags.map(tag => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 bg-background text-xs rounded-md border"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  {'tags' in template && Array.isArray((template as any).tags) && (
+                    <div className="flex flex-wrap gap-2">
+                      {((template as any).tags as string[]).map((tag: string) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 bg-background text-xs rounded-md border"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -41,10 +41,48 @@ export type AIAction =
       config: string
       changes: Record<string, any>
     }
+  | {
+      type: 'explain_code'
+      path: string
+      startLine?: number
+      endLine?: number
+      explanation: string
+    }
+  | {
+      type: 'generate_docs'
+      path: string
+      format: 'jsdoc' | 'markdown' | 'inline'
+      content: string
+    }
+  | {
+      type: 'suggest_fix'
+      path: string
+      line: number
+      issue: string
+      suggestion: string
+      fixedContent?: string
+    }
 
 export interface AIResponse {
   actions: AIAction[]
   messages: string[]
+}
+
+// AI preferences stored per user
+export interface AIPreferences {
+  defaultModel: string
+  temperature: number
+  maxTokens: number
+  enableInlineSuggestions: boolean
+}
+
+// Chat session for grouping messages
+export interface ChatSession {
+  id: string
+  project_id: string
+  title: string
+  created_at: string
+  updated_at: string
 }
 
 export interface FileNode {
