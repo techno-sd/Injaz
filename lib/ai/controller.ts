@@ -23,30 +23,60 @@ function extractJSON(content: string): string {
     // Not valid JSON, try to extract from markdown
   }
 
-  // Remove markdown code blocks
+  // Remove markdown code blocks (```json ... ``` or ``` ... ```)
   let cleaned = content
-    .replace(/^```(?:json)?\s*\n?/i, '')
-    .replace(/\n?```\s*$/i, '')
+    .replace(/^```(?:json)?\s*\n?/gim, '')
+    .replace(/\n?```\s*$/gim, '')
     .trim()
 
+  // Try again
   try {
     JSON.parse(cleaned)
     return cleaned
   } catch {
-    // Still not valid
+    // Still not valid, try to find JSON object
   }
 
-  // Try to find JSON object
+  // Try to find the first complete JSON object using bracket counting
+  let braceDepth = 0
+  let startIdx = -1
+  let endIdx = -1
+
+  for (let i = 0; i < content.length; i++) {
+    if (content[i] === '{') {
+      if (braceDepth === 0) startIdx = i
+      braceDepth++
+    } else if (content[i] === '}') {
+      braceDepth--
+      if (braceDepth === 0 && startIdx !== -1) {
+        endIdx = i
+        break
+      }
+    }
+  }
+
+  if (startIdx !== -1 && endIdx !== -1) {
+    const extracted = content.slice(startIdx, endIdx + 1)
+    try {
+      JSON.parse(extracted)
+      return extracted
+    } catch {
+      // Not valid JSON
+    }
+  }
+
+  // Last resort: try regex match
   const jsonMatch = content.match(/\{[\s\S]*\}/)
   if (jsonMatch) {
     try {
       JSON.parse(jsonMatch[0])
       return jsonMatch[0]
     } catch {
-      // Not valid
+      // Not valid JSON object
     }
   }
 
+  // Return original content and let caller handle the error
   return content
 }
 
@@ -58,6 +88,8 @@ YOUR ROLE:
 - OUTPUT ONLY VALID JSON following the UnifiedAppSchema specification
 - NEVER output code, HTML, CSS, JavaScript, or any programming language
 - Only output structured planning data as JSON
+
+IMPORTANT: Return ONLY raw JSON. Do NOT wrap in markdown code blocks like \`\`\`json. Do NOT include any text before or after the JSON.
 
 PLATFORM SUPPORT:
 - "website": Static HTML/CSS/JS sites

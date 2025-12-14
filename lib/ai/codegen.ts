@@ -90,6 +90,8 @@ YOUR ROLE:
 - Output clean, maintainable, production-quality code
 
 OUTPUT FORMAT:
+IMPORTANT: Return ONLY raw JSON. Do NOT wrap in markdown code blocks like \`\`\`json. Do NOT include any text before or after the JSON.
+
 You must respond with a JSON object:
 {
   "files": [

@@ -28,9 +28,10 @@ interface TemplateBrowserProps {
     favorite_count: number
     last_used_at: string | null
   }>
+  isAuthenticated?: boolean
 }
 
-export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [], templateStats = [] }: TemplateBrowserProps) {
+export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [], templateStats = [], isAuthenticated = false }: TemplateBrowserProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [favorites, setFavorites] = useState<Set<string>>(new Set(favoriteIds))
@@ -107,23 +108,23 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-3 animate-fade-in-up">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
           <Input
             type="search"
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-11 h-12 rounded-xl bg-background shadow-sm transition-all"
+            className="pl-11 h-12 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/40 shadow-sm transition-all focus:bg-white/[0.06] focus:border-violet-500/50"
           />
         </div>
 
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-xl bg-background shadow-sm">
+          <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-xl bg-white/[0.03] border-white/[0.08] text-white shadow-sm hover:bg-white/[0.06]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
-          <SelectContent className="rounded-xl">
+          <SelectContent className="rounded-xl bg-[#1a1a20] border-white/[0.08] text-white">
             {categories.map(category => (
-              <SelectItem key={category} value={category} className="rounded-lg">
+              <SelectItem key={category} value={category} className="rounded-lg focus:bg-white/[0.08] focus:text-white">
                 {category === 'all' ? 'All Categories' : category}
               </SelectItem>
             ))}
@@ -134,7 +135,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
           <Button
             variant="ghost"
             onClick={clearFilters}
-            className="h-12 px-4 rounded-xl hover:bg-accent"
+            className="h-12 px-4 rounded-xl hover:bg-white/[0.06] text-white/70 hover:text-white"
           >
             <X className="h-4 w-4 mr-2" />
             Clear
@@ -144,11 +145,11 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
 
       {/* Results Count */}
       <div className="flex items-center justify-between animate-fade-in-up delay-100">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{filteredTemplates.length}</span> template{filteredTemplates.length !== 1 ? 's' : ''} available
+        <p className="text-sm text-white/60">
+          <span className="font-medium text-white">{filteredTemplates.length}</span> template{filteredTemplates.length !== 1 ? 's' : ''} available
         </p>
         {hasActiveFilters && (
-          <Badge variant="secondary" className="rounded-full">
+          <Badge variant="secondary" className="rounded-full bg-white/[0.06] text-white/80 hover:bg-white/[0.1]">
             Filtered
           </Badge>
         )}
@@ -167,7 +168,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <Card
-                className="group cursor-pointer bg-card rounded-2xl border-border hover:border-primary/50 shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 overflow-hidden h-full"
+                className="group cursor-pointer card-interactive overflow-hidden h-full"
                 onClick={() => onSelectTemplate(template)}
               >
                 {/* Gradient top border on hover */}
@@ -175,13 +176,13 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
 
                 <CardHeader className="pb-3 pt-5">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <div className="h-14 w-14 rounded-2xl bg-white/[0.06] flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-sm border border-white/[0.05]">
                       {template.icon}
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10"
+                      className="h-9 w-9 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-white/[0.08]"
                       onClick={(e) => handleToggleFavorite(template.id, e)}
                       disabled={isLoadingFavorite}
                     >
@@ -189,16 +190,16 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                         className={`h-4 w-4 transition-colors ${
                           isFavorited
                             ? 'fill-red-500 text-red-500'
-                            : 'text-muted-foreground hover:text-red-500'
+                            : 'text-white/40 hover:text-red-500'
                         }`}
                       />
                     </Button>
                   </div>
                   <div className="mt-4">
-                    <h3 className="font-semibold text-card-foreground text-lg group-hover:text-primary transition-colors duration-200">
+                    <h3 className="font-semibold text-white text-lg group-hover:text-violet-400 transition-colors duration-200">
                       {template.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
+                    <p className="text-sm text-white/60 line-clamp-2 mt-1.5 leading-relaxed">
                       {template.description}
                     </p>
                   </div>
@@ -211,20 +212,20 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                       <Badge
                         key={tag}
                         variant="secondary"
-                        className="text-xs font-normal rounded-full px-2.5 py-0.5 bg-secondary text-secondary-foreground hover:bg-primary/20 hover:text-primary transition-colors"
+                        className="text-xs font-normal rounded-full px-2.5 py-0.5 bg-white/[0.04] text-white/70 border border-white/[0.05] hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-500/30 transition-all"
                       >
                         {tag}
                       </Badge>
                     ))}
                     {template.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs font-normal rounded-full px-2.5 py-0.5">
+                      <Badge variant="secondary" className="text-xs font-normal rounded-full px-2.5 py-0.5 bg-white/[0.04] text-white/50 border border-white/[0.05]">
                         +{template.tags.length - 3}
                       </Badge>
                     )}
                   </div>
 
                   {/* Tech Stack */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-xs text-white/40">
                     <Sparkles className="h-3 w-3" />
                     <span>{template.techStack.slice(0, 3).join(' • ')}</span>
                   </div>
@@ -233,7 +234,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full rounded-xl border-border group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-transparent group-hover:shadow-lg group-hover:shadow-primary/25 transition-all duration-300"
+                    className="w-full rounded-xl border-white/[0.08] bg-transparent text-white hover:bg-violet-600 hover:text-white hover:border-transparent hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-300"
                   >
                     <span>Use Template</span>
                     <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -248,15 +249,15 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
       {/* No Results */}
       {filteredTemplates.length === 0 && (
         <div className="text-center py-16 animate-fade-in-up">
-          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
-            <Search className="h-8 w-8 text-muted-foreground" />
+          <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mx-auto mb-4 border border-white/[0.05]">
+            <Search className="h-8 w-8 text-white/20" />
           </div>
-          <h3 className="font-semibold text-foreground mb-2">No templates found</h3>
-          <p className="text-muted-foreground mb-6">Try adjusting your search or filters</p>
+          <h3 className="font-semibold text-white mb-2">No templates found</h3>
+          <p className="text-white/50 mb-6">Try adjusting your search or filters</p>
           <Button
             variant="outline"
             onClick={clearFilters}
-            className="rounded-xl"
+            className="rounded-xl border-white/[0.08] bg-transparent text-white hover:bg-white/[0.06]"
           >
             Clear Filters
           </Button>

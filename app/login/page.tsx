@@ -18,21 +18,24 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-violet-50/30 flex flex-col">
-      {/* Background decoration */}
+    <div className="min-h-screen bg-[#08080c] flex flex-col overflow-hidden noise">
+      {/* Animated mesh gradient background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none gradient-mesh-dark" />
+
+      {/* Animated orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-violet-200/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 -left-40 w-80 h-80 bg-purple-200/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] animate-float" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-500/8 rounded-full blur-[100px] animate-float delay-300" />
       </div>
 
       {/* Header */}
-      <header className="relative z-10 bg-white/60 backdrop-blur-xl border-b border-gray-200/50">
+      <header className="relative z-10 glass-dark border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-xl group-hover:shadow-violet-500/30 transition-all duration-300">
+            <div className="h-9 w-9 rounded-xl icon-box-brand group-hover:glow-purple transition-all duration-300">
               <Code2 className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-lg text-gray-900">iEditor</span>
+            <span className="font-semibold text-lg text-white">iEditor</span>
           </Link>
         </div>
       </header>
@@ -42,12 +45,12 @@ export default async function LoginPage() {
         <div className="w-full max-w-md space-y-6 animate-fade-in-up">
           {/* Welcome Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h1>
-            <p className="text-gray-500">Sign in to continue building amazing apps</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
+            <p className="text-white/60">Sign in to continue building amazing apps</p>
           </div>
 
           {/* Demo Card */}
-          <Card className="border-violet-200/50 bg-gradient-to-br from-violet-50 to-purple-50 shadow-lg shadow-violet-500/5 rounded-2xl overflow-hidden">
+          <Card className="border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-lg shadow-violet-500/5 rounded-2xl overflow-hidden">
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
