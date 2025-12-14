@@ -17,11 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ArrowLeft, MoreHorizontal, Rocket, Share2, Download, ExternalLink, Copy, Check } from 'lucide-react'
+import { ArrowLeft, MoreHorizontal, Rocket, Share2, Download, ExternalLink, Copy, Check, Loader2, Globe, CheckCircle, XCircle, Clock, Zap } from 'lucide-react'
 import { Breadcrumbs } from '@/components/breadcrumbs'
 import { QuickActions } from '@/components/quick-actions'
 import type { Project } from '@/types'
 import { useToast } from '@/components/ui/use-toast'
+import { cn } from '@/lib/utils'
+
+type DeployStatus = 'idle' | 'deploying' | 'success' | 'error'
 
 interface WorkspaceHeaderProps {
   project: Project
@@ -29,8 +32,12 @@ interface WorkspaceHeaderProps {
 
 export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [deployDialogOpen, setDeployDialogOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [shareUrl, setShareUrl] = useState('')
+  const [deployStatus, setDeployStatus] = useState<DeployStatus>('idle')
+  const [deployUrl, setDeployUrl] = useState<string | null>(project.deployment_url || null)
+  const [deployProgress, setDeployProgress] = useState(0)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -49,10 +56,17 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
   }
 
   const handleDeploy = async () => {
-    toast({
-      title: 'Deploying...',
-      description: 'Your project is being deployed',
-    })
+    setDeployStatus('deploying')
+    setDeployDialogOpen(true)
+    setDeployProgress(0)
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setDeployProgress(prev => {
+        if (prev >= 90) return prev
+        return prev + Math.random() * 15
+      })
+    }, 500)
 
     try {
       const response = await fetch('/api/deploy', {
@@ -61,21 +75,54 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
         body: JSON.stringify({ projectId: project.id }),
       })
 
+      clearInterval(progressInterval)
+
       if (response.ok) {
         const data = await response.json()
+        setDeployProgress(100)
+        setDeployStatus('success')
+        setDeployUrl(data.url || `https://${project.name.toLowerCase().replace(/\s+/g, '-')}.vercel.app`)
         toast({
-          title: 'Deployment started!',
-          description: 'Your app will be ready in a few moments',
+          title: '🎉 Deployed successfully!',
+          description: 'Your app is now live',
         })
       } else {
         throw new Error('Deployment failed')
       }
     } catch (error) {
+      clearInterval(progressInterval)
+      setDeployStatus('error')
       toast({
         title: 'Deployment failed',
         description: 'There was an error deploying your project',
         variant: 'destructive',
       })
+    }
+  }
+
+  const getDeployButtonContent = () => {
+    switch (deployStatus) {
+      case 'deploying':
+        return (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Deploying...</span>
+          </>
+        )
+      case 'success':
+        return (
+          <>
+            <CheckCircle className="h-4 w-4" />
+            <span>Live</span>
+          </>
+        )
+      default:
+        return (
+          <>
+            <Rocket className="h-4 w-4" />
+            <span>Deploy</span>
+          </>
+        )
     }
   }
 
@@ -137,11 +184,32 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
           <Button
             size="sm"
             onClick={handleDeploy}
-            className="gradient-primary text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all gap-2"
+            disabled={deployStatus === 'deploying'}
+            className={cn(
+              "text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all gap-2",
+              deployStatus === 'success'
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500"
+                : deployStatus === 'deploying'
+                ? "bg-gradient-to-r from-amber-500 to-orange-600"
+                : "gradient-primary"
+            )}
           >
-            <Rocket className="h-4 w-4" />
-            Deploy
+            {getDeployButtonContent()}
           </Button>
+
+          {/* Live URL indicator */}
+          {deployUrl && deployStatus === 'success' && (
+            <a
+              href={deployUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-colors"
+            >
+              <Globe className="h-3 w-3" />
+              <span className="max-w-[120px] truncate">{new URL(deployUrl).hostname}</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -234,6 +302,146 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
                 </Link>
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deploy Dialog */}
+      <Dialog open={deployDialogOpen} onOpenChange={setDeployDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {deployStatus === 'deploying' && <Loader2 className="h-5 w-5 animate-spin text-amber-400" />}
+              {deployStatus === 'success' && <CheckCircle className="h-5 w-5 text-emerald-400" />}
+              {deployStatus === 'error' && <XCircle className="h-5 w-5 text-red-400" />}
+              {deployStatus === 'deploying' ? 'Deploying your app...' :
+               deployStatus === 'success' ? 'Deployment successful!' :
+               deployStatus === 'error' ? 'Deployment failed' : 'Deploy'}
+            </DialogTitle>
+            <DialogDescription>
+              {deployStatus === 'deploying' && 'Please wait while we deploy your app to production.'}
+              {deployStatus === 'success' && 'Your app is now live and accessible worldwide.'}
+              {deployStatus === 'error' && 'There was an issue deploying your app. Please try again.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Progress Bar */}
+            {deployStatus === 'deploying' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Progress</span>
+                  <span className="font-medium">{Math.round(deployProgress)}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-violet-500 to-purple-600 transition-all duration-300 ease-out"
+                    style={{ width: `${deployProgress}%` }}
+                  />
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Estimated time: ~30 seconds</span>
+                </div>
+              </div>
+            )}
+
+            {/* Deploy Steps */}
+            {deployStatus === 'deploying' && (
+              <div className="space-y-2">
+                {[
+                  { label: 'Building application', done: deployProgress > 20 },
+                  { label: 'Optimizing assets', done: deployProgress > 50 },
+                  { label: 'Deploying to edge', done: deployProgress > 80 },
+                  { label: 'Configuring CDN', done: deployProgress >= 100 },
+                ].map((step, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm">
+                    {step.done ? (
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                    ) : deployProgress > i * 25 ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
+                    )}
+                    <span className={step.done ? 'text-foreground' : 'text-muted-foreground'}>
+                      {step.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Success State */}
+            {deployStatus === 'success' && deployUrl && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Globe className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-400">Live URL</span>
+                  </div>
+                  <a
+                    href={deployUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-foreground hover:text-emerald-400 transition-colors break-all"
+                  >
+                    {deployUrl}
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(deployUrl)
+                      toast({ title: 'URL copied!' })
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy URL
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+                    asChild
+                  >
+                    <a href={deployUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      Visit Site
+                    </a>
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
+                  <Zap className="h-4 w-4 text-amber-400" />
+                  <span>Deployed with edge network for global fast loading</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {deployStatus === 'error' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <p className="text-sm text-red-400">
+                    Something went wrong during deployment. Please check your project for errors and try again.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setDeployStatus('idle')
+                    setDeployDialogOpen(false)
+                    handleDeploy()
+                  }}
+                  className="w-full gap-2"
+                >
+                  <Rocket className="h-4 w-4" />
+                  Try Again
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

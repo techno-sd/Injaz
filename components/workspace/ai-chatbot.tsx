@@ -52,11 +52,11 @@ interface StageInfo {
 }
 
 const STAGES: StageInfo[] = [
-  { id: 'analyzing', label: 'Analyzing', description: 'Understanding your request', icon: Sparkles, color: 'text-amber-400', bgColor: 'bg-amber-500/20' },
-  { id: 'planning', label: 'Planning', description: 'Designing architecture', icon: Braces, color: 'text-violet-400', bgColor: 'bg-violet-500/20' },
-  { id: 'schema', label: 'Schema', description: 'Creating app structure', icon: FolderTree, color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
-  { id: 'generating', label: 'Generating', description: 'Writing code files', icon: Code2, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' },
-  { id: 'complete', label: 'Complete', description: 'All files ready', icon: Rocket, color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' },
+  { id: 'analyzing', label: 'Understanding', description: 'Analyzing your requirements', icon: Sparkles, color: 'text-amber-400', bgColor: 'bg-amber-500/20' },
+  { id: 'planning', label: 'Designing', description: 'Creating architecture', icon: Braces, color: 'text-violet-400', bgColor: 'bg-violet-500/20' },
+  { id: 'schema', label: 'Structuring', description: 'Building app structure', icon: FolderTree, color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
+  { id: 'generating', label: 'Coding', description: 'Writing production code', icon: Code2, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' },
+  { id: 'complete', label: 'Ready', description: 'Your app is ready!', icon: Rocket, color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' },
 ]
 
 interface GenerationState {
@@ -566,19 +566,28 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
               Describe your idea and I'll design, plan, and generate the complete {PLATFORM_INFO[platform].label.toLowerCase()} for you
             </p>
             <div className="w-full max-w-sm space-y-2">
-              {[
-                `Build a ${platform === 'mobile' ? 'fitness tracking' : 'SaaS landing'} page`,
-                `Create a ${platform === 'mobile' ? 'todo list' : 'dashboard'} with authentication`,
-                `Design a ${platform === 'mobile' ? 'chat' : 'portfolio'} app`,
-              ].map((suggestion) => (
+              {platform === 'mobile' ? [
+                { text: 'Build a fitness tracking app with workout plans', emoji: '💪' },
+                { text: 'Create a food delivery app with cart & checkout', emoji: '🍕' },
+                { text: 'Design a social media app with stories & chat', emoji: '💬' },
+              ] : platform === 'webapp' ? [
+                { text: 'Build a SaaS landing page with pricing & features', emoji: '🚀' },
+                { text: 'Create an admin dashboard with charts & tables', emoji: '📊' },
+                { text: 'Design an e-commerce store with product catalog', emoji: '🛒' },
+              ] : [
+                { text: 'Build a modern portfolio with project showcase', emoji: '💼' },
+                { text: 'Create a startup landing page with animations', emoji: '✨' },
+                { text: 'Design a blog with dark mode & newsletter signup', emoji: '📝' },
+              ]}
+              .map((suggestion) => (
                 <button
-                  key={suggestion}
-                  onClick={() => setInput(suggestion)}
-                  className="w-full px-4 py-3 text-sm text-left rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] hover:border-violet-500/30 text-white/70 hover:text-white transition-all duration-200 group"
+                  key={suggestion.text}
+                  onClick={() => setInput(suggestion.text)}
+                  className="w-full px-4 py-3.5 text-sm text-left rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] hover:border-violet-500/30 text-white/70 hover:text-white transition-all duration-200 group"
                 >
                   <div className="flex items-center gap-3">
-                    <Sparkles className="h-4 w-4 text-white/30 group-hover:text-violet-400 transition-colors" />
-                    {suggestion}
+                    <span className="text-lg group-hover:scale-110 transition-transform">{suggestion.emoji}</span>
+                    <span>{suggestion.text}</span>
                   </div>
                 </button>
               ))}

@@ -81,16 +81,25 @@ function extractJSON(content: string): string {
 }
 
 const getCodeGenSystemPrompt = (platform: PlatformType): string => {
-  const basePrompt = `You are an expert code generator that converts application schemas into production-ready code.
+  const basePrompt = `You are an elite code generator creating production-ready applications that rival the quality of Lovable, Bolt.new, and v0.dev outputs.
 
 YOUR ROLE:
-- Receive a Unified App Schema (JSON)
-- Generate complete, working code files
-- Follow best practices for the target platform
-- Output clean, maintainable, production-quality code
+- Transform application schemas into fully functional, deployable code
+- Generate code that WORKS immediately - no placeholders, no TODOs, no incomplete implementations
+- Create pixel-perfect UIs that look professionally designed
+- Output production-ready code that passes linting, type checking, and works in the browser
+
+CRITICAL REQUIREMENTS FOR PRODUCTION-READY CODE:
+1. ALL code MUST be complete and functional - no "// TODO" or placeholder comments
+2. ALL imports MUST be correct and complete
+3. ALL components MUST handle loading, error, and empty states
+4. ALL forms MUST have proper validation and error feedback
+5. ALL interactive elements MUST have proper hover, focus, and active states
+6. ALL images MUST have proper alt text and use real Unsplash URLs
+7. ALL text content MUST be realistic - no "Lorem ipsum" or generic placeholder text
 
 OUTPUT FORMAT:
-IMPORTANT: Return ONLY raw JSON. Do NOT wrap in markdown code blocks like \`\`\`json. Do NOT include any text before or after the JSON.
+IMPORTANT: Return ONLY raw JSON. Do NOT wrap in markdown code blocks like ```json. Do NOT include any text before or after the JSON.
 
 You must respond with a JSON object:
 {
@@ -109,15 +118,15 @@ You must respond with a JSON object:
   }
 }
 
-RULES:
-1. Generate ALL necessary files for a complete, working application
-2. Include proper imports and exports
-3. Use TypeScript where appropriate
-4. Include error handling
-5. Follow the schema exactly - don't add features not specified
-6. Use semantic HTML and accessible patterns
-7. Include responsive design considerations
-8. Generate package.json with correct dependencies
+MANDATORY RULES FOR QUALITY:
+1. Generate ALL files needed for a COMPLETE, DEPLOYABLE application
+2. Every file must be production-ready with NO missing implementations
+3. TypeScript with strict types - no 'any' types allowed
+4. Comprehensive error handling with user-friendly messages
+5. Responsive design that works perfectly on mobile, tablet, and desktop
+6. Accessibility first - proper ARIA labels, keyboard navigation, focus management
+7. Modern UI/UX patterns from 2024-2025 design trends
+8. Generate a complete package.json with ALL required dependencies
 
 CODE QUALITY REQUIREMENTS:
 
@@ -679,13 +688,33 @@ Before generating, ensure these premium details:
   const platformPrompts: Record<PlatformType, string> = {
     website: `
 PLATFORM: Static Website (HTML/CSS/JS)
+QUALITY STANDARD: Match Lovable, Bolt.new, and v0.dev output quality for static sites
 
-FILE STRUCTURE:
+CRITICAL: Generate COMPLETE, WORKING files that display perfectly in a browser immediately
+
+MANDATORY FILE STRUCTURE (Generate ALL these files):
 /
-├── index.html
-├── styles.css
-├── script.js
-└── assets/
+├── index.html          # Complete HTML with all sections, styles linked
+├── styles.css          # Complete CSS with all styles, animations, responsive
+└── script.js           # JavaScript for interactivity (if needed)
+
+MANDATORY INDEX.HTML STRUCTURE:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="[Relevant description]">
+  <title>[Page Title]</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Complete page content here -->
+  <script src="script.js"></script>
+</body>
+</html>
 
 HTML BEST PRACTICES:
 - Semantic HTML5 elements (header, main, nav, section, article, aside, footer)
@@ -696,6 +725,45 @@ HTML BEST PRACTICES:
 - Descriptive alt text for all images
 - Skip to content link: <a href="#main" class="skip-link">Skip to content</a>
 - Proper lang attribute on html element
+
+MANDATORY CSS STRUCTURE (styles.css must include):
+/* CSS Variables - Design Tokens */
+:root {
+  --color-primary: #8b5cf6;
+  --color-primary-dark: #7c3aed;
+  --color-secondary: #06b6d4;
+  --color-background: #0a0a0f;
+  --color-surface: #18181b;
+  --color-text: #fafafa;
+  --color-text-muted: #a1a1aa;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius: 0.75rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 0 40px rgba(139, 92, 246, 0.3);
+}
+
+/* Reset and Base Styles */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background: var(--color-background);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+input, button, textarea, select { font: inherit; }
+
+/* Animation Keyframes */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 CSS BEST PRACTICES:
 - CSS Custom Properties (variables) for theming: --color-primary, --spacing-md, etc.
@@ -727,54 +795,33 @@ PERFORMANCE:
 
     webapp: `
 PLATFORM: Web Application (Next.js 14 + App Router + Supabase)
-This should match the quality of Lovable, Bolt.new, and v0.dev outputs.
+QUALITY STANDARD: Match or exceed Lovable, Bolt.new, and v0.dev output quality.
 
-FILE STRUCTURE:
+CRITICAL: Generate a COMPLETE, WORKING application that runs immediately with npm run dev
+
+MANDATORY FILE STRUCTURE (Generate ALL these files):
 /
 ├── app/
-│   ├── layout.tsx          # Root layout with fonts, metadata, providers
-│   ├── page.tsx            # Home page
-│   ├── loading.tsx         # Global loading UI (skeleton)
-│   ├── error.tsx           # Error boundary with recovery
-│   ├── not-found.tsx       # Custom 404 page
-│   ├── globals.css         # Global styles with CSS variables
-│   ├── (auth)/             # Auth route group
-│   │   ├── login/page.tsx
-│   │   ├── signup/page.tsx
-│   │   └── layout.tsx      # Auth layout (centered, minimal)
-│   ├── (dashboard)/        # Protected routes
-│   │   ├── layout.tsx      # Dashboard layout with sidebar
-│   │   └── page.tsx
-│   └── api/                # API route handlers
+│   ├── layout.tsx          # Root layout with fonts, metadata, ThemeProvider
+│   ├── page.tsx            # Home page (fully styled, responsive)
+│   ├── globals.css         # Complete global styles with CSS variables
+│   └── favicon.ico         # (skip, use default)
 ├── components/
-│   ├── ui/                 # shadcn/ui-style primitives
-│   │   ├── button.tsx      # Button with variants (cva)
-│   │   ├── input.tsx       # Input with floating label
-│   │   ├── card.tsx        # Card with hover effects
-│   │   ├── dialog.tsx      # Modal/Dialog component
-│   │   ├── dropdown-menu.tsx
-│   │   ├── toast.tsx       # Toast notifications
-│   │   ├── skeleton.tsx    # Loading skeletons
-│   │   └── avatar.tsx
-│   ├── forms/              # Form components
-│   ├── layouts/            # Layout components
-│   └── sections/           # Page sections (hero, features, etc.)
+│   ├── ui/                 # REQUIRED: shadcn/ui-style components
+│   │   ├── button.tsx      # Button with 6 variants using cva
+│   │   ├── input.tsx       # Input with labels and error states
+│   │   ├── card.tsx        # Card with hover animations
+│   │   ├── badge.tsx       # Badge with variants
+│   │   └── avatar.tsx      # Avatar with fallback
+│   └── sections/           # Page sections
+│       └── [section-name].tsx
 ├── lib/
-│   ├── supabase/
-│   │   ├── client.ts       # Browser client
-│   │   ├── server.ts       # Server client
-│   │   └── middleware.ts   # Auth middleware helper
-│   ├── utils.ts            # cn() utility function
-│   ├── validations.ts      # Zod schemas
-│   └── hooks/              # Custom hooks
-│       ├── use-toast.ts
-│       └── use-media-query.ts
-├── types/
-│   └── index.ts            # TypeScript types
-├── package.json
-├── tailwind.config.ts
-├── components.json         # Component config (shadcn-style)
-└── .env.example
+│   └── utils.ts            # cn() utility (REQUIRED)
+├── package.json            # Complete with all dependencies
+├── tailwind.config.ts      # Extended theme with custom colors
+├── tsconfig.json           # Strict TypeScript config
+├── postcss.config.js       # PostCSS config for Tailwind
+└── next.config.js          # Next.js config
 
 NEXT.JS ARCHITECTURE:
 - Server Components by default (no 'use client' unless needed)
@@ -933,25 +980,203 @@ FORMS (Best Practices):
 - Toast notifications for success/error (sonner or custom)
 - Optimistic UI updates where appropriate
 
-REQUIRED DEPENDENCIES:
+EXACT PACKAGE.JSON (Use this exact structure):
 {
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
   "dependencies": {
-    "next": "14.x",
-    "@supabase/supabase-js": "^2.x",
-    "@supabase/ssr": "^0.x",
-    "tailwindcss": "^3.x",
-    "class-variance-authority": "^0.7.x",
-    "clsx": "^2.x",
-    "tailwind-merge": "^2.x",
-    "framer-motion": "^11.x",
-    "lucide-react": "^0.x",
-    "zod": "^3.x",
-    "react-hook-form": "^7.x",
-    "@hookform/resolvers": "^3.x",
-    "next-themes": "^0.x",
-    "sonner": "^1.x"
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.4",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0",
+    "framer-motion": "^11.2.12",
+    "lucide-react": "^0.396.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0"
   }
-}`,
+}
+
+MANDATORY lib/utils.ts (Always include this file):
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+MANDATORY tailwind.config.ts:
+import type { Config } from "tailwindcss"
+
+const config: Config = {
+  darkMode: ["class"],
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "fade-in": "fade-in 0.5s ease-out",
+        "fade-up": "fade-up 0.5s ease-out",
+      },
+    },
+  },
+  plugins: [],
+}
+export default config
+
+MANDATORY app/globals.css:
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.75rem;
+  }
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 263.4 70% 50.4%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+MANDATORY BUTTON COMPONENT (components/ui/button.tsx):
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
+        destructive: "bg-red-500 text-white hover:bg-red-600",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-12 rounded-xl px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, ...props }, ref) => {
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
+
+export { Button, buttonVariants }`,
 
     mobile: `
 PLATFORM: Mobile Application (React Native + Expo Router)

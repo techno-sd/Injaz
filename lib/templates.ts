@@ -1339,4 +1339,351 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
   }
 ]
 
+// Modern SaaS Dashboard Template
+const SAAS_DASHBOARD_TEMPLATE: TemplateMetadata = {
+  id: 'modern-saas-dashboard',
+  name: 'Modern SaaS Dashboard',
+  description: 'Production-ready dashboard with charts, metrics, and dark mode. Built with Next.js 14 and shadcn/ui patterns.',
+  category: 'Business',
+  icon: '📈',
+  tags: ['dashboard', 'saas', 'analytics', 'charts', 'modern'],
+  previewImage: '/templates/modern-dashboard.png',
+  difficulty: 'Intermediate',
+  techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript', 'Framer Motion'],
+  features: ['Interactive Charts', 'Real-time Metrics', 'Dark Mode', 'Responsive Sidebar', 'Data Tables'],
+  files: [
+    {
+      path: 'app/page.tsx',
+      content: `import { ArrowUpRight, ArrowDownRight, Users, DollarSign, ShoppingCart, Activity, MoreHorizontal, Search, Bell, Settings, LogOut, ChevronRight, TrendingUp } from 'lucide-react'
+
+export default function Dashboard() {
+  const stats = [
+    { name: 'Total Revenue', value: '$45,231.89', change: '+20.1%', changeType: 'positive', icon: DollarSign, color: 'emerald' },
+    { name: 'Active Users', value: '2,350', change: '+15.2%', changeType: 'positive', icon: Users, color: 'violet' },
+    { name: 'Total Orders', value: '12,234', change: '+5.4%', changeType: 'positive', icon: ShoppingCart, color: 'blue' },
+    { name: 'Conversion Rate', value: '3.24%', change: '-0.5%', changeType: 'negative', icon: Activity, color: 'amber' },
+  ]
+
+  const chartData = [
+    { name: 'Jan', revenue: 4000, orders: 2400 },
+    { name: 'Feb', revenue: 3000, orders: 1398 },
+    { name: 'Mar', revenue: 2000, orders: 9800 },
+    { name: 'Apr', revenue: 2780, orders: 3908 },
+    { name: 'May', revenue: 1890, orders: 4800 },
+    { name: 'Jun', revenue: 2390, orders: 3800 },
+    { name: 'Jul', revenue: 3490, orders: 4300 },
+  ]
+
+  const recentOrders = [
+    { id: '#3210', customer: 'Olivia Martin', email: 'olivia@email.com', amount: '$316.00', status: 'Completed' },
+    { id: '#3209', customer: 'Jackson Lee', email: 'jackson@email.com', amount: '$242.00', status: 'Processing' },
+    { id: '#3208', customer: 'Isabella Nguyen', email: 'isabella@email.com', amount: '$837.00', status: 'Completed' },
+    { id: '#3207', customer: 'William Kim', email: 'william@email.com', amount: '$874.00', status: 'Pending' },
+    { id: '#3206', customer: 'Sofia Davis', email: 'sofia@email.com', amount: '$721.00', status: 'Completed' },
+  ]
+
+  const maxRevenue = Math.max(...chartData.map(d => d.revenue))
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#0f0f14] border-r border-white/[0.06] flex flex-col">
+        <div className="p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold">Analytics</span>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3">
+          {['Dashboard', 'Analytics', 'Customers', 'Products', 'Orders', 'Settings'].map((item, i) => (
+            <button
+              key={item}
+              className={\`w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-xl text-left transition-all \${
+                i === 0
+                  ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/10 text-white border border-violet-500/20'
+                  : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+              }\`}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-white/[0.06]">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-sm font-semibold">JD</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">John Doe</p>
+              <p className="text-xs text-white/40 truncate">john@company.com</p>
+            </div>
+            <button className="p-2 hover:bg-white/[0.06] rounded-lg text-white/40 hover:text-white transition-colors">
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="pl-64">
+        {/* Header */}
+        <header className="sticky top-0 z-10 h-16 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-6">
+          <div>
+            <h1 className="text-xl font-semibold">Dashboard</h1>
+            <p className="text-sm text-white/40">Welcome back, here's what's happening</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="w-64 h-10 pl-10 pr-4 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm placeholder-white/30 focus:outline-none focus:border-violet-500/50 transition-colors"
+              />
+            </div>
+            <button className="relative p-2.5 hover:bg-white/[0.06] rounded-xl transition-colors">
+              <Bell className="w-5 h-5 text-white/60" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-violet-500 rounded-full"></span>
+            </button>
+            <button className="p-2.5 hover:bg-white/[0.06] rounded-xl transition-colors">
+              <Settings className="w-5 h-5 text-white/60" />
+            </button>
+          </div>
+        </header>
+
+        <div className="p-6 space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-4 gap-4">
+            {stats.map((stat) => {
+              const Icon = stat.icon
+              return (
+                <div key={stat.name} className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all group">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={\`w-12 h-12 rounded-xl bg-\${stat.color}-500/10 flex items-center justify-center group-hover:scale-110 transition-transform\`}>
+                      <Icon className={\`w-6 h-6 text-\${stat.color}-400\`} />
+                    </div>
+                    <span className={\`flex items-center gap-1 text-sm font-medium \${
+                      stat.changeType === 'positive' ? 'text-emerald-400' : 'text-red-400'
+                    }\`}>
+                      {stat.changeType === 'positive' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                      {stat.change}
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold mb-1">{stat.value}</p>
+                  <p className="text-sm text-white/40">{stat.name}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="grid grid-cols-3 gap-6">
+            {/* Chart */}
+            <div className="col-span-2 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-semibold">Revenue Overview</h2>
+                  <p className="text-sm text-white/40">Monthly revenue performance</p>
+                </div>
+                <select className="px-4 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm focus:outline-none focus:border-violet-500/50">
+                  <option>Last 7 days</option>
+                  <option>Last 30 days</option>
+                  <option>Last 90 days</option>
+                </select>
+              </div>
+              <div className="h-64 flex items-end gap-4">
+                {chartData.map((item, i) => (
+                  <div key={item.name} className="flex-1 flex flex-col items-center gap-2">
+                    <div
+                      className="w-full bg-gradient-to-t from-violet-500 to-purple-500 rounded-t-lg hover:from-violet-400 hover:to-purple-400 transition-all cursor-pointer"
+                      style={{ height: \`\${(item.revenue / maxRevenue) * 100}%\` }}
+                    />
+                    <span className="text-xs text-white/40">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top Products */}
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold">Top Products</h2>
+                <button className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
+                  <MoreHorizontal className="w-4 h-4 text-white/40" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                {[
+                  { name: 'Premium Plan', sales: 2341, growth: '+12%' },
+                  { name: 'Enterprise', sales: 1832, growth: '+8%' },
+                  { name: 'Basic Plan', sales: 1456, growth: '+5%' },
+                  { name: 'Starter', sales: 987, growth: '+3%' },
+                ].map((product, i) => (
+                  <div key={product.name} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3">
+                      <div className={\`w-10 h-10 rounded-xl flex items-center justify-center text-lg \${
+                        i === 0 ? 'bg-violet-500/20' : 'bg-white/[0.06]'
+                      }\`}>
+                        {i === 0 ? '👑' : i === 1 ? '💎' : i === 2 ? '⭐' : '🚀'}
+                      </div>
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-xs text-white/40">{product.sales.toLocaleString()} sales</p>
+                      </div>
+                    </div>
+                    <span className="text-sm text-emerald-400">{product.growth}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Orders */}
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold">Recent Orders</h2>
+                <p className="text-sm text-white/40">Latest transactions from your store</p>
+              </div>
+              <button className="px-4 py-2 text-sm font-medium text-violet-400 hover:text-violet-300 flex items-center gap-1">
+                View all <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-white/[0.02] border-b border-white/[0.06]">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-white/40 uppercase tracking-wider">Order</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-white/40 uppercase tracking-wider">Customer</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-white/40 uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-white/40 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {recentOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-sm">{order.id}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-medium">{order.customer}</p>
+                          <p className="text-sm text-white/40">{order.email}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-medium">{order.amount}</td>
+                      <td className="px-6 py-4">
+                        <span className={\`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium \${
+                          order.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' :
+                          order.status === 'Processing' ? 'bg-blue-500/10 text-blue-400' :
+                          'bg-amber-500/10 text-amber-400'
+                        }\`}>
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}`
+    },
+    {
+      path: 'app/layout.tsx',
+      content: `import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: 'Analytics Dashboard',
+  description: 'Modern SaaS analytics dashboard',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>{children}</body>
+    </html>
+  )
+}`
+    },
+    {
+      path: 'app/globals.css',
+      content: `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 10 10 15;
+  --foreground: 255 255 255;
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+}`
+    },
+    {
+      path: 'tailwind.config.ts',
+      content: `import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+export default config`
+    },
+    {
+      path: 'package.json',
+      content: `{
+  "name": "modern-saas-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.396.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.4",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19"
+  }
+}`
+    }
+  ]
+}
+
+// Add the new template to the array
+PROJECT_TEMPLATES.push(SAAS_DASHBOARD_TEMPLATE)
+
 export type Template = TemplateMetadata
