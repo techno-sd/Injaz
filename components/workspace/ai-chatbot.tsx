@@ -566,7 +566,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
               Describe your idea and I'll design, plan, and generate the complete {PLATFORM_INFO[platform].label.toLowerCase()} for you
             </p>
             <div className="w-full max-w-sm space-y-2">
-              {platform === 'mobile' ? [
+              {(platform === 'mobile' ? [
                 { text: 'Build a fitness tracking app with workout plans', emoji: '💪' },
                 { text: 'Create a food delivery app with cart & checkout', emoji: '🍕' },
                 { text: 'Design a social media app with stories & chat', emoji: '💬' },
@@ -578,8 +578,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                 { text: 'Build a modern portfolio with project showcase', emoji: '💼' },
                 { text: 'Create a startup landing page with animations', emoji: '✨' },
                 { text: 'Design a blog with dark mode & newsletter signup', emoji: '📝' },
-              ]}
-              .map((suggestion) => (
+              ]).map((suggestion) => (
                 <button
                   key={suggestion.text}
                   onClick={() => setInput(suggestion.text)}
