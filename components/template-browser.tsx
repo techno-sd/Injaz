@@ -1,5 +1,6 @@
 'use client'
 
+// Template browser component
 import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
