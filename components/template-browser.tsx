@@ -1,12 +1,12 @@
 'use client'
 
 // Template browser component
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, X, Heart, ArrowRight, Sparkles } from 'lucide-react'
+import { Search, X, Heart, ArrowRight, Sparkles, Loader2 } from 'lucide-react'
 import type { TemplateMetadata } from '@/lib/templates'
 import {
   Select,
@@ -20,7 +20,7 @@ import { useToast } from '@/components/ui/use-toast'
 
 interface TemplateBrowserProps {
   templates: TemplateMetadata[]
-  onSelectTemplate: (template: TemplateMetadata) => void
+  onSelectTemplate: (template: TemplateMetadata) => void | Promise<void>
   favoriteIds?: string[]
   templateStats?: Array<{
     template_id: string
@@ -36,7 +36,29 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [favorites, setFavorites] = useState<Set<string>>(new Set(favoriteIds))
   const [favoriteLoading, setFavoriteLoading] = useState<Set<string>>(new Set())
+  const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    setFavorites(new Set(favoriteIds))
+  }, [favoriteIds])
+
+  const statsById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        template_id: string
+        usage_count: number
+        favorite_count: number
+        last_used_at: string | null
+      }
+    >()
+
+    for (const stat of templateStats) {
+      map.set(stat.template_id, stat)
+    }
+    return map
+  }, [templateStats])
 
   const categories = useMemo(
     () => ['all', ...new Set(templates.map(t => t.category))],
@@ -62,8 +84,17 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
     setSelectedCategory('all')
   }
 
-  const handleToggleFavorite = async (templateId: string, e: React.MouseEvent) => {
+  const handleToggleFavorite = async (templateId: string, e: MouseEvent) => {
     e.stopPropagation()
+
+    if (!isAuthenticated) {
+      toast({
+        title: 'Sign in required',
+        description: 'Sign in to favorite templates.',
+      })
+      return
+    }
+
     setFavoriteLoading(prev => new Set(prev).add(templateId))
 
     try {
@@ -98,6 +129,17 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
         newLoading.delete(templateId)
         return newLoading
       })
+    }
+  }
+
+  const handleSelect = async (template: TemplateMetadata) => {
+    if (creatingTemplateId) return
+
+    setCreatingTemplateId(template.id)
+    try {
+      await onSelectTemplate(template)
+    } finally {
+      setCreatingTemplateId(null)
     }
   }
 
@@ -160,6 +202,8 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
         {filteredTemplates.map((template, index) => {
           const isFavorited = favorites.has(template.id)
           const isLoadingFavorite = favoriteLoading.has(template.id)
+          const isCreating = creatingTemplateId === template.id
+          const stats = statsById.get(template.id)
 
           return (
             <div
@@ -169,7 +213,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
             >
               <Card
                 className="group cursor-pointer card-interactive overflow-hidden h-full"
-                onClick={() => onSelectTemplate(template)}
+                onClick={() => handleSelect(template)}
               >
                 {/* Gradient top border on hover */}
                 <div className="h-1 w-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -184,13 +228,15 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                       size="icon"
                       className="h-9 w-9 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-white/[0.08]"
                       onClick={(e) => handleToggleFavorite(template.id, e)}
-                      disabled={isLoadingFavorite}
+                      disabled={isLoadingFavorite || isCreating}
                     >
                       <Heart
                         className={`h-4 w-4 transition-colors ${
                           isFavorited
                             ? 'fill-red-500 text-red-500'
-                            : 'text-white/40 hover:text-red-500'
+                            : isAuthenticated
+                              ? 'text-white/40 hover:text-red-500'
+                              : 'text-white/25'
                         }`}
                       />
                     </Button>
@@ -230,14 +276,33 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                     <span>{template.techStack.slice(0, 3).join(' • ')}</span>
                   </div>
 
+                  {/* Stats */}
+                  {stats && (
+                    <div className="flex items-center gap-2 text-xs text-white/40">
+                      <span>Used {stats.usage_count}</span>
+                      <span aria-hidden="true">•</span>
+                      <span>{stats.favorite_count} favorites</span>
+                    </div>
+                  )}
+
                   {/* Action Button */}
                   <Button
                     variant="outline"
                     size="sm"
                     className="w-full rounded-xl border-white/[0.08] bg-transparent text-white hover:bg-violet-600 hover:text-white hover:border-transparent hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-300"
+                    disabled={isCreating}
                   >
-                    <span>Use Template</span>
-                    <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <span>Creating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Use Template</span>
+                        <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>

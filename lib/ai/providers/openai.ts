@@ -5,10 +5,27 @@ import type {
   AICompletionResult,
   AIStreamChunk,
 } from '../types'
+import { HARD_FALLBACK_MODEL } from '../types'
 
 export class OpenAIProvider implements AIProvider {
   name = 'OpenAI'
   private client: OpenAI | null = null
+
+  private shouldRetryWithFallback(error: any): boolean {
+    const message = (error?.message || '').toLowerCase()
+    const code = (error?.code || error?.error?.code || '').toLowerCase()
+    const status = error?.status || error?.response?.status
+
+    // Common OpenAI-ish error signals
+    if (status === 404) return true
+    if (status === 401 || status === 403) return true
+    if (code.includes('model') && code.includes('not')) return true
+    if (message.includes('model') && (message.includes('not found') || message.includes('does not exist'))) return true
+    if (message.includes('you do not have access') && message.includes('model')) return true
+    if (message.includes('model_not_found')) return true
+
+    return false
+  }
 
   isConfigured(): boolean {
     return !!process.env.OPENAI_API_KEY
@@ -29,13 +46,25 @@ export class OpenAIProvider implements AIProvider {
   async chat(options: AICompletionOptions): Promise<AICompletionResult> {
     const client = this.getClient()
 
-    const response = await client.chat.completions.create({
-      model: options.model,
-      messages: options.messages,
-      temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens,
-      stream: false,
-    })
+    const run = async (model: string) =>
+      client.chat.completions.create({
+        model,
+        messages: options.messages,
+        temperature: options.temperature ?? 0.7,
+        max_tokens: options.maxTokens,
+        stream: false,
+      })
+
+    let response: any
+    try {
+      response = await run(options.model)
+    } catch (error: any) {
+      if (options.model !== HARD_FALLBACK_MODEL && this.shouldRetryWithFallback(error)) {
+        response = await run(HARD_FALLBACK_MODEL)
+      } else {
+        throw error
+      }
+    }
 
     const choice = response.choices[0]
 
@@ -53,13 +82,26 @@ export class OpenAIProvider implements AIProvider {
   async *streamChat(options: AICompletionOptions): AsyncGenerator<AIStreamChunk> {
     const client = this.getClient()
 
-    const stream = await client.chat.completions.create({
-      model: options.model,
-      messages: options.messages,
-      temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens,
-      stream: true,
-    })
+    const run = async (model: string) =>
+      client.chat.completions.create({
+        model,
+        messages: options.messages,
+        temperature: options.temperature ?? 0.7,
+        max_tokens: options.maxTokens,
+        stream: true,
+      })
+
+    let stream: any
+    try {
+      stream = await run(options.model)
+    } catch (error: any) {
+      if (options.model !== HARD_FALLBACK_MODEL && this.shouldRetryWithFallback(error)) {
+        stream = await run(HARD_FALLBACK_MODEL)
+      } else {
+        yield { type: 'error', error: error.message || 'Unknown error' }
+        return
+      }
+    }
 
     try {
       for await (const chunk of stream) {

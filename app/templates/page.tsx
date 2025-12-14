@@ -31,19 +31,17 @@ export default function TemplatesPage() {
         const { data: { user } } = await supabase.auth.getUser()
         setIsAuthenticated(!!user)
 
-        if (user) {
-          const [favoritesResult, statsResult] = await Promise.all([
-            getTemplateFavorites(),
-            getTemplateStats(),
-          ])
+        const [statsResult, favoritesResult] = await Promise.all([
+          getTemplateStats(),
+          user ? getTemplateFavorites() : Promise.resolve({ data: [] as string[] }),
+        ])
 
-          if (favoritesResult.data) {
-            setFavoriteIds(favoritesResult.data)
-          }
+        if (favoritesResult.data) {
+          setFavoriteIds(favoritesResult.data)
+        }
 
-          if (statsResult.data) {
-            setTemplateStats(statsResult.data)
-          }
+        if (statsResult.data) {
+          setTemplateStats(statsResult.data)
         }
       } catch (error) {
         console.error('Error fetching template data:', error)
@@ -137,7 +135,11 @@ export default function TemplatesPage() {
           </div>
         ) : (
           <TemplateBrowser
-            templates={PROJECT_TEMPLATES}
+            templates={
+              isAuthenticated
+                ? PROJECT_TEMPLATES
+                : PROJECT_TEMPLATES.filter((t) => t.id in GUEST_TEMPLATES)
+            }
             onSelectTemplate={handleSelectTemplate}
             favoriteIds={favoriteIds}
             templateStats={templateStats}

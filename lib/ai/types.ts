@@ -37,4 +37,8 @@ export interface AIProvider {
 }
 
 // Default fallback (used if .env not set)
-export const DEFAULT_MODEL = 'gpt-4o-mini'
+// Prefer GPT-5.2 (Preview) by default; provider will fall back if unavailable.
+export const DEFAULT_MODEL = 'gpt-5.2-preview'
+
+// Hard fallback if the preferred/default model isn't available.
+export const HARD_FALLBACK_MODEL = 'gpt-4o-mini'

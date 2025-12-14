@@ -4,6 +4,29 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { PROJECT_TEMPLATES } from '@/lib/templates'
 
+function inferPlatformFromTemplateFiles(files: { path: string }[]): 'website' | 'webapp' {
+  const paths = files.map((f) => f.path)
+
+  // Next.js / app router conventions
+  if (
+    paths.some((p) => p.startsWith('app/')) ||
+    paths.some((p) => p.startsWith('pages/')) ||
+    paths.includes('next.config.js') ||
+    paths.includes('next.config.mjs') ||
+    paths.includes('next.config.ts')
+  ) {
+    return 'webapp'
+  }
+
+  // Simple static templates
+  if (paths.includes('index.html')) {
+    return 'website'
+  }
+
+  // Default to webapp for project templates
+  return 'webapp'
+}
+
 export async function createProjectFromTemplate(templateId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -19,6 +42,8 @@ export async function createProjectFromTemplate(templateId: string) {
   }
 
   try {
+    const platform = inferPlatformFromTemplateFiles(template.files)
+
     // Create project from template
     const { data: project, error: projectError } = await supabase
       .from('projects')
@@ -27,6 +52,7 @@ export async function createProjectFromTemplate(templateId: string) {
         name: `${template.name} Project`,
         description: template.description,
         template: template.id,
+        platform,
       })
       .select()
       .single()
