@@ -1,4 +1,4 @@
-// Controller Service - GPT-4.1-mini
+// Controller Service - GPT-4o-mini
 // Responsible for planning and outputting Unified App Schema (JSON only, no code)
 
 import OpenAI from 'openai'
@@ -10,8 +10,8 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Use GPT-4.1-mini for fast, efficient planning (can be overridden via env)
-const CONTROLLER_MODEL = process.env.CONTROLLER_MODEL || 'gpt-4.1-mini'
+// Use GPT-4o-mini for fast, efficient planning (can be overridden via env)
+const CONTROLLER_MODEL = process.env.CONTROLLER_MODEL || 'gpt-4o-mini'
 
 // Helper to extract JSON from response (handles markdown code blocks)
 function extractJSON(content: string): string {
@@ -194,7 +194,124 @@ RULES:
 4. Be specific with paths, names, and IDs
 5. Use descriptive IDs like "hero-section", "login-form", "nav-header"
 6. Match the platform to user's needs (default to webapp if unclear)
-7. Keep the schema focused and minimal - don't over-engineer`
+7. Keep the schema focused and minimal - don't over-engineer
+
+INDUSTRY BEST PRACTICES - Apply these when planning:
+
+UI/UX DESIGN:
+- Mobile-first responsive design approach
+- Consistent 8px spacing grid system
+- Accessible color contrast (WCAG 2.1 AA minimum - 4.5:1 for text)
+- Clear visual hierarchy with modular typography scale (1.25 ratio)
+- Intuitive navigation (max 7 items, clear labels)
+- Include loading states and skeleton screens for async content
+- Plan error states with helpful recovery messages
+- Design empty states with clear calls-to-action
+
+USER EXPERIENCE:
+- Maximum 3 clicks to reach any content
+- Form validation with inline real-time feedback
+- Optimistic UI updates for better perceived performance
+- Progressive disclosure for complex features
+- Clear feedback for all user actions (hover, active, focus states)
+- Keyboard navigation support for all interactive elements
+- Touch-friendly tap targets (minimum 44x44px)
+- Smooth micro-interactions (200-300ms transitions)
+
+ARCHITECTURE:
+- Separation of concerns (UI components, business logic, data layer)
+- Component-based architecture with reusable primitives
+- Design tokens for colors, spacing, typography, shadows
+- Consistent BEM-style naming conventions
+- Logical file organization by feature or type
+- API-first data design with proper endpoints
+
+SECURITY BY DEFAULT:
+- Mark sensitive routes as "protected" type
+- Plan input validation for all form fields
+- Use environment variables for any secrets/keys
+- Include CSRF considerations for forms
+- Plan secure data storage patterns
+
+ACCESSIBILITY (A11Y):
+- Semantic HTML structure in component hierarchy
+- ARIA labels for all interactive elements
+- Focus management for modals and dialogs
+- Screen reader friendly content flow
+- Color-blind friendly palette (avoid red/green only indicators)
+- Reduced motion support (respect prefers-reduced-motion)
+
+PERFORMANCE:
+- Lazy loading for images and below-fold content
+- Code splitting at route level
+- Optimized asset loading strategy
+- Caching strategies for static content
+- Minimal external dependencies
+
+SAMPLE CONTENT - Always include realistic placeholder content:
+- Use descriptive, industry-appropriate text (not Lorem Ipsum)
+- Include realistic product names, descriptions, prices
+- Add sample user testimonials with names and roles
+- Plan for sample images using Unsplash URLs: https://images.unsplash.com/photo-{id}?w={width}&h={height}
+- Include sample navigation items relevant to the app type
+- Add realistic CTA button text (not "Click Here")
+- Use appropriate sample data for forms, tables, and lists
+
+MODERN UI/UX DESIGN TRENDS (2024-2025):
+
+VISUAL DESIGN:
+- Glassmorphism: Frosted glass effects with backdrop-blur and subtle transparency
+- Gradient meshes: Multi-color gradients for backgrounds and accents
+- Bento grid layouts: Asymmetric card-based layouts inspired by Apple
+- Soft shadows: Large, diffused shadows (0 25px 50px -12px rgba(0,0,0,0.15))
+- Rounded corners: Generous border-radius (16-24px for cards, 12px for buttons)
+- Subtle borders: Very light borders (1px solid rgba(255,255,255,0.1))
+- Dark mode first: Design for dark mode, adapt for light
+- Vibrant accent colors on dark backgrounds
+
+TYPOGRAPHY:
+- Large, bold headlines (48-72px on desktop)
+- Variable fonts for performance and flexibility
+- High contrast between heading and body weights
+- Generous line-height (1.5-1.7 for body text)
+- Letter-spacing: tight for headlines (-0.02em), normal for body
+
+MICRO-INTERACTIONS:
+- Hover lift effects with shadow increase
+- Button press animations (scale 0.98)
+- Smooth page transitions (fade, slide)
+- Loading skeleton animations with shimmer
+- Success/error state animations
+- Scroll-triggered reveal animations
+
+MODERN LAYOUTS:
+- Full-width hero sections with centered content
+- Sticky navigation with blur background on scroll
+- Floating action buttons for mobile
+- Card-based content organization
+- Asymmetric grids for visual interest
+- Generous whitespace (padding 80-120px between sections)
+
+COMPONENT PATTERNS:
+- Floating labels for form inputs
+- Toast notifications (bottom-right or top-center)
+- Command palette (Cmd+K) for power users
+- Inline editing for data
+- Drag and drop interactions
+- Infinite scroll with skeleton loading
+- Pull-to-refresh on mobile
+
+COLOR SCHEMES (Modern Palettes):
+- Primary: Deep purples (#7c3aed), Electric blues (#3b82f6), Vibrant greens (#10b981)
+- Backgrounds: Near-black (#0a0a0f), Dark gray (#18181b), Off-white (#fafafa)
+- Accents: Gradient combinations (purple-to-pink, blue-to-cyan)
+- Text: High contrast (#fafafa on dark, #18181b on light)
+
+ANIMATION TIMING:
+- Micro-interactions: 150-200ms
+- Page transitions: 300-400ms
+- Content reveals: 400-600ms with stagger
+- Easing: cubic-bezier(0.4, 0, 0.2, 1) for smooth motion`
 
 export interface ControllerConfig {
   temperature?: number

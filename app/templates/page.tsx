@@ -102,48 +102,36 @@ export default function TemplatesPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="h-8 w-8">
-            <Link href="/dashboard">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center">
-              <Code2 className="h-4 w-4 text-white" />
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild className="rounded-xl hover:bg-secondary">
+              <Link href="/dashboard">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                <Code2 className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-bold text-lg tracking-tight">Templates</span>
             </div>
-            <span className="font-semibold text-foreground">Templates</span>
-          </Link>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Choose a Template</h1>
-          <p className="text-muted-foreground">
-            {PROJECT_TEMPLATES.length} templates available
-            {isAuthenticated === false && (
-              <span className="text-amber-600 dark:text-amber-400 ml-2">
-                (Sign in to save projects)
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Loading templates...</p>
+          <div className="flex items-center justify-center h-[60vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <TemplateBrowser
             templates={PROJECT_TEMPLATES}
-            onSelectTemplate={handleSelectTemplate}
+            onSelect={handleSelectTemplate}
             favoriteIds={favoriteIds}
             templateStats={templateStats}
+            isAuthenticated={!!isAuthenticated}
           />
         )}
       </main>

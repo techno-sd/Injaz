@@ -1,4 +1,4 @@
-// CodeGen Service - GPT-4.1
+// CodeGen Service - GPT-4o
 // Responsible for converting Unified App Schema to production-ready code
 
 import OpenAI from 'openai'
@@ -10,8 +10,8 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Use GPT-4.1 for powerful code generation (can be overridden via env)
-const CODEGEN_MODEL = process.env.CODEGEN_MODEL || 'gpt-4.1'
+// Use GPT-4o for powerful code generation (can be overridden via env)
+const CODEGEN_MODEL = process.env.CODEGEN_MODEL || 'gpt-4o'
 
 // Helper to extract JSON from response (handles markdown code blocks)
 function extractJSON(content: string): string {
@@ -25,8 +25,8 @@ function extractJSON(content: string): string {
 
   // Remove markdown code blocks (```json ... ``` or ``` ... ```)
   let cleaned = content
-    .replace(/^```(?:json)?\s*\n?/i, '')
-    .replace(/\n?```\s*$/i, '')
+    .replace(/^```(?:json)?\s*\n?/gim, '')
+    .replace(/\n?```\s*$/gim, '')
     .trim()
 
   // Try again
@@ -37,7 +37,35 @@ function extractJSON(content: string): string {
     // Still not valid, try to find JSON object
   }
 
-  // Try to find JSON object in the content
+  // Try to find the first complete JSON object using bracket counting
+  let braceDepth = 0
+  let startIdx = -1
+  let endIdx = -1
+
+  for (let i = 0; i < content.length; i++) {
+    if (content[i] === '{') {
+      if (braceDepth === 0) startIdx = i
+      braceDepth++
+    } else if (content[i] === '}') {
+      braceDepth--
+      if (braceDepth === 0 && startIdx !== -1) {
+        endIdx = i
+        break
+      }
+    }
+  }
+
+  if (startIdx !== -1 && endIdx !== -1) {
+    const extracted = content.slice(startIdx, endIdx + 1)
+    try {
+      JSON.parse(extracted)
+      return extracted
+    } catch {
+      // Not valid JSON
+    }
+  }
+
+  // Last resort: try regex match
   const jsonMatch = content.match(/\{[\s\S]*\}/)
   if (jsonMatch) {
     try {
@@ -87,7 +115,564 @@ RULES:
 5. Follow the schema exactly - don't add features not specified
 6. Use semantic HTML and accessible patterns
 7. Include responsive design considerations
-8. Generate package.json with correct dependencies`
+8. Generate package.json with correct dependencies
+
+CODE QUALITY REQUIREMENTS:
+
+CLEAN CODE:
+- Self-documenting code with clear, descriptive naming (variables, functions, components)
+- Single responsibility principle for functions and components
+- DRY (Don't Repeat Yourself) - extract reusable utilities and components
+- KISS (Keep It Simple) - avoid over-engineering and unnecessary abstractions
+- Maximum function length: 50 lines, maximum file length: 300 lines
+- Consistent code formatting and indentation
+
+ERROR HANDLING:
+- Try-catch blocks for all async operations
+- User-friendly error messages (not technical jargon)
+- Graceful degradation when features fail
+- Error boundaries for React components
+- Loading states during all async operations
+- Retry mechanisms for network failures
+
+TYPESCRIPT (when applicable):
+- Strict mode enabled (no implicit any)
+- Proper typing for all function parameters and returns
+- Interface for object shapes, Type for unions/primitives
+- Avoid 'any' - use 'unknown' with type guards if needed
+- Export types that consumers need
+- Use utility types (Partial, Pick, Omit, etc.)
+
+PERFORMANCE:
+- Memoization for expensive computations (useMemo, useCallback)
+- Debounce/throttle for frequent events (scroll, resize, input)
+- Lazy loading for images and below-fold content
+- Virtual scrolling for lists >100 items
+- Avoid unnecessary re-renders
+- Bundle size awareness - no bloated dependencies
+
+ACCESSIBILITY (A11Y):
+- Semantic HTML elements (header, main, nav, section, article, footer)
+- ARIA labels for all interactive elements
+- Proper heading hierarchy (h1 -> h2 -> h3)
+- Focus management and visible focus indicators
+- Keyboard navigation for all interactions
+- Alt text for all images
+- Color contrast minimum 4.5:1 for text
+- Skip to content link for screen readers
+
+SAMPLE CONTENT - Generate realistic placeholder content:
+
+IMAGES (use these Unsplash URLs):
+- Hero images: https://images.unsplash.com/photo-1551434678-e076c223a692?w=1920&h=1080&fit=crop
+- Team/avatars: https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face
+- Products: https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop
+- Office/workspace: https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop
+- Nature/backgrounds: https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop
+- Food: https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=600&fit=crop
+- Technology: https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=600&fit=crop
+- Abstract/patterns: https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&h=800&fit=crop
+
+TEXT CONTENT:
+- Write realistic, industry-appropriate copy (NOT Lorem Ipsum)
+- Use compelling headlines that describe value propositions
+- Include specific numbers and statistics where relevant
+- Write clear, action-oriented CTA buttons ("Start Free Trial", "Get Started", "Learn More")
+- Add realistic testimonials with full names and job titles
+- Use proper pricing formats ($29/month, $299/year)
+
+SAMPLE DATA:
+- User names: "Sarah Johnson", "Michael Chen", "Emily Rodriguez"
+- Company names: "TechCorp", "Innovate Labs", "Acme Inc"
+- Email formats: firstname@company.com
+- Phone formats: (555) 123-4567
+- Addresses: "123 Main Street, San Francisco, CA 94102"
+- Prices: Use realistic price points for the industry
+- Dates: Use relative dates ("2 days ago", "Last week") or recent dates
+
+AVATAR PLACEHOLDERS:
+- Use UI Avatars API: https://ui-avatars.com/api/?name=John+Doe&background=random&size=150
+- Or Unsplash face photos with crop=face parameter
+
+WORLD-CLASS UI/UX DESIGN SYSTEM (2024-2025 Industry Standards):
+
+=== DESIGN PHILOSOPHY ===
+Create interfaces that feel like they were designed by top agencies (Apple, Linear, Vercel, Stripe, Airbnb).
+Focus on: Visual hierarchy, whitespace, subtle animations, premium feel, and delightful micro-interactions.
+Every pixel matters. Every interaction should feel intentional and polished.
+
+=== MODERN VISUAL EFFECTS ===
+
+GLASSMORPHISM (Use Sparingly for Premium Feel):
+- Background: rgba(255, 255, 255, 0.7) light / rgba(17, 17, 17, 0.8) dark
+- Backdrop-filter: blur(20px) saturate(180%)
+- Border: 1px solid rgba(255, 255, 255, 0.2)
+- Box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08)
+
+NEUMORPHISM (Subtle, for interactive elements):
+- Light: box-shadow: 6px 6px 12px #d1d9e6, -6px -6px 12px #ffffff
+- Dark: box-shadow: 6px 6px 12px #0a0a0a, -6px -6px 12px #1a1a1a
+- Use only on buttons/toggles, not whole layouts
+
+MODERN LAYERED SHADOWS (Key to Premium Feel):
+- Level 1 (Subtle): 0 1px 2px 0 rgb(0 0 0 / 0.05)
+- Level 2 (Default): 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)
+- Level 3 (Cards): 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)
+- Level 4 (Dropdown/Modal): 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)
+- Level 5 (Floating): 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)
+- Level 6 (Dramatic): 0 25px 50px -12px rgb(0 0 0 / 0.25)
+- Colored shadow for CTA buttons: 0 10px 40px -10px var(--color-primary)
+
+GRADIENT SYSTEMS:
+- Mesh gradients for hero backgrounds:
+  background:
+    radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.15) 0px, transparent 50%),
+    radial-gradient(at 97% 21%, hsla(280, 94%, 66%, 0.12) 0px, transparent 50%),
+    radial-gradient(at 52% 99%, hsla(354, 98%, 61%, 0.08) 0px, transparent 50%),
+    radial-gradient(at 10% 29%, hsla(168, 95%, 53%, 0.1) 0px, transparent 50%);
+- Animated gradient borders: background-size: 400% 400%; animation: gradient 15s ease infinite
+- Text gradients: background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; color: transparent
+- Button gradients: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)
+
+GLOW EFFECTS (For Premium Interactive Elements):
+- Button glow: box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.4)
+- Card glow on hover: box-shadow: 0 0 40px rgba(var(--primary-rgb), 0.15)
+- Input focus glow: box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2)
+- Animated pulse glow for live indicators
+
+NOISE/GRAIN TEXTURE (Subtle, for backgrounds):
+- Use SVG filter with feTurbulence or CSS noise background
+- Opacity: 0.02-0.05 (very subtle)
+- Adds premium, printed feel
+
+=== TYPOGRAPHY EXCELLENCE ===
+
+FONT PAIRINGS (Industry Standard):
+- Tech/SaaS: Inter + Inter or Geist + Geist Mono
+- Premium: SF Pro Display + SF Pro Text (system-ui on Apple)
+- Modern: Plus Jakarta Sans + DM Sans
+- Editorial: Fraunces + Source Serif Pro
+- Bold: Cabinet Grotesk + Satoshi
+
+TYPE SCALE (Perfect Harmony):
+- Display/Hero: clamp(3rem, 8vw, 6rem) - 800 weight
+- H1: clamp(2.25rem, 5vw, 3.5rem) - 700 weight
+- H2: clamp(1.875rem, 4vw, 2.5rem) - 600 weight
+- H3: clamp(1.5rem, 3vw, 1.875rem) - 600 weight
+- H4: 1.25rem - 600 weight
+- Body Large: 1.125rem - 400 weight
+- Body: 1rem - 400 weight
+- Small: 0.875rem - 400 weight
+- Caption: 0.75rem - 500 weight, letter-spacing: 0.05em, uppercase
+
+LINE HEIGHT:
+- Headings: 1.1 - 1.2
+- Body text: 1.6 - 1.75
+- UI elements: 1.4
+
+LETTER SPACING:
+- Large headings: -0.02em to -0.04em (tighter)
+- Body: 0 (normal)
+- Buttons/Labels: 0.01em to 0.02em
+- Uppercase labels: 0.05em to 0.1em
+
+TEXT COLORS (Hierarchy is Key):
+- Primary: 95% opacity (near black/white)
+- Secondary: 70% opacity
+- Tertiary/Muted: 50% opacity
+- Disabled: 35% opacity
+
+=== WORLD-CLASS ANIMATIONS ===
+
+EASING FUNCTIONS (Natural Motion):
+- Default ease: cubic-bezier(0.4, 0, 0.2, 1) - smooth deceleration
+- Enter ease: cubic-bezier(0, 0, 0.2, 1) - fast start, slow end
+- Exit ease: cubic-bezier(0.4, 0, 1, 1) - slow start, fast end
+- Spring bounce: cubic-bezier(0.34, 1.56, 0.64, 1) - playful overshoot
+- Elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55)
+
+DURATION GUIDELINES:
+- Micro-interactions (hover, focus): 150-200ms
+- Small UI changes (toggles, buttons): 200-300ms
+- Medium transitions (modals, dropdowns): 300-400ms
+- Large transitions (page, slide): 400-500ms
+- Complex animations: 500-800ms
+
+KEYFRAME ANIMATIONS:
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(-100%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes bounce { 0%, 100% { transform: translateY(-5%); } 50% { transform: translateY(0); } }
+@keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+STAGGER ANIMATIONS (For Lists/Grids):
+- Use CSS custom property: style="--index: N"
+- Apply delay: animation-delay: calc(var(--index) * 50ms)
+- Max stagger: 10-12 items, then batch
+- Intersection Observer for scroll-triggered
+
+SCROLL ANIMATIONS (Subtle & Elegant):
+- Fade in on scroll: opacity 0 -> 1, translateY(20px) -> 0
+- Parallax: transform: translateY(calc(var(--scroll) * 0.3))
+- Scale on scroll: transform: scale(calc(0.8 + var(--progress) * 0.2))
+- Use Intersection Observer with threshold: [0, 0.25, 0.5, 0.75, 1]
+
+=== MICRO-INTERACTIONS (THE MAGIC) ===
+
+BUTTON INTERACTIONS:
+- Hover: transform: translateY(-2px); box-shadow: increase
+- Active/Click: transform: translateY(0) scale(0.98); box-shadow: decrease
+- Loading: Replace text with spinner, or show progress bar inside
+- Success: Brief green flash or checkmark animation
+- Ripple effect on click (Material-style)
+
+CARD HOVER EFFECTS:
+- Lift: translateY(-4px) + shadow increase
+- Border glow: box-shadow: 0 0 0 1px var(--primary)
+- Image zoom: img { transform: scale(1.05); transition: 0.4s }
+- Gradient reveal: pseudo-element gradient sliding in
+- Content preview: Additional info fades in
+
+LINK & NAVIGATION:
+- Underline grow: pseudo-element width 0 -> 100%
+- Color transition: 200ms ease
+- Active indicator: Pill background or dot below
+- Hover background: subtle rgba(primary, 0.1)
+
+INPUT FOCUS STATES:
+- Ring: box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15)
+- Border color change: border-color: var(--primary)
+- Label float: translateY(-100%) scale(0.85)
+- Icon color change
+
+TOGGLE/SWITCH:
+- Thumb slide: translateX with spring easing
+- Background color transition
+- Optional: subtle bounce at end
+- Haptic feedback indication (mobile)
+
+LOADING STATES:
+- Skeleton shimmer: 200% width gradient animation
+- Pulse animation for placeholders
+- Spinner for buttons (replace text or inline)
+- Progress bar for uploads/long operations
+
+=== MODERN LAYOUT PATTERNS ===
+
+BENTO GRID (Trending Layout):
+- Grid with varying cell sizes (1x1, 2x1, 1x2, 2x2)
+- Gap: 16-24px
+- Rounded corners: 16-24px
+- Each cell has hover state
+- Great for features, portfolios, dashboards
+
+ASYMMETRIC LAYOUTS:
+- Hero with offset image/content
+- Overlapping elements with z-index
+- Negative margins for visual interest
+- Split screens with different backgrounds
+
+SECTION LAYOUTS:
+- Centered content: max-width 680px for readability
+- Two-column: 1:1 or 2:3 ratio
+- Offset: Content left, visual right (or vice versa)
+- Full-bleed images with contained text overlay
+
+SPACING SCALE (8px Base):
+- 4px (0.25rem) - Micro spacing
+- 8px (0.5rem) - Tight
+- 12px (0.75rem) - Small
+- 16px (1rem) - Default
+- 24px (1.5rem) - Medium
+- 32px (2rem) - Large
+- 48px (3rem) - XL
+- 64px (4rem) - 2XL
+- 96px (6rem) - 3XL
+- 128px (8rem) - Section gaps
+- 160px (10rem) - Hero padding
+
+RESPONSIVE BREAKPOINTS:
+- Mobile: < 640px (default styles)
+- sm: 640px (landscape phones)
+- md: 768px (tablets)
+- lg: 1024px (laptops)
+- xl: 1280px (desktops)
+- 2xl: 1536px (large screens)
+- Container max-widths: 640, 768, 1024, 1280, 1536px
+
+=== COMPONENT DESIGN PATTERNS ===
+
+NAVIGATION (Premium):
+- Height: 64-80px
+- Backdrop blur when scrolled: blur(12px) + subtle bg
+- Logo left, links center, actions right
+- Mobile: Bottom sheet or full-screen overlay (not hamburger menu alone)
+- Active state: Pill background or bottom indicator
+- Mega menus for complex navigation
+- Keyboard accessible with arrow key navigation
+
+HERO SECTIONS (High Impact):
+- Full viewport or 80vh minimum
+- Large headline with gradient or animated text
+- Subheadline in muted color
+- Clear CTA with glow effect
+- Background: gradient mesh, subtle animation, or video
+- Social proof below CTA (logos, avatars, stats)
+- Scroll indicator at bottom
+
+FEATURE SECTIONS:
+- Icon + Title + Description pattern
+- Use Bento grid or alternating left/right
+- Icons in colored circles or squares
+- Hover: lift card, animate icon
+- Consider tabbed or accordion for many features
+
+TESTIMONIALS (Trust Building):
+- Large quote marks or avatar
+- Star ratings if applicable
+- Company logo + person's role
+- Carousel or grid layout
+- Video testimonials if available
+
+PRICING TABLES:
+- 2-3 tiers maximum (Good, Better, Best)
+- Highlight recommended tier (scale, border, badge)
+- Monthly/Annual toggle with savings badge
+- Feature comparison with checkmarks
+- Sticky header for long feature lists
+- Money-back guarantee badge
+
+FORMS (Conversion Optimized):
+- Single column for simplicity
+- Floating or top-aligned labels
+- 48-56px input height (touch-friendly)
+- Clear error states with icons
+- Progress indicator for multi-step
+- Smart defaults and autocomplete
+- Real-time validation feedback
+
+FOOTERS (Professional):
+- 4-5 column grid on desktop
+- Newsletter signup section
+- Social links with hover effects
+- Legal links at very bottom
+- Background slightly different shade
+- Optional: Dark footer for contrast
+
+MODALS/DIALOGS:
+- Centered with backdrop blur
+- Max-width: 500px for forms, 800px for content
+- Rounded corners: 16-24px
+- Close button top-right
+- Focus trap for accessibility
+- Escape key to close
+- Animate in: scale(0.95) -> scale(1) + fade
+
+DROPDOWNS:
+- Slight offset from trigger (8px)
+- Border-radius matching system
+- Shadow level 4
+- Hover state on items
+- Keyboard navigation
+- Check mark for selected
+- Optional: Icons on left
+
+TOAST NOTIFICATIONS:
+- Fixed position: bottom-right or top-center
+- Stack multiple with spacing
+- Auto-dismiss with progress bar
+- Types: success (green), error (red), warning (yellow), info (blue)
+- Close button + swipe to dismiss
+- Icons matching type
+
+=== COLOR SYSTEM ===
+
+PRIMARY COLOR USAGE:
+- CTAs, links, active states, highlights
+- Use sparingly for maximum impact
+- Provide hover (darker) and focus (lighter) variants
+
+SEMANTIC COLORS:
+- Success: Green (#10B981, #22C55E)
+- Error: Red (#EF4444, #F43F5E)
+- Warning: Amber (#F59E0B, #FBBF24)
+- Info: Blue (#3B82F6, #60A5FA)
+
+NEUTRAL PALETTE (Modern Gray):
+- 50: #FAFAFA (backgrounds)
+- 100: #F4F4F5
+- 200: #E4E4E7
+- 300: #D4D4D8
+- 400: #A1A1AA (placeholder text)
+- 500: #71717A (secondary text)
+- 600: #52525B
+- 700: #3F3F46
+- 800: #27272A (dark backgrounds)
+- 900: #18181B (dark cards)
+- 950: #09090B (dark body)
+
+DARK MODE (Essential):
+- Invert backgrounds, not colors
+- Reduce white brightness to #FAFAFA or #F4F4F5
+- Increase shadow opacity slightly
+- Use subtle borders for depth
+- Consider primary color adjustments
+
+=== RESPONSIVE & MOBILE EXCELLENCE ===
+
+MOBILE-FIRST PRINCIPLES:
+- Design smallest screen first
+- Touch targets: minimum 44x44px
+- Thumb-friendly placement for key actions
+- Reduce cognitive load on mobile
+- Prioritize content over navigation
+
+MOBILE PATTERNS:
+- Bottom navigation for key actions
+- Pull-to-refresh indicator
+- Swipe gestures for navigation
+- Bottom sheets instead of dropdowns
+- Sticky CTA at bottom of viewport
+- Optimized forms with correct keyboard types
+
+TABLET OPTIMIZATION:
+- Consider landscape vs portrait
+- Two-column layouts at 768px+
+- Touch-friendly hover alternatives
+- Sidebar navigation options
+
+=== ICON SYSTEM ===
+
+ICON LIBRARIES:
+- Web: Lucide React (modern, consistent, lightweight)
+- Alternative: Heroicons, Phosphor Icons
+- Mobile: @expo/vector-icons (Ionicons, Feather)
+
+ICON SIZES:
+- Inline with text: 16px
+- UI elements: 20-24px
+- Feature icons: 32-48px
+- Hero/illustration: 64-128px
+
+ICON STYLING:
+- Stroke width: 1.5-2px
+- Match text color or use primary for emphasis
+- Rounded corners/caps for modern feel
+- Optional: Circular or rounded square background
+
+=== INDUSTRY-SPECIFIC DESIGN PATTERNS ===
+
+SAAS/TECH PRODUCTS (Stripe, Linear, Vercel style):
+- Clean, minimal aesthetic with lots of whitespace
+- Dark mode as default or prominent option
+- Gradient mesh backgrounds in hero
+- Code snippets with syntax highlighting
+- Animated product demos/screenshots
+- Trust badges: SOC2, GDPR, security certifications
+- Feature comparison tables
+- Integration logos grid
+- API documentation preview
+- Developer-focused copy
+
+E-COMMERCE (Shopify, ASOS style):
+- Product images as hero (high quality, consistent)
+- Quick add to cart without page reload
+- Size/color selectors with visual feedback
+- Urgency indicators (stock levels, sale timers)
+- Reviews with photos
+- Recently viewed products
+- Wishlist functionality
+- Trust signals: secure payment icons, return policy
+- Mobile-optimized checkout
+- Product recommendations grid
+
+PORTFOLIO/AGENCY (Awwwards winners style):
+- Bold typography, experimental layouts
+- Full-screen project showcases
+- Smooth page transitions
+- Custom cursor effects
+- Scroll-driven animations
+- Case study format with before/after
+- Team section with personality
+- Client logo wall
+- Contact form with personality
+- Social proof through awards/features
+
+LANDING PAGES (High conversion):
+- Single focused message above the fold
+- Social proof immediately visible (logos, testimonials)
+- Clear value proposition in headline
+- Benefits, not features
+- Video or animated product demo
+- Multiple CTA opportunities (not just one)
+- FAQ section addressing objections
+- Risk reversal (money-back guarantee)
+- Urgency/scarcity when appropriate
+- Mobile-optimized CTA placement
+
+DASHBOARDS/ADMIN (Linear, Notion style):
+- Sidebar navigation with icons
+- Command palette (⌘K) for power users
+- Data tables with sorting/filtering
+- Charts with hover details
+- Card-based stat widgets
+- Activity feeds/timelines
+- Notification system
+- Settings with tabs/sections
+- Dark mode essential
+- Keyboard shortcuts throughout
+
+BLOG/CONTENT (Medium, Substack style):
+- Reading-optimized typography (max-width: 680px)
+- Large featured images
+- Author byline with avatar
+- Estimated read time
+- Progress indicator while reading
+- Table of contents for long posts
+- Code blocks with copy button
+- Newsletter signup inline
+- Related articles at bottom
+- Social sharing buttons
+
+HEALTHCARE/FINTECH (Trust-critical):
+- Conservative color palette (blues, greens)
+- Prominent security indicators
+- Clear data privacy messaging
+- Accessible design (WCAG AAA)
+- Professional photography
+- Credential/certification displays
+- FAQ and help resources prominent
+- Contact options clearly visible
+- Simple, clear language
+- Trust seals and compliance badges
+
+=== PREMIUM DETAILS CHECKLIST ===
+
+Before generating, ensure these premium details:
+□ Proper letter-spacing on headings (tighter)
+□ Subtle hover states on ALL interactive elements
+□ Focus states for keyboard navigation
+□ Loading states for async operations
+□ Empty states with helpful actions
+□ Error states with recovery options
+□ Smooth transitions (never instant)
+□ Proper image aspect ratios
+□ Consistent icon sizing
+□ Color contrast accessibility (4.5:1 minimum)
+□ Touch targets 44px+ on mobile
+□ Scroll animations respect prefers-reduced-motion
+□ Dark mode support
+□ Skeleton loaders for content
+□ Toast notifications for actions
+□ Form validation feedback
+□ Responsive images with srcset
+□ Proper semantic HTML
+□ ARIA labels for accessibility`
 
   const platformPrompts: Record<PlatformType, string> = {
     website: `
@@ -100,46 +685,271 @@ FILE STRUCTURE:
 ├── script.js
 └── assets/
 
-GUIDELINES:
-- Use vanilla HTML5, CSS3, JavaScript (ES6+)
-- Include proper meta tags and SEO basics
-- Make it responsive with CSS Grid/Flexbox
-- Add smooth animations where appropriate
-- Include favicon and basic assets setup
-- No frameworks - pure vanilla code`,
+HTML BEST PRACTICES:
+- Semantic HTML5 elements (header, main, nav, section, article, aside, footer)
+- Proper heading hierarchy (single h1, then h2, h3, etc.)
+- Complete meta tags: viewport, description, Open Graph (og:title, og:description, og:image)
+- JSON-LD structured data for SEO
+- Lazy loading for images: loading="lazy" decoding="async"
+- Descriptive alt text for all images
+- Skip to content link: <a href="#main" class="skip-link">Skip to content</a>
+- Proper lang attribute on html element
+
+CSS BEST PRACTICES:
+- CSS Custom Properties (variables) for theming: --color-primary, --spacing-md, etc.
+- Mobile-first media queries (min-width breakpoints)
+- CSS Grid for page layouts, Flexbox for component layouts
+- BEM naming convention: .block__element--modifier
+- Smooth transitions: transition: all 0.2s ease-in-out
+- :focus-visible for keyboard focus (not :focus alone)
+- @media (prefers-reduced-motion: reduce) for animation preferences
+- @media (prefers-color-scheme: dark) for dark mode support
+- Logical properties where possible (margin-inline, padding-block)
+
+JAVASCRIPT BEST PRACTICES:
+- ES6+ features: const/let (no var), arrow functions, destructuring, template literals
+- Event delegation for dynamic content
+- Intersection Observer for scroll animations and lazy loading
+- requestAnimationFrame for smooth animations
+- No inline event handlers (use addEventListener)
+- Module pattern or IIFE for encapsulation
+- Debounce scroll/resize handlers
+- Passive event listeners for scroll/touch
+
+PERFORMANCE:
+- Critical CSS inlined in <head>
+- defer attribute on script tags
+- Preconnect to external domains: <link rel="preconnect">
+- Minification-ready code structure
+- Optimize images (WebP with fallback)`,
 
     webapp: `
 PLATFORM: Web Application (Next.js 14 + App Router + Supabase)
+This should match the quality of Lovable, Bolt.new, and v0.dev outputs.
 
 FILE STRUCTURE:
 /
 ├── app/
-│   ├── layout.tsx
-│   ├── page.tsx
-│   ├── globals.css
-│   ├── loading.tsx
-│   └── [dynamic-routes]/
+│   ├── layout.tsx          # Root layout with fonts, metadata, providers
+│   ├── page.tsx            # Home page
+│   ├── loading.tsx         # Global loading UI (skeleton)
+│   ├── error.tsx           # Error boundary with recovery
+│   ├── not-found.tsx       # Custom 404 page
+│   ├── globals.css         # Global styles with CSS variables
+│   ├── (auth)/             # Auth route group
+│   │   ├── login/page.tsx
+│   │   ├── signup/page.tsx
+│   │   └── layout.tsx      # Auth layout (centered, minimal)
+│   ├── (dashboard)/        # Protected routes
+│   │   ├── layout.tsx      # Dashboard layout with sidebar
+│   │   └── page.tsx
+│   └── api/                # API route handlers
 ├── components/
-│   └── ui/
+│   ├── ui/                 # shadcn/ui-style primitives
+│   │   ├── button.tsx      # Button with variants (cva)
+│   │   ├── input.tsx       # Input with floating label
+│   │   ├── card.tsx        # Card with hover effects
+│   │   ├── dialog.tsx      # Modal/Dialog component
+│   │   ├── dropdown-menu.tsx
+│   │   ├── toast.tsx       # Toast notifications
+│   │   ├── skeleton.tsx    # Loading skeletons
+│   │   └── avatar.tsx
+│   ├── forms/              # Form components
+│   ├── layouts/            # Layout components
+│   └── sections/           # Page sections (hero, features, etc.)
 ├── lib/
-│   ├── supabase.ts
-│   └── utils.ts
+│   ├── supabase/
+│   │   ├── client.ts       # Browser client
+│   │   ├── server.ts       # Server client
+│   │   └── middleware.ts   # Auth middleware helper
+│   ├── utils.ts            # cn() utility function
+│   ├── validations.ts      # Zod schemas
+│   └── hooks/              # Custom hooks
+│       ├── use-toast.ts
+│       └── use-media-query.ts
 ├── types/
+│   └── index.ts            # TypeScript types
 ├── package.json
 ├── tailwind.config.ts
-├── next.config.js
-└── tsconfig.json
+├── components.json         # Component config (shadcn-style)
+└── .env.example
 
-GUIDELINES:
-- Use Next.js 14 App Router with server components where possible
-- Use Tailwind CSS for styling
-- Set up Supabase client in lib/supabase.ts
-- Include proper TypeScript types
-- Use 'use client' directive only when needed
-- Include loading.tsx for loading states
-- Set up proper metadata for SEO
-- Use shadcn/ui component patterns
-- Include environment variable setup (.env.example)`,
+NEXT.JS ARCHITECTURE:
+- Server Components by default (no 'use client' unless needed)
+- 'use client' only for: useState, useEffect, event handlers, browser APIs
+- Server Actions for form submissions ('use server' directive)
+- Proper data fetching: fetch in Server Components, React Query in Client
+- Route handlers (route.ts) for API endpoints
+- Middleware for authentication redirects
+- generateMetadata() for dynamic SEO
+- Parallel routes and intercepting routes where appropriate
+
+COMPONENT ARCHITECTURE (shadcn/ui Pattern):
+Create reusable, composable components following this pattern:
+
+// lib/utils.ts
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// components/ui/button.tsx
+import { cva, type VariantProps } from "class-variance-authority"
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-lg px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: { variant: "default", size: "default" },
+  }
+)
+
+ANIMATIONS (Framer Motion Pattern):
+Include smooth, professional animations:
+
+// Fade in on mount
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+>
+
+// Stagger children
+<motion.div variants={containerVariants} initial="hidden" animate="visible">
+  {items.map((item, i) => (
+    <motion.div key={i} variants={itemVariants} />
+  ))}
+</motion.div>
+
+// Page transitions with AnimatePresence
+<AnimatePresence mode="wait">
+  <motion.main key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+
+// Hover animations
+whileHover={{ scale: 1.02, y: -2 }}
+whileTap={{ scale: 0.98 }}
+
+STYLING WITH TAILWIND (Production-Grade):
+- Design system tokens in tailwind.config.ts:
+  extend: {
+    colors: {
+      border: "hsl(var(--border))",
+      background: "hsl(var(--background))",
+      foreground: "hsl(var(--foreground))",
+      primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
+      secondary: { DEFAULT: "hsl(var(--secondary))", foreground: "hsl(var(--secondary-foreground))" },
+      muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
+      accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
+    },
+    borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
+    keyframes: {
+      "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
+      "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
+      "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+      "fade-up": { from: { opacity: "0", transform: "translateY(10px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+    },
+  }
+- CSS variables in globals.css for theme colors (HSL format for opacity support)
+- Dark mode: class strategy with next-themes
+- Responsive: mobile-first with sm:, md:, lg:, xl: prefixes
+- Custom animations: animate-fade-in, animate-fade-up, animate-accordion-down
+- Component variants with class-variance-authority (cva)
+- Class merging with clsx + tailwind-merge (cn utility)
+
+GLOBALS.CSS TEMPLATE:
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --border: 240 5.9% 90%;
+    --radius: 0.75rem;
+  }
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+  }
+}
+
+AUTHENTICATION (Supabase SSR):
+- @supabase/ssr for server-side auth
+- Middleware for protected route checks
+- Server-side session management
+- OAuth providers (Google, GitHub) with proper callback handling
+- Email/password with email verification
+- Auth context provider for client-side state
+
+DATA FETCHING PATTERNS:
+- Server Components for static/cached data (default)
+- React Query for client-side data with optimistic updates
+- Proper loading states with Suspense boundaries
+- Error boundaries with recovery UI and retry
+- revalidatePath() and revalidateTag() for cache invalidation
+- Streaming with loading.tsx files per route
+
+FORMS (Best Practices):
+- Server Actions for form handling
+- Zod for validation schemas (shared client/server)
+- React Hook Form for complex forms with useForm
+- Inline error messages with proper ARIA
+- Loading states on submit (useFormStatus)
+- Toast notifications for success/error (sonner or custom)
+- Optimistic UI updates where appropriate
+
+REQUIRED DEPENDENCIES:
+{
+  "dependencies": {
+    "next": "14.x",
+    "@supabase/supabase-js": "^2.x",
+    "@supabase/ssr": "^0.x",
+    "tailwindcss": "^3.x",
+    "class-variance-authority": "^0.7.x",
+    "clsx": "^2.x",
+    "tailwind-merge": "^2.x",
+    "framer-motion": "^11.x",
+    "lucide-react": "^0.x",
+    "zod": "^3.x",
+    "react-hook-form": "^7.x",
+    "@hookform/resolvers": "^3.x",
+    "next-themes": "^0.x",
+    "sonner": "^1.x"
+  }
+}`,
 
     mobile: `
 PLATFORM: Mobile Application (React Native + Expo Router)
@@ -147,35 +957,77 @@ PLATFORM: Mobile Application (React Native + Expo Router)
 FILE STRUCTURE:
 /
 ├── app/
-│   ├── _layout.tsx
-│   ├── index.tsx
-│   ├── (tabs)/
-│   │   ├── _layout.tsx
-│   │   ├── index.tsx
-│   │   └── [other-tabs].tsx
-│   └── [screens]/
+│   ├── _layout.tsx         # Root layout with providers
+│   ├── index.tsx           # Entry/splash redirect
+│   ├── (tabs)/             # Tab navigation
+│   │   ├── _layout.tsx     # Tab bar config
+│   │   ├── index.tsx       # Home tab
+│   │   └── profile.tsx     # Profile tab
+│   ├── (auth)/             # Auth stack
+│   │   ├── login.tsx
+│   │   └── signup.tsx
+│   └── [id].tsx            # Dynamic routes
 ├── components/
+│   ├── ui/                 # Reusable components
+│   └── forms/              # Form components
 ├── lib/
-│   ├── supabase.ts
+│   ├── supabase.ts         # Supabase with AsyncStorage
 │   └── utils.ts
 ├── constants/
-│   └── Colors.ts
+│   ├── Colors.ts           # Theme colors
+│   └── Layout.ts           # Spacing, sizes
 ├── hooks/
+│   ├── useColorScheme.ts
+│   └── useAuth.ts
 ├── app.json
-├── package.json
-├── tsconfig.json
-└── expo-env.d.ts
+└── package.json
 
-GUIDELINES:
-- Use Expo SDK 50+ with Expo Router
-- Use React Native StyleSheet for styling
-- Include platform-specific code where needed (Platform.OS)
-- Set up Supabase client for mobile
-- Use expo-secure-store for sensitive data
-- Include proper app.json configuration
-- Use Expo Vector Icons
-- Follow React Native best practices
-- Include safe area handling`,
+PLATFORM AWARENESS:
+- Platform.select({ ios: ..., android: ... }) for platform-specific code
+- SafeAreaView for notches and home indicators
+- KeyboardAvoidingView with behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+- StatusBar management (style, backgroundColor)
+- expo-haptics for tactile feedback on interactions
+- Dimensions API for responsive layouts
+
+STYLING BEST PRACTICES:
+- StyleSheet.create() for all styles (performance optimized)
+- Consistent spacing scale: 4, 8, 12, 16, 24, 32, 48
+- Platform-specific shadows:
+  - iOS: shadowColor, shadowOffset, shadowOpacity, shadowRadius
+  - Android: elevation
+- Dynamic theming with React Context
+- useColorScheme() hook for system theme
+- Avoid inline styles (performance)
+
+PERFORMANCE:
+- FlatList for lists (NEVER ScrollView with many items)
+- React.memo for pure components
+- useCallback for event handlers passed to children
+- useMemo for expensive computations
+- Image caching with expo-image
+- Hermes engine enabled
+
+NAVIGATION (Expo Router):
+- File-based routing
+- Deep linking configured in app.json
+- Tab navigation with custom icons (@expo/vector-icons)
+- Stack navigation with gestures
+- Modal presentation: presentation: 'modal'
+- Protected routes with redirect
+
+SECURITY:
+- expo-secure-store for tokens and sensitive data
+- No hardcoded API keys (use .env)
+- Biometric authentication option (expo-local-authentication)
+- Certificate pinning for production
+
+FORMS & INPUT:
+- TextInput with proper keyboardType
+- secureTextEntry for passwords
+- returnKeyType for form flow
+- onSubmitEditing for keyboard navigation
+- Form validation with inline errors`,
   }
 
   return basePrompt + platformPrompts[platform]
@@ -323,6 +1175,7 @@ export class CodeGen {
         const parsed = JSON.parse(jsonContent) as CodeGenOutput
 
         if (!parsed.files || !Array.isArray(parsed.files)) {
+          console.error('Invalid CodeGen response structure:', parsed)
           throw new Error('CodeGen did not return files array')
         }
 
@@ -350,9 +1203,14 @@ export class CodeGen {
             totalFiles: parsed.files.length,
           },
         }
-      } catch (parseError) {
-        console.error('Failed to parse CodeGen response:', fullContent.slice(0, 500))
-        throw new Error('CodeGen returned invalid JSON')
+      } catch (parseError: any) {
+        console.error('Failed to parse CodeGen response:', {
+          error: parseError.message,
+          contentLength: fullContent.length,
+          contentPreview: fullContent.slice(0, 1000),
+          contentEnd: fullContent.slice(-500),
+        })
+        throw new Error(`CodeGen returned invalid JSON: ${parseError.message}`)
       }
     } catch (error: any) {
       console.error('CodeGen stream error:', error)

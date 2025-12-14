@@ -16,7 +16,6 @@ import {
   Code2,
   FileCode,
   Share2,
-  Rocket,
   Plus,
   FileText,
   Image,
@@ -24,17 +23,8 @@ import {
   MessageSquare,
   ChevronLeft,
   Terminal,
-  Settings,
   Github,
-  MoreHorizontal,
   RefreshCw,
-  ExternalLink,
-  Monitor,
-  Tablet,
-  Smartphone,
-  ChevronDown,
-  Maximize2,
-  RotateCcw,
   Loader2,
   Zap,
   Save,
@@ -49,6 +39,15 @@ import type { Project, File, Message } from '@/types'
 // Lazy load heavy components
 const CodeEditor = dynamic(() => import('./code-editor').then(mod => ({ default: mod.CodeEditor })), {
   loading: () => <EditorSkeleton />,
+  ssr: false,
+})
+
+const LivePreview = dynamic(() => import('./live-preview').then(mod => ({ default: mod.LivePreview })), {
+  loading: () => (
+    <div className="h-full flex items-center justify-center bg-[#0d0d12]">
+      <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+    </div>
+  ),
   ssr: false,
 })
 
@@ -79,13 +78,6 @@ function getFileIcon(path: string) {
 
 // View modes for the main content area
 type ViewMode = 'preview' | 'code' | 'split' | 'terminal'
-type DeviceMode = 'desktop' | 'tablet' | 'mobile'
-
-const devicePresets = {
-  desktop: { width: '100%', label: 'Desktop', icon: Monitor },
-  tablet: { width: '768px', label: 'Tablet', icon: Tablet },
-  mobile: { width: '375px', label: 'iPhone 17', icon: Smartphone },
-}
 
 // Mobile view tabs
 type MobileView = 'chat' | 'code' | 'preview'
@@ -108,11 +100,6 @@ export function LovableWorkspaceLayout({
   )
   const [showFileDrawer, setShowFileDrawer] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('split')
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
-  const [showDeviceMenu, setShowDeviceMenu] = useState(false)
-  const [previewKey, setPreviewKey] = useState(0)
-  const [isPreviewLoading, setIsPreviewLoading] = useState(true)
-  const [previewZoom, setPreviewZoom] = useState(100)
   const [mobileView, setMobileView] = useState<MobileView>('chat')
   const [isMobile, setIsMobile] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -293,87 +280,14 @@ export function LovableWorkspaceLayout({
           }
         }
 
-        // Always refresh preview when files change (new or modified)
-        if (newlyAddedFiles.length > 0 || hasModifiedFiles) {
-          setPreviewKey(prev => prev + 1)
-        }
+        // Preview refresh is handled automatically by LivePreview component
       }, 0)
 
       return newFiles
     })
   }, [])
 
-  const refreshPreview = () => {
-    setPreviewKey(prev => prev + 1)
-    setIsPreviewLoading(true)
-  }
-
-  const [previewUrl, setPreviewUrl] = useState<string>('')
-
-  // Helper to normalize file paths
-  const normalizePath = (p: string) => p.replace(/^\.?\//, '').trim()
-
-  // Build preview HTML - memoized with files dependency
-  const buildPreviewHtml = useCallback(() => {
-    // Find index.html with flexible path matching
-    const indexHtml = files.find(f => {
-      const normalized = normalizePath(f.path)
-      return normalized === 'index.html' || normalized.endsWith('/index.html')
-    })
-    if (!indexHtml) {
-      // Show helpful message with file list
-      const fileList = files.map(f => f.path).join(', ') || 'No files'
-      return `<!DOCTYPE html><html><head><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a1a;color:#888;flex-direction:column;gap:16px;padding:20px;text-align:center;}</style></head><body><div><p style="font-size:16px;color:#aaa;">Waiting for index.html...</p><p style="font-size:12px;color:#666;">Files: ${files.length}</p><p style="font-size:10px;color:#555;max-width:400px;word-break:break-all;">${fileList}</p></div></body></html>`
-    }
-
-    // Check if content exists and is valid
-    if (!indexHtml.content || indexHtml.content.trim() === '') {
-      return `<!DOCTYPE html><html><head><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a1a;color:#888;}</style></head><body><div style="text-align:center;"><p style="color:#f87171;">index.html is empty</p><p style="font-size:12px;color:#666;">Waiting for content...</p></div></body></html>`
-    }
-
-    let html = indexHtml.content
-
-    // Inject CSS files
-    const cssFiles = files.filter(f => f.path.endsWith('.css') && f.content)
-    if (cssFiles.length > 0) {
-      const allCss = cssFiles.map(f => f.content).join('\n')
-      // Try to inject before </head>, or append to end if no </head>
-      if (html.includes('</head>')) {
-        html = html.replace('</head>', `<style>\n${allCss}\n</style>\n</head>`)
-      } else if (html.includes('</HEAD>')) {
-        html = html.replace('</HEAD>', `<style>\n${allCss}\n</style>\n</HEAD>`)
-      } else {
-        html = `<style>\n${allCss}\n</style>\n${html}`
-      }
-    }
-
-    // Inject JS files
-    const jsFiles = files.filter(f => f.path.endsWith('.js') && !f.path.includes('node_modules') && f.content)
-    if (jsFiles.length > 0) {
-      const allJs = jsFiles.map(f => f.content).join('\n')
-      // Try to inject before </body>, or append to end if no </body>
-      if (html.includes('</body>')) {
-        html = html.replace('</body>', `<script>\n${allJs}\n</script>\n</body>`)
-      } else if (html.includes('</BODY>')) {
-        html = html.replace('</BODY>', `<script>\n${allJs}\n</script>\n</BODY>`)
-      } else {
-        html = `${html}\n<script>\n${allJs}\n</script>`
-      }
-    }
-
-    return html
-  }, [files])
-
-  // Update preview when files change
-  useEffect(() => {
-    const html = buildPreviewHtml()
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    setPreviewUrl(url)
-    setIsPreviewLoading(false)
-    return () => URL.revokeObjectURL(url)
-  }, [buildPreviewHtml, previewKey])
-
+  
   // Mobile bottom navigation
   const MobileNav = () => (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/[0.06] safe-area-bottom">
@@ -418,153 +332,8 @@ export function LovableWorkspaceLayout({
     </div>
   )
 
-  // Integrated Preview Component with device frame
-  const IntegratedPreview = ({ className }: { className?: string }) => (
-    <div className={cn("h-full flex flex-col bg-[#0d0d12]", className)}>
-      {/* Preview Toolbar */}
-      <div className="h-11 border-b border-white/[0.06] bg-[#0a0a0f] flex items-center justify-between px-3">
-        {/* Device Selector */}
-        <div className="relative">
-          <button
-            onClick={() => setShowDeviceMenu(!showDeviceMenu)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-sm text-white/80 transition-colors"
-          >
-            {(() => {
-              const DeviceIcon = devicePresets[deviceMode].icon
-              return <DeviceIcon className="h-4 w-4" />
-            })()}
-            <span>{devicePresets[deviceMode].label}</span>
-            <ChevronDown className="h-3 w-3 text-white/40" />
-          </button>
-
-          {showDeviceMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowDeviceMenu(false)} />
-              <div className="absolute top-full left-0 mt-1 w-48 bg-[#1a1a1f] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-1 overflow-hidden">
-                {(Object.keys(devicePresets) as DeviceMode[]).map((mode) => {
-                  const DeviceIcon = devicePresets[mode].icon
-                  return (
-                    <button
-                      key={mode}
-                      onClick={() => {
-                        setDeviceMode(mode)
-                        setShowDeviceMenu(false)
-                      }}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors',
-                        deviceMode === mode
-                          ? 'bg-purple-500/15 text-purple-300'
-                          : 'text-white/70 hover:bg-white/[0.06]'
-                      )}
-                    >
-                      <DeviceIcon className="h-4 w-4" />
-                      <span>{devicePresets[mode].label}</span>
-                      {mode !== 'desktop' && (
-                        <span className="ml-auto text-xs text-white/40">
-                          {devicePresets[mode].width}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Preview Info */}
-        <div className="flex items-center gap-2 text-xs text-white/40">
-          <span>{deviceMode !== 'desktop' ? devicePresets[deviceMode].width : 'Full width'}</span>
-          <span className="text-white/20">•</span>
-          <span>{previewZoom}%</span>
-        </div>
-
-        {/* Preview Actions */}
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
-                onClick={refreshPreview}
-              >
-                <RefreshCw className={cn("h-4 w-4", isPreviewLoading && "animate-spin")} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Refresh</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
-                onClick={() => window.open(previewUrl, '_blank')}
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Open in new tab</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
-                onClick={() => setViewMode('preview')}
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Fullscreen</TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-
-      {/* Preview Content with Device Frame */}
-      <div className="flex-1 overflow-hidden p-4 bg-[#0d0d12]">
-        <div className="h-full flex items-center justify-center">
-          <div
-            className={cn(
-              "h-full bg-white rounded-xl shadow-2xl shadow-black/30 overflow-hidden transition-all duration-300 relative",
-              deviceMode !== 'desktop' && "ring-[12px] ring-[#1a1a1f]"
-            )}
-            style={{
-              maxWidth: devicePresets[deviceMode].width,
-              width: devicePresets[deviceMode].width === '100%' ? '100%' : devicePresets[deviceMode].width
-            }}
-          >
-            {/* Device Notch for Mobile */}
-            {deviceMode === 'mobile' && (
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1a1a1f] rounded-b-2xl z-10" />
-            )}
-
-            {isPreviewLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
-              </div>
-            )}
-            <iframe
-              key={previewKey}
-              src={previewUrl}
-              className="w-full h-full border-0"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              onLoad={() => setIsPreviewLoading(false)}
-              title="Preview"
-            />
-
-            {/* Made with Badge */}
-            <div className="absolute bottom-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 bg-white/90 backdrop-blur border border-gray-200 rounded-full text-xs text-gray-600 shadow-lg">
-              <Zap className="h-3 w-3" />
-              <span>Made in iEditor</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  // Get platform from project
+  const projectPlatform = (project as any).platform || 'webapp'
 
   return (
     <TooltipProvider>
@@ -598,16 +367,16 @@ export function LovableWorkspaceLayout({
           </div>
 
           {/* Center - View Toggle Toolbar */}
-          <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl p-1 border border-white/[0.06]">
+          <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1 border border-border/50">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setViewMode('preview')}
                   className={cn(
-                    'p-2 rounded-lg transition-all',
+                    'p-2 rounded-md transition-all',
                     viewMode === 'preview'
-                      ? 'bg-white/[0.1] text-white'
-                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                   )}
                 >
                   <Eye className="h-4 w-4" />
@@ -621,10 +390,10 @@ export function LovableWorkspaceLayout({
                 <button
                   onClick={() => setViewMode('code')}
                   className={cn(
-                    'p-2 rounded-lg transition-all',
+                    'p-2 rounded-md transition-all',
                     viewMode === 'code'
-                      ? 'bg-white/[0.1] text-white'
-                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                   )}
                 >
                   <Code2 className="h-4 w-4" />
@@ -638,32 +407,32 @@ export function LovableWorkspaceLayout({
                 <button
                   onClick={() => setViewMode('split')}
                   className={cn(
-                    'p-2 rounded-lg transition-all',
+                    'p-2 rounded-md transition-all',
                     viewMode === 'split'
-                      ? 'bg-white/[0.1] text-white'
-                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                   )}
                 >
                   <div className="flex gap-0.5">
-                    <div className="w-1.5 h-4 bg-current rounded-sm" />
-                    <div className="w-1.5 h-4 bg-current rounded-sm opacity-50" />
+                    <div className="w-1.5 h-4 bg-current rounded-[1px]" />
+                    <div className="w-1.5 h-4 bg-current rounded-[1px] opacity-50" />
                   </div>
                 </button>
               </TooltipTrigger>
               <TooltipContent>Split View</TooltipContent>
             </Tooltip>
 
-            <div className="w-px h-5 bg-white/[0.08] mx-1" />
+            <div className="w-px h-5 bg-border mx-1" />
 
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setViewMode('terminal')}
                   className={cn(
-                    'p-2 rounded-lg transition-all',
+                    'p-2 rounded-md transition-all',
                     viewMode === 'terminal'
-                      ? 'bg-white/[0.1] text-white'
-                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                   )}
                 >
                   <Terminal className="h-4 w-4" />
@@ -759,7 +528,7 @@ export function LovableWorkspaceLayout({
             {/* Main Content Area - Code + Preview */}
             <div className="flex-1 flex flex-col">
               {viewMode === 'preview' && (
-                <IntegratedPreview />
+                <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
               )}
 
               {viewMode === 'code' && (
@@ -895,7 +664,7 @@ export function LovableWorkspaceLayout({
 
                   {/* Preview Panel */}
                   <ResizablePanel defaultSize={50} minSize={30}>
-                    <IntegratedPreview />
+                    <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
                   </ResizablePanel>
                 </ResizablePanelGroup>
               )}
@@ -983,7 +752,7 @@ export function LovableWorkspaceLayout({
             )}
 
             {mobileView === 'preview' && (
-              <IntegratedPreview />
+              <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
             )}
           </div>
         </div>

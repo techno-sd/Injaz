@@ -37,4 +37,4 @@ export interface AIProvider {
 }
 
 // Default fallback (used if .env not set)
-export const DEFAULT_MODEL = 'gpt-4.1-mini'
+export const DEFAULT_MODEL = 'gpt-4o-mini'
