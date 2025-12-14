@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createProject } from '@/app/actions/projects'
 import { createProjectFromTemplate } from '@/app/actions/templates'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Loader2, Globe, AppWindow, Smartphone, Check } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { useRouter } from 'next/navigation'
 import { PROJECT_TEMPLATES } from '@/lib/templates'
@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createClient } from '@/lib/supabase/client'
+import type { PlatformType } from '@/types'
+import { cn } from '@/lib/utils'
 
 interface CreateProjectDialogProps {
   variant?: ButtonProps['variant']
@@ -34,17 +36,50 @@ interface CreateProjectDialogProps {
   className?: string
 }
 
+const PLATFORM_OPTIONS: {
+  id: PlatformType
+  name: string
+  description: string
+  icon: typeof Globe
+  color: string
+  tech: string
+}[] = [
+  {
+    id: 'website',
+    name: 'Website',
+    description: 'Static HTML/CSS/JS',
+    icon: Globe,
+    color: 'text-emerald-400',
+    tech: 'Vanilla',
+  },
+  {
+    id: 'webapp',
+    name: 'Web App',
+    description: 'Full-stack application',
+    icon: AppWindow,
+    color: 'text-violet-400',
+    tech: 'Next.js + Supabase',
+  },
+  {
+    id: 'mobile',
+    name: 'Mobile App',
+    description: 'iOS & Android',
+    icon: Smartphone,
+    color: 'text-cyan-400',
+    tech: 'React Native + Expo',
+  },
+]
+
 export function CreateProjectDialog({ variant, size, className }: CreateProjectDialogProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [open, setOpen] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank')
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('webapp')
   const [projectName, setProjectName] = useState('')
-  const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
-  // Check authentication on mount
   useEffect(() => {
     async function checkAuth() {
       const supabase = createClient()
@@ -59,69 +94,47 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
     setLoading(true)
 
     try {
-      // If not authenticated, redirect to demo workspace with template
       if (!isAuthenticated) {
         setOpen(false)
         const guestTemplate = GUEST_TEMPLATES[selectedTemplate] || GUEST_TEMPLATES.blank
         toast({
           title: 'Demo Mode',
-          description: `Starting with ${guestTemplate.name} template. Sign in to save your projects!`,
+          description: `Starting with ${guestTemplate.name}. Sign in to save your work.`,
         })
-        router.push(`/workspace/demo?template=${selectedTemplate}`)
+        router.push(`/workspace/demo?template=${selectedTemplate}&platform=${selectedPlatform}`)
         return
       }
 
       if (selectedTemplate === 'blank') {
-        // Create blank project
         const formData = new FormData()
         formData.append('name', projectName)
-        formData.append('description', description)
+        formData.append('platform', selectedPlatform)
         const result = await createProject(formData)
 
         if (result?.error) {
-          toast({
-            title: 'Error',
-            description: result.error,
-            variant: 'destructive',
-          })
+          toast({ title: 'Error', description: result.error, variant: 'destructive' })
         } else {
           setOpen(false)
-          toast({
-            title: 'Project created!',
-            description: 'Your blank project has been created successfully',
-          })
+          toast({ title: 'Project created', description: `Your ${selectedPlatform} project is ready` })
         }
       } else {
-        // Create from template
         const result = await createProjectFromTemplate(selectedTemplate)
 
         if (result?.error) {
-          toast({
-            title: 'Error',
-            description: result.error,
-            variant: 'destructive',
-          })
+          toast({ title: 'Error', description: result.error, variant: 'destructive' })
         } else if (result?.data) {
           setOpen(false)
-          toast({
-            title: 'Project created!',
-            description: 'Your project has been created from template',
-          })
+          toast({ title: 'Project created', description: 'Created from template' })
           router.push(`/workspace/${result.data.id}`)
         }
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create project',
-        variant: 'destructive',
-      })
+      toast({ title: 'Error', description: 'Failed to create project', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
-  // Use guest templates for unauthenticated users, project templates for authenticated
   const availableTemplates = isAuthenticated === false
     ? Object.values(GUEST_TEMPLATES).filter(t => t.id !== 'blank')
     : PROJECT_TEMPLATES
@@ -133,120 +146,148 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant} size={size} className={className}>
+        <Button variant={variant} size={size || 'sm'} className={className}>
           <Plus className="mr-2 h-4 w-4" />
           New Project
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Create New Project
-          </DialogTitle>
+          <DialogTitle>New Project</DialogTitle>
           <DialogDescription>
             {isAuthenticated === false
-              ? 'Try templates in demo mode - sign in to save your projects'
-              : 'Start from scratch or choose a template to kickstart your project'}
+              ? 'Demo mode - sign in to save your projects'
+              : 'Choose platform and template for your new project'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Platform Selector */}
+          <div className="space-y-3">
+            <Label>Platform</Label>
+            <div className="grid grid-cols-3 gap-3">
+              {PLATFORM_OPTIONS.map((platform) => {
+                const Icon = platform.icon
+                const isSelected = selectedPlatform === platform.id
+                return (
+                  <button
+                    key={platform.id}
+                    type="button"
+                    onClick={() => setSelectedPlatform(platform.id)}
+                    className={cn(
+                      'relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200',
+                      isSelected
+                        ? 'border-violet-500 bg-violet-500/10'
+                        : 'border-border hover:border-violet-500/50 hover:bg-accent/50'
+                    )}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-2 right-2">
+                        <Check className="h-4 w-4 text-violet-400" />
+                      </div>
+                    )}
+                    <Icon className={cn('h-6 w-6', isSelected ? platform.color : 'text-muted-foreground')} />
+                    <div className="text-center">
+                      <p className={cn('font-medium text-sm', isSelected ? 'text-foreground' : 'text-muted-foreground')}>
+                        {platform.name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {platform.tech}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Template Selector */}
           <div className="space-y-2">
-            <Label htmlFor="template">Choose a Template</Label>
+            <Label htmlFor="template">Template</Label>
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a template" />
               </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
+              <SelectContent>
                 <SelectItem value="blank">
-                  <div className="flex items-center gap-2">
-                    <span>📄</span>
+                  <span className="flex items-center gap-2">
                     <span>Blank Project</span>
-                  </div>
+                  </span>
                 </SelectItem>
                 {availableTemplates.map((t: any) => (
                   <SelectItem key={t.id} value={t.id}>
-                    <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-2">
                       <span>{t.icon}</span>
                       <span>{t.name}</span>
-                      {t.difficulty && (
-                        <span className="text-xs text-muted-foreground">
-                          ({t.difficulty})
-                        </span>
-                      )}
-                    </div>
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {template && (
-            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          {/* Template Preview */}
+          {template && selectedTemplate !== 'blank' && (
+            <div className="rounded-lg border bg-muted/50 p-3">
               <div className="flex items-start gap-3">
-                <div className="text-3xl">{template.icon}</div>
-                <div className="flex-1">
-                  <h4 className="font-semibold mb-1">{template.name}</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {template.description}
-                  </p>
-                  {'tags' in template && Array.isArray((template as any).tags) && (
-                    <div className="flex flex-wrap gap-2">
-                      {((template as any).tags as string[]).map((tag: string) => (
-                        <span
-                          key={tag}
-                          className="px-2 py-1 bg-background text-xs rounded-md border"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                <span className="text-2xl">{template.icon}</span>
+                <div>
+                  <p className="font-medium text-sm">{template.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
                 </div>
               </div>
             </div>
           )}
 
+          {/* Project Name (for blank projects) */}
           {selectedTemplate === 'blank' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="name">Project Name</Label>
-                <Input
-                  id="name"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="My Awesome App"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What does your app do?"
-                />
-              </div>
-            </>
+            <div className="space-y-2">
+              <Label htmlFor="name">Project Name</Label>
+              <Input
+                id="name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="My Project"
+                required
+              />
+            </div>
           )}
 
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="flex-1"
-              disabled={loading}
-            >
+          {/* Selected Platform Info */}
+          <div className="rounded-lg border border-dashed border-violet-500/30 bg-violet-500/5 p-3">
+            <div className="flex items-center gap-2 text-sm">
+              {(() => {
+                const platform = PLATFORM_OPTIONS.find(p => p.id === selectedPlatform)
+                const Icon = platform?.icon || Globe
+                return (
+                  <>
+                    <Icon className={cn('h-4 w-4', platform?.color)} />
+                    <span className="font-medium">{platform?.name}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-muted-foreground">{platform?.description}</span>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1" disabled={loading}>
               Cancel
             </Button>
             <Button
               type="submit"
-              className="flex-1 gradient-primary text-white border-0"
+              className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500"
               disabled={loading || (selectedTemplate === 'blank' && !projectName)}
             >
-              {loading ? 'Creating...' : 'Create Project'}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Project'
+              )}
             </Button>
           </div>
         </form>

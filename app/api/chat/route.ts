@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel, isModelAvailable } from '@/lib/ai/providers'
 import { buildContext } from '@/lib/ai/context-manager'
 import { DEFAULT_MODEL as FALLBACK_MODEL } from '@/lib/ai/types'
-import type { Message, File, AIAction } from '@/types'
+import { getOrchestrator, formatSSE } from '@/lib/ai/orchestrator'
+import type { Message, File, AIAction, PlatformType, AIMode, UnifiedAppSchema } from '@/types'
 
 export const runtime = 'edge'
 
@@ -18,6 +19,11 @@ export async function POST(req: Request) {
       model = DEFAULT_MODEL,
       activeFilePath = null,
       temperature = 0.7,
+      // New dual-mode parameters
+      platform = 'webapp' as PlatformType,
+      mode = 'auto' as AIMode,
+      schema = null as UnifiedAppSchema | null,
+      useDualMode = false,
     } = await req.json()
 
     const isDemoProject = projectId === 'demo' || projectId === 'new' || projectId.startsWith('new-')
@@ -33,11 +39,14 @@ export async function POST(req: Request) {
       return new Response('Unauthorized', { status: 401 })
     }
 
+    // Get project info including platform and schema
+    let projectPlatform = platform
+    let existingSchema = schema
+
     if (supabase) {
-      // Verify user owns the project
       const { data: project } = await supabase
         .from('projects')
-        .select('id')
+        .select('id, platform, app_schema')
         .eq('id', projectId)
         .eq('user_id', userId!)
         .single()
@@ -45,193 +54,43 @@ export async function POST(req: Request) {
       if (!project) {
         return new Response('Project not found', { status: 404 })
       }
+
+      // Use project's platform and schema if available
+      if (project.platform) {
+        projectPlatform = project.platform as PlatformType
+      }
+      if (project.app_schema) {
+        existingSchema = project.app_schema as UnifiedAppSchema
+      }
     }
 
-    // Get the provider for the selected model
-    const provider = getProviderForModel(model)
-    if (!provider) {
-      return new Response(JSON.stringify({ error: 'Invalid model selected' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
+    // Determine if we should use dual-mode AI (Controller + CodeGen)
+    const shouldUseDualMode = useDualMode || detectDualModeIntent(messages)
+
+    if (shouldUseDualMode) {
+      // Use the new dual-mode orchestrator
+      return handleDualModeChat({
+        projectId,
+        messages,
+        files,
+        platform: projectPlatform,
+        mode,
+        existingSchema,
+        supabase,
+        isDemoProject,
       })
     }
 
-    if (!provider.isConfigured()) {
-      return new Response(JSON.stringify({
-        error: `${provider.name} API key is not configured`,
-        provider: provider.type
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Build optimized context
-    const context = buildContext(files, messages, activeFilePath, {
-      maxContextTokens: 100000,
-      includeFileContents: true,
-      prioritizeActiveFile: true,
-    })
-
-    // Prepare messages for the AI
-    const aiMessages = [
-      { role: 'system' as const, content: context.systemPrompt },
-      ...messages.map((m: Message) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
-    ]
-
-    // Save user message to database for authenticated projects
-    if (supabase && !isDemoProject) {
-      await supabase.from('messages').insert({
-        project_id: projectId,
-        role: 'user',
-        content: messages[messages.length - 1].content,
-      })
-    }
-
-    let fullResponse = ''
-    let actions: AIAction[] = []
-
-    // Create a transform stream to process the response
-    const encoder = new TextEncoder()
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          // Send context info to client
-          const contextInfo = JSON.stringify({
-            type: 'context',
-            filesIncluded: context.files.length,
-            totalTokens: context.totalTokens,
-            truncated: context.truncated,
-            model: model,
-          })
-          controller.enqueue(encoder.encode(`data: ${contextInfo}\n\n`))
-
-          // Stream from the provider
-          const streamGenerator = provider.streamChat({
-            model,
-            messages: aiMessages,
-            temperature,
-          })
-
-          for await (const chunk of streamGenerator) {
-            if (chunk.type === 'content' && chunk.content) {
-              fullResponse += chunk.content
-
-              // Send content to client
-              const data = JSON.stringify({ type: 'content', content: chunk.content })
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`))
-            } else if (chunk.type === 'error') {
-              const errorData = JSON.stringify({ type: 'error', error: chunk.error })
-              controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
-              break
-            }
-          }
-
-          // Try to extract JSON actions from the response
-          // Support multiple formats: ```json, ``` or just raw JSON
-          let jsonContent = null
-
-          // Try ```json format first
-          const jsonBlockMatch = fullResponse.match(/```json\s*([\s\S]*?)\s*```/)
-          if (jsonBlockMatch) {
-            jsonContent = jsonBlockMatch[1].trim()
-          } else {
-            // Try plain ``` code block
-            const codeBlockMatch = fullResponse.match(/```\s*([\s\S]*?)\s*```/)
-            if (codeBlockMatch) {
-              const content = codeBlockMatch[1].trim()
-              if (content.startsWith('{')) {
-                jsonContent = content
-              }
-            }
-          }
-
-          // If still no match, try to find raw JSON object
-          if (!jsonContent) {
-            const rawJsonMatch = fullResponse.match(/\{[\s\S]*"actions"[\s\S]*\}/)
-            if (rawJsonMatch) {
-              jsonContent = rawJsonMatch[0]
-            }
-          }
-
-          if (jsonContent) {
-            try {
-              const parsed = JSON.parse(jsonContent)
-              if (parsed.actions && Array.isArray(parsed.actions)) {
-                actions = parsed.actions
-                console.log(`[Chat API] Parsed ${actions.length} actions from AI response`)
-
-                // Apply actions to database
-                if (supabase && !isDemoProject) {
-                  for (const action of actions) {
-                    if (action.type === 'create_or_update_file') {
-                      await supabase
-                        .from('files')
-                        .upsert({
-                          project_id: projectId,
-                          path: action.path,
-                          content: action.content,
-                          language: getLanguageFromPath(action.path),
-                        }, {
-                          onConflict: 'project_id,path',
-                        })
-                    } else if (action.type === 'delete_file') {
-                      await supabase
-                        .from('files')
-                        .delete()
-                        .eq('project_id', projectId)
-                        .eq('path', action.path)
-                    }
-                  }
-                }
-
-                // Send actions to client
-                const actionsData = JSON.stringify({ type: 'actions', actions })
-                controller.enqueue(encoder.encode(`data: ${actionsData}\n\n`))
-              }
-            } catch (error) {
-              console.error('Error parsing actions JSON:', error)
-              console.error('JSON content was:', jsonContent?.substring(0, 500))
-            }
-          } else {
-            console.log('[Chat API] No JSON actions found in response')
-          }
-
-          // Save assistant message to database for authenticated projects
-          if (supabase && !isDemoProject) {
-            await supabase.from('messages').insert({
-              project_id: projectId,
-              role: 'assistant',
-              content: fullResponse,
-            })
-          }
-
-          // Send done signal
-          const doneData = JSON.stringify({ type: 'done' })
-          controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
-
-          controller.close()
-        } catch (error: any) {
-          console.error('Error in stream:', error)
-          const errorData = JSON.stringify({
-            type: 'error',
-            error: error.message || 'An error occurred while processing your request'
-          })
-          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
-          controller.close()
-        }
-      },
-    })
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
+    // Legacy single-mode chat (for backward compatibility)
+    return handleLegacyChat({
+      projectId,
+      messages,
+      files,
+      model,
+      activeFilePath,
+      temperature,
+      supabase,
+      isDemoProject,
     })
   } catch (error: any) {
     console.error('Error in chat API:', error)
@@ -244,20 +103,437 @@ export async function POST(req: Request) {
   }
 }
 
-// API endpoint to get available models
-export async function GET(req: Request) {
-  const { getAvailableModels, getConfiguredProviders } = await import('@/lib/ai/providers')
+/**
+ * Detect if user intent requires dual-mode processing
+ */
+function detectDualModeIntent(messages: Message[]): boolean {
+  const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || ''
 
-  const models = getAvailableModels()
-  const providers = getConfiguredProviders().map(p => ({
-    type: p.type,
-    name: p.name,
-  }))
+  // Keywords that suggest full app generation
+  const generationKeywords = [
+    'build',
+    'create',
+    'make',
+    'generate',
+    'develop',
+    'design',
+    'build me',
+    'create a',
+    'make a',
+    'new app',
+    'new website',
+    'new project',
+    'landing page',
+    'dashboard',
+    'e-commerce',
+    'portfolio',
+    'saas',
+    'mobile app',
+  ]
 
+  return generationKeywords.some((keyword) => lastMessage.includes(keyword))
+}
+
+/**
+ * Handle dual-mode chat with Controller + CodeGen orchestration
+ */
+async function handleDualModeChat({
+  projectId,
+  messages,
+  files,
+  platform,
+  mode,
+  existingSchema,
+  supabase,
+  isDemoProject,
+}: {
+  projectId: string
+  messages: Message[]
+  files: File[]
+  platform: PlatformType
+  mode: AIMode
+  existingSchema: UnifiedAppSchema | null
+  supabase: any
+  isDemoProject: boolean
+}) {
+  const orchestrator = getOrchestrator()
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // Send initial mode info
+        const modeInfo = JSON.stringify({
+          type: 'mode',
+          mode: 'dual',
+          platform,
+        })
+        controller.enqueue(encoder.encode(`data: ${modeInfo}\n\n`))
+
+        const lastUserMessage = messages[messages.length - 1]?.content || ''
+
+        // Convert messages to AI format
+        const conversationHistory = messages.slice(0, -1).map((m) => ({
+          role: m.role as 'user' | 'assistant' | 'system',
+          content: m.content,
+        }))
+
+        // Convert files to simpler format
+        const existingFiles = files.map((f) => ({
+          path: f.path,
+          content: f.content,
+        }))
+
+        // Run orchestration
+        const orchestrationStream = orchestrator.orchestrate({
+          userPrompt: lastUserMessage,
+          platform,
+          mode,
+          existingSchema: existingSchema || undefined,
+          existingFiles,
+          conversationHistory,
+        })
+
+        let finalSchema: UnifiedAppSchema | null = null
+        let generatedFiles: { path: string; content: string }[] = []
+
+        for await (const event of orchestrationStream) {
+          // Forward events to client
+          controller.enqueue(encoder.encode(formatSSE(event)))
+
+          // Track results
+          if (event.type === 'schema') {
+            finalSchema = event.data.schema
+          }
+
+          if (event.type === 'actions') {
+            const actions = event.data.actions
+            generatedFiles.push(
+              ...actions
+                .filter((a: any) => a.type === 'create_or_update_file')
+                .map((a: any) => ({ path: a.path, content: a.content }))
+            )
+
+            // Save files to database
+            if (supabase && !isDemoProject) {
+              for (const action of actions) {
+                if (action.type === 'create_or_update_file') {
+                  await supabase
+                    .from('files')
+                    .upsert({
+                      project_id: projectId,
+                      path: action.path,
+                      content: action.content,
+                      language: getLanguageFromPath(action.path),
+                    }, {
+                      onConflict: 'project_id,path',
+                    })
+                } else if (action.type === 'delete_file') {
+                  await supabase
+                    .from('files')
+                    .delete()
+                    .eq('project_id', projectId)
+                    .eq('path', action.path)
+                }
+              }
+            }
+          }
+
+          if (event.type === 'complete') {
+            // Update project with schema
+            if (supabase && !isDemoProject && finalSchema) {
+              await supabase
+                .from('projects')
+                .update({
+                  platform,
+                  app_schema: finalSchema,
+                  last_schema_update: new Date().toISOString(),
+                })
+                .eq('id', projectId)
+
+              // Save generation history
+              await supabase.from('generation_history').insert({
+                project_id: projectId,
+                mode: mode === 'auto' ? 'controller' : mode,
+                input_prompt: messages[messages.length - 1]?.content || '',
+                controller_output: finalSchema ? { schema: finalSchema } : null,
+                codegen_output: generatedFiles.length > 0 ? { files: generatedFiles } : null,
+                files_generated: generatedFiles.map((f) => f.path),
+                status: 'completed',
+              })
+            }
+          }
+
+          if (event.type === 'error') {
+            console.error('Orchestration error:', event.data)
+          }
+        }
+
+        // Save messages to database
+        if (supabase && !isDemoProject) {
+          // Save user message
+          await supabase.from('messages').insert({
+            project_id: projectId,
+            role: 'user',
+            content: messages[messages.length - 1]?.content || '',
+          })
+
+          // Save assistant summary
+          const summary = finalSchema
+            ? `Created ${platform} application schema with ${finalSchema.structure?.pages?.length || 0} pages and ${generatedFiles.length} files.`
+            : `Generated ${generatedFiles.length} files for your ${platform} application.`
+
+          await supabase.from('messages').insert({
+            project_id: projectId,
+            role: 'assistant',
+            content: summary,
+          })
+        }
+
+        // Send done signal
+        const doneData = JSON.stringify({ type: 'done' })
+        controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
+
+        controller.close()
+      } catch (error: any) {
+        console.error('Error in dual-mode stream:', error)
+        const errorData = JSON.stringify({
+          type: 'error',
+          error: error.message || 'An error occurred during generation'
+        })
+        controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
+}
+
+/**
+ * Handle legacy single-mode chat (backward compatible)
+ */
+async function handleLegacyChat({
+  projectId,
+  messages,
+  files,
+  model,
+  activeFilePath,
+  temperature,
+  supabase,
+  isDemoProject,
+}: {
+  projectId: string
+  messages: Message[]
+  files: File[]
+  model: string
+  activeFilePath: string | null
+  temperature: number
+  supabase: any
+  isDemoProject: boolean
+}) {
+  // Get the provider for the selected model
+  const provider = getProviderForModel(model)
+  if (!provider) {
+    return new Response(JSON.stringify({ error: 'Invalid model selected' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (!provider.isConfigured()) {
+    return new Response(JSON.stringify({
+      error: `${provider.name} API key is not configured`,
+      provider: provider.name
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Build optimized context
+  const context = buildContext(files, messages, activeFilePath, {
+    maxContextTokens: 100000,
+    includeFileContents: true,
+    prioritizeActiveFile: true,
+  })
+
+  // Prepare messages for the AI
+  const aiMessages = [
+    { role: 'system' as const, content: context.systemPrompt },
+    ...messages.map((m: Message) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    })),
+  ]
+
+  // Save user message to database for authenticated projects
+  if (supabase && !isDemoProject) {
+    await supabase.from('messages').insert({
+      project_id: projectId,
+      role: 'user',
+      content: messages[messages.length - 1].content,
+    })
+  }
+
+  let fullResponse = ''
+  let actions: AIAction[] = []
+
+  // Create a transform stream to process the response
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // Send context info to client
+        const contextInfo = JSON.stringify({
+          type: 'context',
+          filesIncluded: context.files.length,
+          totalTokens: context.totalTokens,
+          truncated: context.truncated,
+          model: model,
+          mode: 'legacy',
+        })
+        controller.enqueue(encoder.encode(`data: ${contextInfo}\n\n`))
+
+        // Stream from the provider
+        const streamGenerator = provider.streamChat({
+          model,
+          messages: aiMessages,
+          temperature,
+        })
+
+        for await (const chunk of streamGenerator) {
+          if (chunk.type === 'content' && chunk.content) {
+            fullResponse += chunk.content
+
+            // Send content to client
+            const data = JSON.stringify({ type: 'content', content: chunk.content })
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+          } else if (chunk.type === 'error') {
+            const errorData = JSON.stringify({ type: 'error', error: chunk.error })
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+            break
+          }
+        }
+
+        // Try to extract JSON actions from the response
+        let jsonContent = null
+
+        // Try ```json format first
+        const jsonBlockMatch = fullResponse.match(/```json\s*([\s\S]*?)\s*```/)
+        if (jsonBlockMatch) {
+          jsonContent = jsonBlockMatch[1].trim()
+        } else {
+          // Try plain ``` code block
+          const codeBlockMatch = fullResponse.match(/```\s*([\s\S]*?)\s*```/)
+          if (codeBlockMatch) {
+            const content = codeBlockMatch[1].trim()
+            if (content.startsWith('{')) {
+              jsonContent = content
+            }
+          }
+        }
+
+        // If still no match, try to find raw JSON object
+        if (!jsonContent) {
+          const rawJsonMatch = fullResponse.match(/\{[\s\S]*"actions"[\s\S]*\}/)
+          if (rawJsonMatch) {
+            jsonContent = rawJsonMatch[0]
+          }
+        }
+
+        if (jsonContent) {
+          try {
+            const parsed = JSON.parse(jsonContent)
+            if (parsed.actions && Array.isArray(parsed.actions)) {
+              actions = parsed.actions
+              console.log(`[Chat API] Parsed ${actions.length} actions from AI response`)
+
+              // Apply actions to database
+              if (supabase && !isDemoProject) {
+                for (const action of actions) {
+                  if (action.type === 'create_or_update_file') {
+                    await supabase
+                      .from('files')
+                      .upsert({
+                        project_id: projectId,
+                        path: action.path,
+                        content: action.content,
+                        language: getLanguageFromPath(action.path),
+                      }, {
+                        onConflict: 'project_id,path',
+                      })
+                  } else if (action.type === 'delete_file') {
+                    await supabase
+                      .from('files')
+                      .delete()
+                      .eq('project_id', projectId)
+                      .eq('path', action.path)
+                  }
+                }
+              }
+
+              // Send actions to client
+              const actionsData = JSON.stringify({ type: 'actions', actions })
+              controller.enqueue(encoder.encode(`data: ${actionsData}\n\n`))
+            }
+          } catch (error) {
+            console.error('Error parsing actions JSON:', error)
+          }
+        }
+
+        // Save assistant message to database for authenticated projects
+        if (supabase && !isDemoProject) {
+          await supabase.from('messages').insert({
+            project_id: projectId,
+            role: 'assistant',
+            content: fullResponse,
+          })
+        }
+
+        // Send done signal
+        const doneData = JSON.stringify({ type: 'done' })
+        controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
+
+        controller.close()
+      } catch (error: any) {
+        console.error('Error in stream:', error)
+        const errorData = JSON.stringify({
+          type: 'error',
+          error: error.message || 'An error occurred while processing your request'
+        })
+        controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
+}
+
+// API endpoint to get available models and platform info
+export async function GET() {
   return new Response(JSON.stringify({
-    models,
-    providers,
+    models: [
+      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: 'Fast planning & architecture' },
+      { id: 'gpt-4.1', name: 'GPT-4.1', description: 'Powerful code generation' },
+    ],
+    providers: [{ name: 'OpenAI' }],
     defaultModel: DEFAULT_MODEL,
+    supportedPlatforms: ['website', 'webapp', 'mobile'],
+    supportedModes: ['auto', 'controller', 'codegen'],
   }), {
     headers: { 'Content-Type': 'application/json' },
   })

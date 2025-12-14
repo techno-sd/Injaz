@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, Filter, X, Heart, TrendingUp, Clock } from 'lucide-react'
+import { Search, X, Heart, ArrowRight, Sparkles } from 'lucide-react'
 import type { TemplateMetadata } from '@/lib/templates'
 import {
   Select,
@@ -32,72 +32,36 @@ interface TemplateBrowserProps {
 export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [], templateStats = [] }: TemplateBrowserProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all')
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [favorites, setFavorites] = useState<Set<string>>(new Set(favoriteIds))
   const [favoriteLoading, setFavoriteLoading] = useState<Set<string>>(new Set())
   const { toast } = useToast()
 
-  // Get unique categories, difficulties, and tags
   const categories = useMemo(
     () => ['all', ...new Set(templates.map(t => t.category))],
     [templates]
   )
 
-  const difficulties = useMemo(
-    () => ['all', ...new Set(templates.map(t => t.difficulty))],
-    [templates]
-  )
-
-  const allTags = useMemo(
-    () => [...new Set(templates.flatMap(t => t.tags))],
-    [templates]
-  )
-
-  // Filter templates
   const filteredTemplates = useMemo(() => {
     return templates.filter(template => {
-      // Search filter
       const matchesSearch =
         template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         template.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
 
-      // Category filter
       const matchesCategory =
         selectedCategory === 'all' || template.category === selectedCategory
 
-      // Difficulty filter
-      const matchesDifficulty =
-        selectedDifficulty === 'all' || template.difficulty === selectedDifficulty
-
-      // Tags filter
-      const matchesTags =
-        selectedTags.length === 0 ||
-        selectedTags.every(tag => template.tags.includes(tag))
-
-      return matchesSearch && matchesCategory && matchesDifficulty && matchesTags
+      return matchesSearch && matchesCategory
     })
-  }, [templates, searchQuery, selectedCategory, selectedDifficulty, selectedTags])
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    )
-  }
+  }, [templates, searchQuery, selectedCategory])
 
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedCategory('all')
-    setSelectedDifficulty('all')
-    setSelectedTags([])
   }
 
   const handleToggleFavorite = async (templateId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-
     setFavoriteLoading(prev => new Set(prev).add(templateId))
 
     try {
@@ -119,13 +83,6 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
           }
           return newFavorites
         })
-
-        toast({
-          title: result.data.favorited ? 'Added to favorites' : 'Removed from favorites',
-          description: result.data.favorited
-            ? 'Template added to your favorites'
-            : 'Template removed from your favorites',
-        })
       }
     } catch (error) {
       toast({
@@ -142,256 +99,166 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
     }
   }
 
-  const getTemplateStats = (templateId: string) => {
-    return templateStats.find(s => s.template_id === templateId)
-  }
-
-  const hasActiveFilters =
-    searchQuery !== '' ||
-    selectedCategory !== 'all' ||
-    selectedDifficulty !== 'all' ||
-    selectedTags.length > 0
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Beginner':
-        return 'bg-green-100 text-green-700 border-green-200'
-      case 'Intermediate':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200'
-      case 'Advanced':
-        return 'bg-red-100 text-red-700 border-red-200'
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200'
-    }
-  }
+  const hasActiveFilters = searchQuery !== '' || selectedCategory !== 'all'
 
   return (
     <div className="space-y-8">
       {/* Search and Filters */}
-      <div className="glass-card border-2 rounded-3xl p-6 shadow-xl space-y-6">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row gap-3 animate-fade-in-up">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             type="search"
-            placeholder="Search templates by name, description, or tags..."
+            placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-14 text-base border-2 focus:border-primary transition-colors rounded-2xl"
+            className="pl-11 h-12 rounded-xl border-gray-200 bg-white shadow-sm focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 transition-all"
           />
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[200px] h-12 border-2 rounded-xl">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map(category => (
-                <SelectItem key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-            <SelectTrigger className="w-[200px] h-12 border-2 rounded-xl">
-              <SelectValue placeholder="Difficulty" />
-            </SelectTrigger>
-            <SelectContent>
-              {difficulties.map(difficulty => (
-                <SelectItem key={difficulty} value={difficulty}>
-                  {difficulty === 'all' ? 'All Levels' : difficulty}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={clearFilters}
-              className="gap-2 border-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:shadow-lg transition-all"
-            >
-              <X className="h-4 w-4" />
-              Clear Filters
-            </Button>
-          )}
-        </div>
-
-        {/* Tag Filters */}
-        <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3">
-            <Filter className="h-4 w-4" />
-            Filter by Tags:
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {allTags.map(tag => (
-              <Badge
-                key={tag}
-                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-                className={`cursor-pointer hover:scale-105 transition-all px-4 py-2 text-sm rounded-xl ${
-                  selectedTags.includes(tag)
-                    ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white border-0 shadow-md'
-                    : 'hover:bg-purple-100 dark:hover:bg-purple-500/20 hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400'
-                }`}
-                onClick={() => toggleTag(tag)}
-              >
-                {tag}
-              </Badge>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-xl border-gray-200 bg-white shadow-sm">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl">
+            {categories.map(category => (
+              <SelectItem key={category} value={category} className="rounded-lg">
+                {category === 'all' ? 'All Categories' : category}
+              </SelectItem>
             ))}
-          </div>
-        </div>
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            onClick={clearFilters}
+            className="h-12 px-4 rounded-xl hover:bg-gray-100"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Results Count */}
-      <div className="flex items-center justify-between">
-        <div className="text-base font-semibold text-muted-foreground">
-          {filteredTemplates.length} {filteredTemplates.length === 1 ? 'template' : 'templates'} found
-        </div>
+      <div className="flex items-center justify-between animate-fade-in-up delay-100">
+        <p className="text-sm text-gray-500">
+          <span className="font-medium text-gray-900">{filteredTemplates.length}</span> template{filteredTemplates.length !== 1 ? 's' : ''} available
+        </p>
+        {hasActiveFilters && (
+          <Badge variant="secondary" className="rounded-full">
+            Filtered
+          </Badge>
+        )}
       </div>
 
       {/* Template Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map(template => {
-          const stats = getTemplateStats(template.id)
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filteredTemplates.map((template, index) => {
           const isFavorited = favorites.has(template.id)
           const isLoadingFavorite = favoriteLoading.has(template.id)
 
           return (
-            <Card
+            <div
               key={template.id}
-              className="hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer group border-2 hover:border-purple-500/50 glass-card overflow-hidden"
-              onClick={() => onSelectTemplate(template)}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-violet-500/0 group-hover:from-purple-500/10 group-hover:to-violet-500/10 transition-all duration-300 pointer-events-none" />
+              <Card
+                className="group cursor-pointer bg-white rounded-2xl border border-gray-200/80 hover:border-violet-300 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 overflow-hidden h-full"
+                onClick={() => onSelectTemplate(template)}
+              >
+                {/* Gradient top border on hover */}
+                <div className="h-1 w-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-              <CardHeader className="relative pb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-500/20 dark:to-violet-500/20 flex items-center justify-center text-4xl shadow-lg group-hover:shadow-purple-500/30 group-hover:scale-110 transition-all">
-                    {template.icon}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={`${getDifficultyColor(template.difficulty)} font-semibold px-3 py-1`}>
-                      {template.difficulty}
-                    </Badge>
+                <CardHeader className="pb-3 pt-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                      {template.icon}
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-xl hover:bg-red-50 transition-all"
+                      className="h-9 w-9 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"
                       onClick={(e) => handleToggleFavorite(template.id, e)}
                       disabled={isLoadingFavorite}
                     >
                       <Heart
-                        className={`h-5 w-5 transition-all ${
+                        className={`h-4 w-4 transition-colors ${
                           isFavorited
-                            ? 'fill-red-500 text-red-500 scale-110'
-                            : 'text-muted-foreground hover:text-red-500 hover:scale-110'
+                            ? 'fill-red-500 text-red-500'
+                            : 'text-gray-400 hover:text-red-500'
                         }`}
                       />
                     </Button>
                   </div>
-                </div>
-                <CardTitle className="text-2xl font-bold mb-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{template.name}</CardTitle>
-                <CardDescription className="text-base leading-relaxed line-clamp-2">
-                  {template.description}
-                </CardDescription>
+                  <div className="mt-4">
+                    <h3 className="font-semibold text-gray-900 text-lg group-hover:text-violet-600 transition-colors duration-200">
+                      {template.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 line-clamp-2 mt-1.5 leading-relaxed">
+                      {template.description}
+                    </p>
+                  </div>
+                </CardHeader>
 
-                {/* Stats */}
-                {stats && (stats.usage_count > 0 || stats.favorite_count > 0) && (
-                  <div className="flex items-center gap-4 mt-4 pt-4 border-t">
-                    {stats.usage_count > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{stats.usage_count} uses</span>
-                      </div>
-                    )}
-                    {stats.favorite_count > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Heart className="h-4 w-4 text-red-500" />
-                        <span className="font-medium">{stats.favorite_count}</span>
-                      </div>
+                <CardContent className="pt-0 pb-5 space-y-4">
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {template.tags.slice(0, 3).map(tag => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="text-xs font-normal rounded-full px-2.5 py-0.5 bg-gray-100 text-gray-600 hover:bg-violet-100 hover:text-violet-700 transition-colors"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                    {template.tags.length > 3 && (
+                      <Badge variant="secondary" className="text-xs font-normal rounded-full px-2.5 py-0.5 bg-gray-100 text-gray-500">
+                        +{template.tags.length - 3}
+                      </Badge>
                     )}
                   </div>
-                )}
-              </CardHeader>
 
-            <CardContent className="relative space-y-5 pt-0">
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2">
-                {template.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1.5 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-500/10 dark:to-violet-500/10 text-purple-600 dark:text-purple-400 text-xs font-semibold rounded-full border border-purple-200 dark:border-purple-500/30 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all"
+                  {/* Tech Stack */}
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Sparkles className="h-3 w-3" />
+                    <span>{template.techStack.slice(0, 3).join(' • ')}</span>
+                  </div>
+
+                  {/* Action Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-xl border-gray-200 group-hover:bg-gradient-to-r group-hover:from-violet-600 group-hover:via-purple-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-lg group-hover:shadow-violet-500/25 transition-all duration-300"
                   >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              {/* Tech Stack */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                  Tech Stack
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {template.techStack.map(tech => (
-                    <span
-                      key={tech}
-                      className="px-3 py-1.5 bg-muted text-xs font-medium rounded-lg hover:bg-purple-100 dark:hover:bg-purple-500/20 hover:text-purple-600 dark:hover:text-purple-400 hover:border hover:border-purple-300 dark:hover:border-purple-500/50 transition-all"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Features */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                  Features
-                </h4>
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  {template.features.slice(0, 3).map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-primary font-bold text-lg leading-none">✓</span>
-                      <span className="leading-tight">{feature}</span>
-                    </li>
-                  ))}
-                  {template.features.length > 3 && (
-                    <li className="text-primary font-semibold text-sm">
-                      +{template.features.length - 3} more features
-                    </li>
-                  )}
-                </ul>
-              </div>
-
-              <Button className="w-full h-12 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0 shadow-lg group-hover:shadow-xl group-hover:shadow-purple-500/30 group-hover:scale-105 transition-all font-semibold text-base">
-                Use Template
-              </Button>
-            </CardContent>
-          </Card>
+                    <span>Use Template</span>
+                    <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           )
         })}
       </div>
 
       {/* No Results */}
       {filteredTemplates.length === 0 && (
-        <div className="text-center py-20 animate-fade-in">
-          <div className="glass-card border-2 rounded-3xl p-12 max-w-2xl mx-auto shadow-xl">
-            <div className="text-8xl mb-6">🔍</div>
-            <h3 className="text-3xl font-bold mb-4 text-gradient">No templates found</h3>
-            <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
-              We couldn't find any templates matching your criteria. Try adjusting your filters or search query.
-            </p>
-            <Button onClick={clearFilters} size="lg" className="gradient-primary text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
-              <X className="mr-2 h-5 w-5" />
-              Clear All Filters
-            </Button>
+        <div className="text-center py-16 animate-fade-in-up">
+          <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Search className="h-8 w-8 text-gray-400" />
           </div>
+          <h3 className="font-semibold text-gray-900 mb-2">No templates found</h3>
+          <p className="text-gray-500 mb-6">Try adjusting your search or filters</p>
+          <Button
+            variant="outline"
+            onClick={clearFilters}
+            className="rounded-xl"
+          >
+            Clear Filters
+          </Button>
         </div>
       )}
     </div>

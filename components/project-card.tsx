@@ -1,11 +1,9 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
-import { FolderOpen, Clock, ExternalLink } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Clock, ArrowUpRight, Code2 } from 'lucide-react'
 import type { Project } from '@/types'
 
 interface ProjectCardProps {
@@ -13,57 +11,81 @@ interface ProjectCardProps {
   index: number
 }
 
+const templateIcons: Record<string, string> = {
+  'react': '⚛️',
+  'nextjs': '▲',
+  'vue': '💚',
+  'angular': '🅰️',
+  'svelte': '🔥',
+  'html': '🌐',
+  'blank': '📄',
+}
+
 export function ProjectCard({ project, index }: ProjectCardProps) {
+  const templateIcon = templateIcons[project.template?.toLowerCase() || 'blank'] || '📄'
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
+    <div
+      className="animate-fade-in-up"
+      style={{ animationDelay: `${index * 50}ms` }}
     >
       <Link href={`/workspace/${project.id}`}>
-        <Card className="hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:scale-105 transition-all duration-300 cursor-pointer h-full group relative overflow-hidden border-2">
-          {/* Gradient overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-violet-500/0 group-hover:from-purple-500/10 group-hover:to-violet-500/10 transition-all duration-300" />
+        <Card className="group h-full bg-white rounded-2xl border border-gray-200/80 hover:border-violet-300 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 cursor-pointer overflow-hidden">
+          {/* Gradient top border on hover */}
+          <div className="h-1 w-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          <CardHeader className="relative">
-            <CardTitle className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-500/20 dark:to-violet-500/20 group-hover:from-purple-600 group-hover:to-violet-600 flex items-center justify-center transition-all group-hover:shadow-lg group-hover:shadow-purple-500/30">
-                <FolderOpen className="h-5 w-5 text-purple-600 dark:text-purple-400 group-hover:text-white group-hover:scale-110 transition-all" />
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-lg group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                  {project.name}
+          <CardHeader className="pb-3 pt-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-xl">{templateIcon}</span>
                 </div>
-                <div className="text-xs text-muted-foreground capitalize mt-0.5">
-                  {project.template} template
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 truncate group-hover:text-violet-600 transition-colors duration-200">
+                    {project.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Code2 className="h-3 w-3 text-gray-400" />
+                    <p className="text-xs text-gray-500 capitalize">
+                      {project.template || 'blank'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </CardTitle>
-            <CardDescription className="mt-2 line-clamp-2">
-              {project.description || 'No description provided'}
-            </CardDescription>
+
+              {/* Arrow icon on hover */}
+              <div className="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:bg-violet-100 transition-all duration-300">
+                <ArrowUpRight className="h-4 w-4 text-gray-400 group-hover:text-violet-600 transition-colors" />
+              </div>
+            </div>
           </CardHeader>
 
-          <CardContent className="relative">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+          <CardContent className="pt-0 pb-5">
+            {project.description ? (
+              <p className="text-sm text-gray-500 line-clamp-2 mb-4 leading-relaxed">
+                {project.description}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400 italic mb-4">
+                No description
+              </p>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <Clock className="h-3.5 w-3.5" />
                 <span>{formatDate(project.updated_at)}</span>
               </div>
+
+              {/* Status indicator */}
+              <div className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs text-gray-400">Active</span>
+              </div>
             </div>
           </CardContent>
-
-          <CardFooter className="relative">
-            <Button
-              variant="ghost"
-              className="w-full group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-violet-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-purple-500/30 transition-all"
-            >
-              Open Project
-              <ExternalLink className="ml-2 h-3.5 w-3.5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </Button>
-          </CardFooter>
         </Card>
       </Link>
-    </motion.div>
+    </div>
   )
 }

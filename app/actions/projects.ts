@@ -87,6 +87,132 @@ export async function updateProject(projectId: string, updates: any) {
   return { success: true }
 }
 
+/**
+ * Save a guest project with files to the database
+ * Used when a guest user wants to save their generated project
+ */
+export async function saveGuestProject(input: {
+  name: string
+  description?: string
+  platform?: 'website' | 'webapp' | 'mobile'
+  files: { path: string; content: string; language?: string }[]
+}): Promise<{ success: boolean; projectId?: string; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Please sign in to save your project' }
+    }
+
+    // Create the project
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .insert({
+        name: input.name || 'Untitled Project',
+        description: input.description || 'AI-generated project',
+        platform: input.platform || 'website',
+        user_id: user.id,
+        is_public: false,
+      })
+      .select('id')
+      .single()
+
+    if (projectError || !project) {
+      console.error('Error creating project:', projectError)
+      return { success: false, error: 'Failed to create project' }
+    }
+
+    // Save all files
+    if (input.files.length > 0) {
+      const filesToInsert = input.files.map(file => ({
+        project_id: project.id,
+        path: file.path,
+        content: file.content,
+        language: file.language || 'plaintext',
+      }))
+
+      const { error: filesError } = await supabase
+        .from('files')
+        .insert(filesToInsert)
+
+      if (filesError) {
+        console.error('Error saving files:', filesError)
+        // Delete the project if files failed to save
+        await supabase.from('projects').delete().eq('id', project.id)
+        return { success: false, error: 'Failed to save files' }
+      }
+    }
+
+    revalidatePath('/dashboard')
+    return { success: true, projectId: project.id }
+  } catch (error: any) {
+    console.error('Save guest project error:', error)
+    return { success: false, error: error.message || 'An error occurred' }
+  }
+}
+
+/**
+ * Check if user is authenticated
+ */
+export async function checkAuth(): Promise<{ isAuthenticated: boolean; userId?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    return { isAuthenticated: !!user, userId: user?.id }
+  } catch {
+    return { isAuthenticated: false }
+  }
+}
+
+/**
+ * Save files to an existing project (upsert)
+ */
+export async function saveFilesToProject(
+  projectId: string,
+  files: { path: string; content: string; language?: string }[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    // Verify project ownership
+    const { data: project } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!project) {
+      return { success: false, error: 'Project not found' }
+    }
+
+    // Upsert files (update if exists, insert if not)
+    for (const file of files) {
+      await supabase
+        .from('files')
+        .upsert({
+          project_id: projectId,
+          path: file.path,
+          content: file.content,
+          language: file.language || 'plaintext',
+        }, {
+          onConflict: 'project_id,path',
+        })
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Save files error:', error)
+    return { success: false, error: error.message || 'An error occurred' }
+  }
+}
+
 function getInitialFiles(template: string, projectId: string) {
   const baseFiles = [
     {

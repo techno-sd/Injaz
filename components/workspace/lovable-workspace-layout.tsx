@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { formatDistanceToNow } from 'date-fns'
 import {
   FolderOpen,
   X,
@@ -19,11 +18,31 @@ import {
   Share2,
   Rocket,
   Plus,
-  Lightbulb,
   FileText,
   Image,
-  Home,
+  Eye,
+  MessageSquare,
+  ChevronLeft,
+  Terminal,
+  Settings,
+  Github,
+  MoreHorizontal,
+  RefreshCw,
+  ExternalLink,
+  Monitor,
+  Tablet,
+  Smartphone,
+  ChevronDown,
+  Maximize2,
+  RotateCcw,
+  Loader2,
+  Zap,
+  Save,
+  AlertTriangle,
+  LogIn,
 } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
+import { saveGuestProject, checkAuth } from '@/app/actions/projects'
 import { EditorSkeleton } from './loading-skeleton'
 import type { Project, File, Message } from '@/types'
 
@@ -33,8 +52,6 @@ const CodeEditor = dynamic(() => import('./code-editor').then(mod => ({ default:
   ssr: false,
 })
 
-// Use simple iframe-based preview for fast loading
-import { SimplePreview } from './simple-preview'
 import { AIChatbot } from './ai-chatbot'
 
 interface LovableWorkspaceLayoutProps {
@@ -49,45 +66,29 @@ interface LovableWorkspaceLayoutProps {
 function getFileIcon(path: string) {
   const ext = path.split('.').pop()?.toLowerCase()
   switch (ext) {
-    case 'html': return <FileCode className="h-4 w-4 text-orange-500" />
-    case 'css': return <FileCode className="h-4 w-4 text-blue-500" />
-    case 'js': case 'jsx': return <FileCode className="h-4 w-4 text-yellow-500" />
-    case 'ts': case 'tsx': return <FileCode className="h-4 w-4 text-blue-600" />
-    case 'json': return <FileCode className="h-4 w-4 text-green-500" />
-    case 'md': return <FileText className="h-4 w-4 text-gray-500" />
-    case 'png': case 'jpg': case 'svg': return <Image className="h-4 w-4 text-purple-500" />
-    default: return <FileText className="h-4 w-4 text-gray-400" />
+    case 'html': return <FileCode className="h-4 w-4 text-orange-400" />
+    case 'css': return <FileCode className="h-4 w-4 text-blue-400" />
+    case 'js': case 'jsx': return <FileCode className="h-4 w-4 text-yellow-400" />
+    case 'ts': case 'tsx': return <FileCode className="h-4 w-4 text-blue-500" />
+    case 'json': return <FileCode className="h-4 w-4 text-green-400" />
+    case 'md': return <FileText className="h-4 w-4 text-white/50" />
+    case 'png': case 'jpg': case 'svg': return <Image className="h-4 w-4 text-purple-400" />
+    default: return <FileText className="h-4 w-4 text-white/40" />
   }
 }
 
-type StatusTone = 'neutral' | 'success' | 'warning'
+// View modes for the main content area
+type ViewMode = 'preview' | 'code' | 'split' | 'terminal'
+type DeviceMode = 'desktop' | 'tablet' | 'mobile'
 
-interface StatusPillProps {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  value?: string
-  tone?: StatusTone
+const devicePresets = {
+  desktop: { width: '100%', label: 'Desktop', icon: Monitor },
+  tablet: { width: '768px', label: 'Tablet', icon: Tablet },
+  mobile: { width: '375px', label: 'iPhone 17', icon: Smartphone },
 }
 
-const pillVariants: Record<StatusTone, string> = {
-  neutral: 'bg-muted/70 text-muted-foreground border border-border/60 dark:bg-[#1a1a1a] dark:text-muted-foreground',
-  success: 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300',
-  warning: 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-300',
-}
-
-function StatusPill({ icon: Icon, label, value, tone = 'neutral' }: StatusPillProps) {
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium tracking-wide', pillVariants[tone])}>
-      <Icon className="h-3.5 w-3.5" />
-      {label}
-      {value && (
-        <span className="text-[10px] font-normal opacity-75">
-          {value}
-        </span>
-      )}
-    </span>
-  )
-}
+// Mobile view tabs
+type MobileView = 'chat' | 'code' | 'preview'
 
 export function LovableWorkspaceLayout({
   project,
@@ -97,6 +98,7 @@ export function LovableWorkspaceLayout({
   isGuestMode = false,
 }: LovableWorkspaceLayoutProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [files, setFiles] = useState<File[]>(initialFiles)
   const [activeFileId, setActiveFileId] = useState<string | null>(
     initialFiles.length > 0 ? initialFiles[0].id : null
@@ -105,36 +107,156 @@ export function LovableWorkspaceLayout({
     initialFiles.length > 0 ? [initialFiles[0].id] : []
   )
   const [showFileDrawer, setShowFileDrawer] = useState(false)
-  const [showChat, setShowChat] = useState(true)
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('split')
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false)
+  const [previewKey, setPreviewKey] = useState(0)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(true)
+  const [previewZoom, setPreviewZoom] = useState(100)
+  const [mobileView, setMobileView] = useState<MobileView>('chat')
+  const [isMobile, setIsMobile] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+
+  // Check if this is a temporary/unsaved project
+  const isTemporaryProject = project.id.startsWith('new-') || project.id === 'demo' || project.id === 'new'
+  const hasGeneratedFiles = files.length > 3 || files.some(f => f.content && f.content.length > 200)
+
+  // Track if we've auto-saved
+  const [hasAutoSaved, setHasAutoSaved] = useState(false)
+  const [savedProjectId, setSavedProjectId] = useState<string | null>(null)
+
+  // Check auth status on mount
+  useEffect(() => {
+    checkAuth().then(({ isAuthenticated }) => setIsAuthenticated(isAuthenticated))
+  }, [])
+
+  // Auto-save for logged-in users when files are generated
+  useEffect(() => {
+    // Only auto-save if:
+    // 1. User is authenticated
+    // 2. This is a temporary project
+    // 3. We haven't already auto-saved
+    // 4. There are generated files (more than initial 3 starter files)
+    if (
+      isAuthenticated &&
+      isTemporaryProject &&
+      !hasAutoSaved &&
+      hasGeneratedFiles &&
+      files.length > 3
+    ) {
+      const autoSave = async () => {
+        try {
+          const result = await saveGuestProject({
+            name: project.name || 'My Project',
+            description: project.description,
+            platform: (project as any).platform || 'website',
+            files: files.map(f => ({
+              path: f.path,
+              content: f.content,
+              language: f.language,
+            })),
+          })
+
+          if (result.success && result.projectId) {
+            setHasAutoSaved(true)
+            setSavedProjectId(result.projectId)
+            toast({
+              title: 'Project Auto-Saved',
+              description: 'Your project has been saved to your account.',
+            })
+            // Redirect to saved project after a short delay
+            setTimeout(() => {
+              router.push(`/workspace/${result.projectId}`)
+            }, 1500)
+          }
+        } catch (error) {
+          console.error('Auto-save failed:', error)
+        }
+      }
+
+      // Debounce auto-save to avoid saving during rapid file generation
+      const timer = setTimeout(autoSave, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthenticated, isTemporaryProject, hasAutoSaved, hasGeneratedFiles, files, project, router, toast])
+
+  // Save project handler
+  const handleSaveProject = async () => {
+    if (!isTemporaryProject) return
+
+    if (!isAuthenticated) {
+      // Redirect to login with return URL
+      const returnUrl = encodeURIComponent(window.location.pathname)
+      router.push(`/login?returnUrl=${returnUrl}`)
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const result = await saveGuestProject({
+        name: project.name || 'My Project',
+        description: project.description,
+        platform: (project as any).platform || 'website',
+        files: files.map(f => ({
+          path: f.path,
+          content: f.content,
+          language: f.language,
+        })),
+      })
+
+      if (result.success && result.projectId) {
+        toast({
+          title: 'Project Saved!',
+          description: 'Your project has been saved to your account.',
+        })
+        // Redirect to the saved project
+        router.push(`/workspace/${result.projectId}`)
+      } else {
+        toast({
+          title: 'Save Failed',
+          description: result.error || 'Failed to save project',
+          variant: 'destructive',
+        })
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'An error occurred',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const activeFile = files.find(f => f.id === activeFileId)
-  const totalFiles = files.length
-  const lastSavedLabel = lastSavedAt
-    ? formatDistanceToNow(lastSavedAt, { addSuffix: true })
-    : 'Saving changes...'
-  const vercelTone: StatusTone = isVercelConnected ? 'success' : 'warning'
-  const vercelLabel = isVercelConnected ? 'Vercel linked' : 'Vercel not linked'
-
-  useEffect(() => {
-    setLastSavedAt(new Date())
-  }, [])
 
   const handleFileUpdate = useCallback((updatedFile: File) => {
     setFiles(prev => prev.map(f => (f.id === updatedFile.id ? updatedFile : f)))
-    setLastSavedAt(new Date())
   }, [])
 
-  // Handle file selection
   const handleFileSelect = (fileId: string) => {
     setActiveFileId(fileId)
     if (!openTabs.includes(fileId)) {
       setOpenTabs([...openTabs, fileId])
     }
     setShowFileDrawer(false)
+    if (isMobile) {
+      setMobileView('code')
+    }
   }
 
-  // Handle tab close
   const handleCloseTab = (fileId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     const newTabs = openTabs.filter(id => id !== fileId)
@@ -145,130 +267,680 @@ export function LovableWorkspaceLayout({
   }
 
   const handleFilesChange = useCallback((newFiles: File[]) => {
-    setFiles(newFiles)
-    setLastSavedAt(new Date())
+    setFiles(prevFiles => {
+      // Find newly added files (files that weren't in previous state)
+      const prevIds = new Set(prevFiles.map(f => f.id))
+      const newlyAddedFiles = newFiles.filter(f => !prevIds.has(f.id))
+
+      // Check if any existing files were modified
+      const hasModifiedFiles = newFiles.some(newFile => {
+        const prevFile = prevFiles.find(f => f.id === newFile.id)
+        return prevFile && prevFile.content !== newFile.content
+      })
+
+      // Schedule tab and preview updates after state update
+      // Always refresh preview if files were modified OR new files added
+      setTimeout(() => {
+        if (newlyAddedFiles.length > 0) {
+          const newTabIds = newlyAddedFiles.map(f => f.id)
+          setOpenTabs(prev => [...new Set([...prev, ...newTabIds])])
+
+          // Set active file to index.html if it exists, otherwise first new file
+          const indexFile = newlyAddedFiles.find(f => f.path === 'index.html' || f.path.endsWith('/index.html'))
+          const fileToActivate = indexFile || newlyAddedFiles[0]
+          if (fileToActivate) {
+            setActiveFileId(fileToActivate.id)
+          }
+        }
+
+        // Always refresh preview when files change (new or modified)
+        if (newlyAddedFiles.length > 0 || hasModifiedFiles) {
+          setPreviewKey(prev => prev + 1)
+        }
+      }, 0)
+
+      return newFiles
+    })
   }, [])
+
+  const refreshPreview = () => {
+    setPreviewKey(prev => prev + 1)
+    setIsPreviewLoading(true)
+  }
+
+  const [previewUrl, setPreviewUrl] = useState<string>('')
+
+  // Helper to normalize file paths
+  const normalizePath = (p: string) => p.replace(/^\.?\//, '').trim()
+
+  // Build preview HTML - memoized with files dependency
+  const buildPreviewHtml = useCallback(() => {
+    // Find index.html with flexible path matching
+    const indexHtml = files.find(f => {
+      const normalized = normalizePath(f.path)
+      return normalized === 'index.html' || normalized.endsWith('/index.html')
+    })
+    if (!indexHtml) {
+      // Show helpful message with file list
+      const fileList = files.map(f => f.path).join(', ') || 'No files'
+      return `<!DOCTYPE html><html><head><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a1a;color:#888;flex-direction:column;gap:16px;padding:20px;text-align:center;}</style></head><body><div><p style="font-size:16px;color:#aaa;">Waiting for index.html...</p><p style="font-size:12px;color:#666;">Files: ${files.length}</p><p style="font-size:10px;color:#555;max-width:400px;word-break:break-all;">${fileList}</p></div></body></html>`
+    }
+
+    // Check if content exists and is valid
+    if (!indexHtml.content || indexHtml.content.trim() === '') {
+      return `<!DOCTYPE html><html><head><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a1a;color:#888;}</style></head><body><div style="text-align:center;"><p style="color:#f87171;">index.html is empty</p><p style="font-size:12px;color:#666;">Waiting for content...</p></div></body></html>`
+    }
+
+    let html = indexHtml.content
+
+    // Inject CSS files
+    const cssFiles = files.filter(f => f.path.endsWith('.css') && f.content)
+    if (cssFiles.length > 0) {
+      const allCss = cssFiles.map(f => f.content).join('\n')
+      // Try to inject before </head>, or append to end if no </head>
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', `<style>\n${allCss}\n</style>\n</head>`)
+      } else if (html.includes('</HEAD>')) {
+        html = html.replace('</HEAD>', `<style>\n${allCss}\n</style>\n</HEAD>`)
+      } else {
+        html = `<style>\n${allCss}\n</style>\n${html}`
+      }
+    }
+
+    // Inject JS files
+    const jsFiles = files.filter(f => f.path.endsWith('.js') && !f.path.includes('node_modules') && f.content)
+    if (jsFiles.length > 0) {
+      const allJs = jsFiles.map(f => f.content).join('\n')
+      // Try to inject before </body>, or append to end if no </body>
+      if (html.includes('</body>')) {
+        html = html.replace('</body>', `<script>\n${allJs}\n</script>\n</body>`)
+      } else if (html.includes('</BODY>')) {
+        html = html.replace('</BODY>', `<script>\n${allJs}\n</script>\n</BODY>`)
+      } else {
+        html = `${html}\n<script>\n${allJs}\n</script>`
+      }
+    }
+
+    return html
+  }, [files])
+
+  // Update preview when files change
+  useEffect(() => {
+    const html = buildPreviewHtml()
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    setPreviewUrl(url)
+    setIsPreviewLoading(false)
+    return () => URL.revokeObjectURL(url)
+  }, [buildPreviewHtml, previewKey])
+
+  // Mobile bottom navigation
+  const MobileNav = () => (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/[0.06] safe-area-bottom">
+      <div className="flex items-center justify-around py-2 px-4">
+        <button
+          onClick={() => setMobileView('chat')}
+          className={cn(
+            'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all',
+            mobileView === 'chat'
+              ? 'text-purple-400 bg-purple-500/15'
+              : 'text-white/50 hover:text-white/70'
+          )}
+        >
+          <MessageSquare className="h-5 w-5" />
+          <span className="text-[10px] font-medium">AI Chat</span>
+        </button>
+        <button
+          onClick={() => setMobileView('code')}
+          className={cn(
+            'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all',
+            mobileView === 'code'
+              ? 'text-cyan-400 bg-cyan-500/15'
+              : 'text-white/50 hover:text-white/70'
+          )}
+        >
+          <Code2 className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Code</span>
+        </button>
+        <button
+          onClick={() => setMobileView('preview')}
+          className={cn(
+            'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all',
+            mobileView === 'preview'
+              ? 'text-emerald-400 bg-emerald-500/15'
+              : 'text-white/50 hover:text-white/70'
+          )}
+        >
+          <Eye className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Preview</span>
+        </button>
+      </div>
+    </div>
+  )
+
+  // Integrated Preview Component with device frame
+  const IntegratedPreview = ({ className }: { className?: string }) => (
+    <div className={cn("h-full flex flex-col bg-[#0d0d12]", className)}>
+      {/* Preview Toolbar */}
+      <div className="h-11 border-b border-white/[0.06] bg-[#0a0a0f] flex items-center justify-between px-3">
+        {/* Device Selector */}
+        <div className="relative">
+          <button
+            onClick={() => setShowDeviceMenu(!showDeviceMenu)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-sm text-white/80 transition-colors"
+          >
+            {(() => {
+              const DeviceIcon = devicePresets[deviceMode].icon
+              return <DeviceIcon className="h-4 w-4" />
+            })()}
+            <span>{devicePresets[deviceMode].label}</span>
+            <ChevronDown className="h-3 w-3 text-white/40" />
+          </button>
+
+          {showDeviceMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowDeviceMenu(false)} />
+              <div className="absolute top-full left-0 mt-1 w-48 bg-[#1a1a1f] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-1 overflow-hidden">
+                {(Object.keys(devicePresets) as DeviceMode[]).map((mode) => {
+                  const DeviceIcon = devicePresets[mode].icon
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        setDeviceMode(mode)
+                        setShowDeviceMenu(false)
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors',
+                        deviceMode === mode
+                          ? 'bg-purple-500/15 text-purple-300'
+                          : 'text-white/70 hover:bg-white/[0.06]'
+                      )}
+                    >
+                      <DeviceIcon className="h-4 w-4" />
+                      <span>{devicePresets[mode].label}</span>
+                      {mode !== 'desktop' && (
+                        <span className="ml-auto text-xs text-white/40">
+                          {devicePresets[mode].width}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Preview Info */}
+        <div className="flex items-center gap-2 text-xs text-white/40">
+          <span>{deviceMode !== 'desktop' ? devicePresets[deviceMode].width : 'Full width'}</span>
+          <span className="text-white/20">•</span>
+          <span>{previewZoom}%</span>
+        </div>
+
+        {/* Preview Actions */}
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                onClick={refreshPreview}
+              >
+                <RefreshCw className={cn("h-4 w-4", isPreviewLoading && "animate-spin")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Refresh</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                onClick={() => window.open(previewUrl, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Open in new tab</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                onClick={() => setViewMode('preview')}
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Fullscreen</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Preview Content with Device Frame */}
+      <div className="flex-1 overflow-hidden p-4 bg-[#0d0d12]">
+        <div className="h-full flex items-center justify-center">
+          <div
+            className={cn(
+              "h-full bg-white rounded-xl shadow-2xl shadow-black/30 overflow-hidden transition-all duration-300 relative",
+              deviceMode !== 'desktop' && "ring-[12px] ring-[#1a1a1f]"
+            )}
+            style={{
+              maxWidth: devicePresets[deviceMode].width,
+              width: devicePresets[deviceMode].width === '100%' ? '100%' : devicePresets[deviceMode].width
+            }}
+          >
+            {/* Device Notch for Mobile */}
+            {deviceMode === 'mobile' && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1a1a1f] rounded-b-2xl z-10" />
+            )}
+
+            {isPreviewLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+              </div>
+            )}
+            <iframe
+              key={previewKey}
+              src={previewUrl}
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              onLoad={() => setIsPreviewLoading(false)}
+              title="Preview"
+            />
+
+            {/* Made with Badge */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 bg-white/90 backdrop-blur border border-gray-200 rounded-full text-xs text-gray-600 shadow-lg">
+              <Zap className="h-3 w-3" />
+              <span>Made in iEditor</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <TooltipProvider>
-      <div className="h-screen flex flex-col bg-[#fafafa] dark:bg-[#0a0a0a]">
-        {/* Modern Header */}
-        <header className="h-14 border-b bg-white/80 dark:bg-[#111]/80 backdrop-blur-xl flex items-center justify-between px-4 z-50">
+      <div className="h-screen flex flex-col bg-[#08080c]">
+        {/* Header - Bolt Style */}
+        <header className="h-12 border-b border-white/[0.06] bg-[#0a0a0f] flex items-center justify-between px-3 z-50">
+          {/* Left - Logo & Project Name */}
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg"
+              className="h-8 w-8 rounded-lg text-white/70 hover:text-white hover:bg-white/[0.06]"
               onClick={() => router.push('/dashboard')}
             >
-              <Home className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="h-5 w-px bg-border" />
+
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                <Code2 className="h-4 w-4 text-white" />
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-white" />
               </div>
-              <div>
-                <h1 className="text-sm font-semibold leading-none">{project.name}</h1>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {isGuestMode ? 'Demo Project' : 'Personal Project'}
-                </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-white">{project.name}</span>
+                {isGuestMode && (
+                  <Badge className="bg-white/[0.06] text-white/60 border-0 text-[10px] px-1.5">
+                    Demo
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
 
+          {/* Center - View Toggle Toolbar */}
+          <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl p-1 border border-white/[0.06]">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setViewMode('preview')}
+                  className={cn(
+                    'p-2 rounded-lg transition-all',
+                    viewMode === 'preview'
+                      ? 'bg-white/[0.1] text-white'
+                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                  )}
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Preview Only</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setViewMode('code')}
+                  className={cn(
+                    'p-2 rounded-lg transition-all',
+                    viewMode === 'code'
+                      ? 'bg-white/[0.1] text-white'
+                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                  )}
+                >
+                  <Code2 className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Code Only</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setViewMode('split')}
+                  className={cn(
+                    'p-2 rounded-lg transition-all',
+                    viewMode === 'split'
+                      ? 'bg-white/[0.1] text-white'
+                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                  )}
+                >
+                  <div className="flex gap-0.5">
+                    <div className="w-1.5 h-4 bg-current rounded-sm" />
+                    <div className="w-1.5 h-4 bg-current rounded-sm opacity-50" />
+                  </div>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Split View</TooltipContent>
+            </Tooltip>
+
+            <div className="w-px h-5 bg-white/[0.08] mx-1" />
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setViewMode('terminal')}
+                  className={cn(
+                    'p-2 rounded-lg transition-all',
+                    viewMode === 'terminal'
+                      ? 'bg-white/[0.1] text-white'
+                      : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                  )}
+                >
+                  <Terminal className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Terminal</TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Right - Actions */}
           <div className="flex items-center gap-2">
-            {isGuestMode && (
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                Demo Mode
-              </Badge>
+            {!isTemporaryProject && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                >
+                  <Github className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+                <Button className="h-8 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg border-0">
+                  Publish
+                </Button>
+              </>
             )}
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Share2 className="h-4 w-4" />
-              Share
-            </Button>
-            <Button size="sm" className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white border-0">
-              <Rocket className="h-4 w-4" />
-              Deploy
-            </Button>
+            {isTemporaryProject && (
+              <Button
+                onClick={handleSaveProject}
+                disabled={isSaving}
+                className="h-8 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg border-0 gap-2"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isAuthenticated ? (
+                  <Save className="h-4 w-4" />
+                ) : (
+                  <LogIn className="h-4 w-4" />
+                )}
+                {isSaving ? 'Saving...' : isAuthenticated ? 'Save Project' : 'Sign in to Save'}
+              </Button>
+            )}
           </div>
         </header>
 
-        {/* Workspace context bar */}
-        <div className="border-b bg-white/70 dark:bg-[#101010]/80 backdrop-blur flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-[11px]">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusPill icon={Sparkles} label="Copilot" value="Ready" />
-            <StatusPill icon={Code2} label="Files" value={`${totalFiles}`} />
-            <StatusPill icon={Rocket} label={vercelLabel} tone={vercelTone} />
-            {isGuestMode && (
-              <StatusPill icon={Lightbulb} label="Demo mode" tone="warning" />
-            )}
+        {/* Unsaved Project Banner */}
+        {isTemporaryProject && hasGeneratedFiles && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                Your project is not saved. {isAuthenticated ? 'Click "Save Project" to keep your work.' : 'Sign in to save your progress.'}
+              </span>
+            </div>
+            <Button
+              onClick={handleSaveProject}
+              disabled={isSaving}
+              size="sm"
+              className="h-7 px-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-medium"
+            >
+              {isSaving ? 'Saving...' : isAuthenticated ? 'Save Now' : 'Sign In'}
+            </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live preview
-            </span>
-            <span className="hidden sm:inline">Last saved {lastSavedLabel}</span>
-          </div>
-        </div>
+        )}
 
         {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* AI Chat Panel */}
-          <AnimatePresence>
-            {showChat && (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 380, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="border-r flex flex-col overflow-hidden"
-              >
+        <div className="flex-1 flex overflow-hidden pb-16 md:pb-0">
+          {/* Desktop Layout */}
+          <div className="hidden md:flex flex-1">
+            {/* AI Chat Panel - Bolt Style */}
+            <div className="w-[420px] border-r border-white/[0.06] flex flex-col bg-[#0a0a0f]">
+              <AIChatbot
+                projectId={project.id}
+                files={files}
+                onFilesChange={handleFilesChange}
+                platform={(project as any).platform || 'webapp'}
+              />
+            </div>
+
+            {/* Main Content Area - Code + Preview */}
+            <div className="flex-1 flex flex-col">
+              {viewMode === 'preview' && (
+                <IntegratedPreview />
+              )}
+
+              {viewMode === 'code' && (
+                <div className="h-full flex flex-col bg-[#0d0d12]">
+                  {/* File Tabs */}
+                  <div className="h-10 border-b border-white/[0.06] flex items-center gap-1 px-2 bg-white/[0.02]">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]"
+                      onClick={() => setShowFileDrawer(true)}
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                    <div className="h-4 w-px bg-white/[0.08] mx-1" />
+                    <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                      {openTabs.map((tabId) => {
+                        const file = files.find(f => f.id === tabId)
+                        if (!file) return null
+                        return (
+                          <button
+                            key={tabId}
+                            onClick={() => setActiveFileId(tabId)}
+                            className={cn(
+                              'flex items-center gap-2 px-3 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
+                              activeFileId === tabId
+                                ? 'bg-white/[0.08] text-white'
+                                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                            )}
+                          >
+                            {getFileIcon(file.path)}
+                            <span>{file.path.split('/').pop()}</span>
+                            <X
+                              className="h-3 w-3 opacity-50 hover:opacity-100"
+                              onClick={(e) => handleCloseTab(tabId, e)}
+                            />
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Editor */}
+                  <div className="flex-1 overflow-hidden">
+                    {activeFile ? (
+                      <CodeEditor
+                        file={activeFile}
+                        projectId={project.id}
+                        onFileUpdate={handleFileUpdate}
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-white/40">
+                        <div className="text-center">
+                          <FileCode className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                          <p>Select a file to edit</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {viewMode === 'split' && (
+                <ResizablePanelGroup direction="horizontal" className="flex-1">
+                  {/* Code Panel */}
+                  <ResizablePanel defaultSize={50} minSize={30}>
+                    <div className="h-full flex flex-col bg-[#0d0d12]">
+                      {/* File Tabs */}
+                      <div className="h-10 border-b border-white/[0.06] flex items-center gap-1 px-2 bg-white/[0.02]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]"
+                          onClick={() => setShowFileDrawer(true)}
+                        >
+                          <FolderOpen className="h-4 w-4" />
+                        </Button>
+                        <div className="h-4 w-px bg-white/[0.08] mx-1" />
+                        <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                          {openTabs.map((tabId) => {
+                            const file = files.find(f => f.id === tabId)
+                            if (!file) return null
+                            return (
+                              <button
+                                key={tabId}
+                                onClick={() => setActiveFileId(tabId)}
+                                className={cn(
+                                  'flex items-center gap-2 px-3 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
+                                  activeFileId === tabId
+                                    ? 'bg-white/[0.08] text-white'
+                                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                                )}
+                              >
+                                {getFileIcon(file.path)}
+                                <span>{file.path.split('/').pop()}</span>
+                                <X
+                                  className="h-3 w-3 opacity-50 hover:opacity-100"
+                                  onClick={(e) => handleCloseTab(tabId, e)}
+                                />
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Editor */}
+                      <div className="flex-1 overflow-hidden">
+                        {activeFile ? (
+                          <CodeEditor
+                            file={activeFile}
+                            projectId={project.id}
+                            onFileUpdate={handleFileUpdate}
+                          />
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-white/40">
+                            <div className="text-center">
+                              <FileCode className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                              <p>Select a file to edit</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </ResizablePanel>
+
+                  <ResizableHandle className="w-px bg-white/[0.06] hover:bg-purple-500/50 transition-colors" />
+
+                  {/* Preview Panel */}
+                  <ResizablePanel defaultSize={50} minSize={30}>
+                    <IntegratedPreview />
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              )}
+
+              {viewMode === 'terminal' && (
+                <div className="h-full flex flex-col bg-[#0d0d12]">
+                  <div className="h-10 border-b border-white/[0.06] flex items-center px-4 bg-white/[0.02]">
+                    <Terminal className="h-4 w-4 text-white/50 mr-2" />
+                    <span className="text-sm text-white/70">Terminal</span>
+                  </div>
+                  <div className="flex-1 p-4 font-mono text-sm text-white/70">
+                    <p className="text-green-400">$ npm run dev</p>
+                    <p className="text-white/50 mt-2">Starting development server...</p>
+                    <p className="text-cyan-400 mt-1">Ready on http://localhost:3000</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="md:hidden flex-1 flex flex-col">
+            {mobileView === 'chat' && (
+              <div className="flex-1 overflow-hidden bg-[#0a0a0f]">
                 <AIChatbot
                   projectId={project.id}
                   files={files}
                   onFilesChange={handleFilesChange}
+                  platform={(project as any).platform || 'webapp'}
                 />
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
-          {/* Toggle Chat Button */}
-          {!showChat && (
-            <div className="w-12 border-r bg-background flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowChat(true)}
-                className="h-10 w-10 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-500/20"
-              >
-                <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </Button>
-            </div>
-          )}
-
-          {/* Center & Right - Editor and Preview */}
-          <ResizablePanelGroup direction="horizontal" className="flex-1">
-            {/* Code Editor Panel */}
-            <ResizablePanel defaultSize={50} minSize={30}>
-              <div className="h-full flex flex-col bg-white dark:bg-[#0d0d0d]">
-                {/* File Tabs */}
-                <div className="h-10 border-b flex items-center gap-1 px-2 bg-muted/30">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg flex-shrink-0"
-                        onClick={() => setShowFileDrawer(true)}
-                      >
-                        <FolderOpen className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Files</TooltipContent>
-                  </Tooltip>
-                  <div className="h-4 w-px bg-border mx-1" />
+            {mobileView === 'code' && (
+              <div className="flex-1 flex flex-col overflow-hidden bg-[#0d0d12]">
+                <div className="h-10 border-b border-white/[0.06] flex items-center gap-1 px-2 bg-white/[0.02]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]"
+                    onClick={() => setShowFileDrawer(true)}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                  <div className="h-4 w-px bg-white/[0.08] mx-1" />
                   <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
                     {openTabs.map((tabId) => {
                       const file = files.find(f => f.id === tabId)
@@ -278,33 +950,19 @@ export function LovableWorkspaceLayout({
                           key={tabId}
                           onClick={() => setActiveFileId(tabId)}
                           className={cn(
-                            'flex items-center gap-2 px-3 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
+                            'flex items-center gap-2 px-2 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
                             activeFileId === tabId
-                              ? 'bg-white dark:bg-[#1a1a1a] shadow-sm'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                              ? 'bg-white/[0.08] text-white'
+                              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
                           )}
                         >
                           {getFileIcon(file.path)}
-                          <span>{file.path.split('/').pop()}</span>
-                          <X
-                            className="h-3 w-3 opacity-50 hover:opacity-100"
-                            onClick={(e) => handleCloseTab(tabId, e)}
-                          />
+                          <span className="max-w-[60px] truncate">{file.path.split('/').pop()}</span>
                         </button>
                       )
                     })}
                   </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg flex-shrink-0">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>New File</TooltipContent>
-                  </Tooltip>
                 </div>
-
-                {/* Editor */}
                 <div className="flex-1 overflow-hidden">
                   {activeFile ? (
                     <CodeEditor
@@ -313,45 +971,25 @@ export function LovableWorkspaceLayout({
                       onFileUpdate={handleFileUpdate}
                     />
                   ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="h-full flex items-center justify-center text-white/40 p-4">
                       <div className="text-center">
-                        <FileCode className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                        <p>Select a file to edit</p>
+                        <FileCode className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">Select a file to edit</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-            </ResizablePanel>
+            )}
 
-            <ResizableHandle className="w-px bg-border hover:bg-violet-500 transition-colors" />
-
-            {/* Preview Panel */}
-            <ResizablePanel defaultSize={50} minSize={30}>
-              <SimplePreview files={files} />
-            </ResizablePanel>
-          </ResizablePanelGroup>
+            {mobileView === 'preview' && (
+              <IntegratedPreview />
+            )}
+          </div>
         </div>
 
-        {/* Status bar */}
-        <footer className="h-11 border-t bg-white/80 dark:bg-[#0d0d0d]/80 backdrop-blur flex flex-wrap items-center justify-between gap-3 px-4 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium text-foreground">
-              {activeFile ? activeFile.path : 'No file selected'}
-            </span>
-            <span className="hidden sm:inline text-muted-foreground">·</span>
-            <span className="hidden sm:inline truncate max-w-[220px]">
-              {project.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              Synced
-            </span>
-            <span>Auto-save · On</span>
-          </div>
-        </footer>
+        {/* Mobile Bottom Navigation */}
+        <MobileNav />
 
         {/* File Drawer Overlay */}
         <AnimatePresence>
@@ -361,7 +999,7 @@ export function LovableWorkspaceLayout({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 z-50"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
                 onClick={() => setShowFileDrawer(false)}
               />
               <motion.div
@@ -369,35 +1007,33 @@ export function LovableWorkspaceLayout({
                 animate={{ x: 0 }}
                 exit={{ x: -320 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="fixed left-0 top-0 bottom-0 w-80 bg-white dark:bg-[#111] z-50 shadow-2xl"
+                className="fixed left-0 top-0 bottom-0 w-[280px] sm:w-80 bg-[#0d0d12] border-r border-white/[0.06] z-50 shadow-2xl"
               >
-                {/* Drawer Header */}
-                <div className="h-14 border-b flex items-center justify-between px-4">
-                  <div className="flex items-center gap-2">
-                    <FolderOpen className="h-4 w-4" />
+                <div className="h-14 border-b border-white/[0.06] flex items-center justify-between px-4">
+                  <div className="flex items-center gap-2 text-white">
+                    <FolderOpen className="h-4 w-4 text-purple-400" />
                     <span className="font-medium">Files</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/[0.06]"
                     onClick={() => setShowFileDrawer(false)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
 
-                {/* File List */}
-                <div className="p-2 space-y-1">
+                <div className="p-2 space-y-1 overflow-y-auto max-h-[calc(100vh-120px)]">
                   {files.map((file) => (
                     <button
                       key={file.id}
                       onClick={() => handleFileSelect(file.id)}
                       className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
                         activeFileId === file.id
-                          ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-                          : 'hover:bg-muted'
+                          ? 'bg-purple-500/15 text-purple-300'
+                          : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
                       )}
                     >
                       {getFileIcon(file.path)}
@@ -406,9 +1042,8 @@ export function LovableWorkspaceLayout({
                   ))}
                 </div>
 
-                {/* Add File Button */}
-                <div className="p-4 border-t">
-                  <Button variant="outline" className="w-full gap-2">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/[0.06] bg-[#0d0d12]">
+                  <Button variant="outline" className="w-full gap-2 border-white/[0.1] text-white/70 hover:bg-white/[0.06] hover:text-white">
                     <Plus className="h-4 w-4" />
                     Add File
                   </Button>

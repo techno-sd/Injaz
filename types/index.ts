@@ -1,5 +1,8 @@
 import { Database } from './supabase'
 
+// Re-export all app schema types
+export * from './app-schema'
+
 export type User = Database['public']['Tables']['users']['Row']
 export type Project = Database['public']['Tables']['projects']['Row'] & {
   github_repo_url?: string | null

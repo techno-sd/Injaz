@@ -87,6 +87,9 @@ console.log('App ready');`,
       name: isAIGeneratedProject ? 'New Project' : template.name,
       description: isAIGeneratedProject ? 'AI-generated project' : template.description,
       template: templateId,
+      // Set platform to 'website' for new projects - generates static HTML/CSS/JS that can be previewed immediately
+      // Use 'webapp' for Next.js projects (requires WebContainer for preview)
+      platform: 'website' as const,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       user_id: user?.id || 'guest',

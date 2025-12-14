@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { FileTree } from './file-tree'
@@ -8,7 +8,18 @@ import { WorkspaceHeader } from './workspace-header'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { CommandPalette } from '@/components/command-palette'
 import { Button } from '@/components/ui/button'
-import { Globe, Terminal as TerminalIcon, MessageSquare, GitBranch, Rocket } from 'lucide-react'
+import {
+  Globe,
+  Terminal as TerminalIcon,
+  MessageSquare,
+  GitBranch,
+  Rocket,
+  Code2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react'
 import {
   EditorSkeleton,
   PreviewSkeleton,
@@ -18,6 +29,12 @@ import {
   DeploymentSkeleton,
 } from './loading-skeleton'
 import type { Project, File, Message } from '@/types'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 // Lazy load heavy components
 const CodeEditor = dynamic(() => import('./code-editor').then(mod => ({ default: mod.CodeEditor })), {
@@ -68,6 +85,8 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
   const [rightView, setRightView] = useState<'chat' | 'git' | 'deploy'>('chat')
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [fileSearchOpen, setFileSearchOpen] = useState(false)
+  const [isEditorCollapsed, setIsEditorCollapsed] = useState(false)
+  const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false)
 
   const activeFile = files.find(f => f.id === activeFileId)
 
@@ -104,16 +123,25 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
         e.preventDefault()
         setRightView('git')
       }
+      // Toggle editor - Ctrl/Cmd+E
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault()
+        setIsEditorCollapsed(!isEditorCollapsed)
+      }
+      // Toggle file tree - Ctrl/Cmd+B
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault()
+        setIsFileTreeCollapsed(!isFileTreeCollapsed)
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [bottomView])
+  }, [bottomView, isEditorCollapsed, isFileTreeCollapsed])
 
   const handleCommandAction = (action: string) => {
     switch (action) {
       case 'new-file':
-        // Trigger file tree new file creation
         document.querySelector('[data-action="new-file"]')?.dispatchEvent(new Event('click'))
         break
       case 'search':
@@ -128,6 +156,12 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
       case 'terminal':
         setBottomView(bottomView === 'terminal' ? 'preview' : 'terminal')
         break
+      case 'toggle-editor':
+        setIsEditorCollapsed(!isEditorCollapsed)
+        break
+      case 'toggle-sidebar':
+        setIsFileTreeCollapsed(!isFileTreeCollapsed)
+        break
       case 'settings':
         window.location.href = '/settings'
         break
@@ -137,172 +171,274 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      <WorkspaceHeader project={project} />
-      <KeyboardShortcuts />
+    <TooltipProvider>
+      <div className="h-screen flex flex-col bg-gray-50">
+        <WorkspaceHeader project={project} />
+        <KeyboardShortcuts />
 
-      {/* Command Palette */}
-      <CommandPalette
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-        onAction={handleCommandAction}
-      />
+        {/* Command Palette */}
+        <CommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+          onAction={handleCommandAction}
+        />
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* Left Sidebar - File Tree */}
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <FileTree
-            files={files}
-            projectId={project.id}
-            activeFileId={activeFileId}
-            onFileSelect={setActiveFileId}
-            onFilesChange={setFiles}
-          />
-        </ResizablePanel>
-
-        <ResizableHandle />
-
-        {/* Main Editor Area */}
-        <ResizablePanel defaultSize={45} minSize={30}>
-          <ResizablePanelGroup direction="vertical">
-            {/* Code Editor */}
-            <ResizablePanel defaultSize={60} minSize={30}>
-              <CodeEditor
-                file={activeFile}
-                projectId={project.id}
-                onFileUpdate={(updatedFile) => {
-                  setFiles(files.map(f => f.id === updatedFile.id ? updatedFile : f))
-                }}
-              />
-            </ResizablePanel>
-
-            <ResizableHandle />
-
-            {/* Preview / Terminal */}
-            <ResizablePanel defaultSize={40} minSize={20}>
-              <div className="h-full flex flex-col">
-                {/* Tabs */}
-                <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 border-b">
-                  <Button
-                    variant={bottomView === 'preview' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setBottomView('preview')}
-                    className={bottomView === 'preview'
-                      ? 'h-9 gradient-primary text-white border-0 shadow-sm'
-                      : 'h-9 hover:bg-primary/10 hover:text-primary'
-                    }
-                  >
-                    <Globe className="h-4 w-4 mr-2" />
-                    Preview
-                  </Button>
-                  <Button
-                    variant={bottomView === 'terminal' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setBottomView('terminal')}
-                    className={bottomView === 'terminal'
-                      ? 'h-9 gradient-primary text-white border-0 shadow-sm'
-                      : 'h-9 hover:bg-primary/10 hover:text-primary'
-                    }
-                  >
-                    <TerminalIcon className="h-4 w-4 mr-2" />
-                    Terminal
-                  </Button>
-                  <div className="flex-1"></div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                    <span>Live</span>
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          {/* Left Sidebar - File Tree */}
+          {!isFileTreeCollapsed && (
+            <>
+              <ResizablePanel defaultSize={18} minSize={12} maxSize={25}>
+                <div className="h-full flex flex-col bg-white border-r border-gray-200">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Explorer</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                          onClick={() => setIsFileTreeCollapsed(true)}
+                        >
+                          <PanelLeftClose className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p>Hide sidebar (Ctrl+B)</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-hidden">
-                  {bottomView === 'preview' ? (
-                    <WebContainerPreview projectId={project.id} files={files} />
-                  ) : (
-                    <Terminal projectId={project.id} />
-                  )}
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </ResizablePanel>
-
-        <ResizableHandle />
-
-        {/* Right Sidebar - AI Chat / Git Panel / Deploy */}
-        <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
-          <div className="h-full flex flex-col">
-            {/* Tabs */}
-            <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 border-b">
-              <Button
-                variant={rightView === 'chat' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setRightView('chat')}
-                className={rightView === 'chat'
-                  ? 'h-9 gradient-primary text-white border-0 shadow-sm'
-                  : 'h-9 hover:bg-primary/10 hover:text-primary'
-                }
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                AI Chat
-              </Button>
-              <Button
-                variant={rightView === 'git' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setRightView('git')}
-                className={rightView === 'git'
-                  ? 'h-9 gradient-primary text-white border-0 shadow-sm'
-                  : 'h-9 hover:bg-primary/10 hover:text-primary'
-                }
-              >
-                <GitBranch className="h-4 w-4 mr-2" />
-                Git
-              </Button>
-              <Button
-                variant={rightView === 'deploy' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setRightView('deploy')}
-                className={rightView === 'deploy'
-                  ? 'h-9 gradient-primary text-white border-0 shadow-sm'
-                  : 'h-9 hover:bg-primary/10 hover:text-primary'
-                }
-              >
-                <Rocket className="h-4 w-4 mr-2" />
-                Deploy
-              </Button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-hidden">
-              {rightView === 'chat' ? (
-                <ChatPanel
-                  projectId={project.id}
-                  files={files}
-                  messages={messages}
-                  onMessagesChange={setMessages}
-                  onFilesChange={setFiles}
-                />
-              ) : rightView === 'git' ? (
-                <GitPanel
-                  project={project}
-                  files={files}
-                  onRefresh={() => {
-                    // Refresh files from server
-                    window.location.reload()
-                  }}
-                />
-              ) : (
-                <div className="h-full overflow-auto p-4">
-                  <DeploymentPanel
-                    project={project}
-                    isVercelConnected={isVercelConnected}
+                  <FileTree
+                    files={files}
+                    projectId={project.id}
+                    activeFileId={activeFileId}
+                    onFileSelect={setActiveFileId}
+                    onFilesChange={setFiles}
                   />
                 </div>
-              )}
+              </ResizablePanel>
+              <ResizableHandle className="w-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
+            </>
+          )}
+
+          {/* Collapsed File Tree Toggle */}
+          {isFileTreeCollapsed && (
+            <div className="w-12 bg-white border-r border-gray-200 flex flex-col items-center py-3 gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    onClick={() => setIsFileTreeCollapsed(false)}
+                  >
+                    <PanelLeftOpen className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Show sidebar (Ctrl+B)</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
+          )}
+
+          {/* Main Editor Area */}
+          <ResizablePanel defaultSize={isFileTreeCollapsed ? 50 : 45} minSize={30}>
+            <ResizablePanelGroup direction="vertical">
+              {/* Code Editor */}
+              {!isEditorCollapsed && (
+                <>
+                  <ResizablePanel defaultSize={55} minSize={20}>
+                    <div className="h-full flex flex-col bg-white">
+                      {/* Editor Header */}
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50/50">
+                        <div className="flex items-center gap-2">
+                          <Code2 className="h-4 w-4 text-violet-600" />
+                          <span className="text-sm font-medium text-gray-700">
+                            {activeFile?.path || 'No file selected'}
+                          </span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-gray-400 hover:text-gray-600"
+                              onClick={() => setIsEditorCollapsed(true)}
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Collapse editor (Ctrl+E)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <CodeEditor
+                          file={activeFile}
+                          projectId={project.id}
+                          onFileUpdate={(updatedFile) => {
+                            setFiles(files.map(f => f.id === updatedFile.id ? updatedFile : f))
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle className="h-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
+                </>
+              )}
+
+              {/* Collapsed Editor Toggle */}
+              {isEditorCollapsed && (
+                <div className="h-10 bg-white border-b border-gray-200 flex items-center justify-between px-3">
+                  <div className="flex items-center gap-2">
+                    <Code2 className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-500">Editor collapsed</span>
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                        onClick={() => setIsEditorCollapsed(false)}
+                      >
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        Show Editor
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Expand editor (Ctrl+E)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
+
+              {/* Preview / Terminal */}
+              <ResizablePanel defaultSize={isEditorCollapsed ? 100 : 45} minSize={20}>
+                <div className="h-full flex flex-col bg-white">
+                  {/* Tabs */}
+                  <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 border-b border-gray-100">
+                    <Button
+                      variant={bottomView === 'preview' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setBottomView('preview')}
+                      className={bottomView === 'preview'
+                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                      }
+                    >
+                      <Globe className="h-4 w-4 mr-2" />
+                      Preview
+                    </Button>
+                    <Button
+                      variant={bottomView === 'terminal' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setBottomView('terminal')}
+                      className={bottomView === 'terminal'
+                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                      }
+                    >
+                      <TerminalIcon className="h-4 w-4 mr-2" />
+                      Terminal
+                    </Button>
+                    <div className="flex-1"></div>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <span>Live</span>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 overflow-hidden">
+                    {bottomView === 'preview' ? (
+                      <WebContainerPreview projectId={project.id} files={files} />
+                    ) : (
+                      <Terminal projectId={project.id} />
+                    )}
+                  </div>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+
+          <ResizableHandle className="w-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
+
+          {/* Right Sidebar - AI Chat / Git Panel / Deploy */}
+          <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
+            <div className="h-full flex flex-col bg-white">
+              {/* Tabs */}
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 border-b border-gray-100">
+                <Button
+                  variant={rightView === 'chat' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightView('chat')}
+                  className={rightView === 'chat'
+                    ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                    : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                  }
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  AI Chat
+                </Button>
+                <Button
+                  variant={rightView === 'git' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightView('git')}
+                  className={rightView === 'git'
+                    ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                    : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                  }
+                >
+                  <GitBranch className="h-4 w-4 mr-2" />
+                  Git
+                </Button>
+                <Button
+                  variant={rightView === 'deploy' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightView('deploy')}
+                  className={rightView === 'deploy'
+                    ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                    : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                  }
+                >
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Deploy
+                </Button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-hidden">
+                {rightView === 'chat' ? (
+                  <ChatPanel
+                    projectId={project.id}
+                    files={files}
+                    messages={messages}
+                    onMessagesChange={setMessages}
+                    onFilesChange={setFiles}
+                  />
+                ) : rightView === 'git' ? (
+                  <GitPanel
+                    project={project}
+                    files={files}
+                    onRefresh={() => {
+                      window.location.reload()
+                    }}
+                  />
+                ) : (
+                  <div className="h-full overflow-auto p-4">
+                    <DeploymentPanel
+                      project={project}
+                      isVercelConnected={isVercelConnected}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </TooltipProvider>
   )
 }
