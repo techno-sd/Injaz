@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import {
   Loader2,
   Globe,
@@ -11,11 +11,13 @@ import {
   Settings2,
   Maximize2,
   Minimize2,
+  Smartphone,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { File, PlatformType } from '@/types'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 // Import preview components
 import {
@@ -28,6 +30,13 @@ import {
   ViewportInput,
   ViewportDimensions,
   BreakpointBadge,
+  ZoomControls,
+  ScreenshotButton,
+  GridOverlay,
+  GridToggle,
+  ThemeToggle,
+  UrlBar,
+  MobileStatusBar,
 } from './preview'
 
 interface SimplePreviewProps {
@@ -42,13 +51,29 @@ const PLATFORM_COLORS: Record<PlatformType, string> = {
 }
 
 export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps) {
-  const { mode, setMode, showFrame, setShowFrame, scale, setScale } = usePreviewDevice()
+  const { mode, setMode, showFrame, setShowFrame, scale, setScale, device } = usePreviewDevice()
   const { width, height } = useViewportDimensions()
   const [isLoading, setIsLoading] = useState(true)
   const [key, setKey] = useState(0)
   const [showQRCode, setShowQRCode] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showGrid, setShowGrid] = useState(false)
+  const [showRulers, setShowRulers] = useState(false)
+  const [previewTheme, setPreviewTheme] = useState<'light' | 'dark' | 'system'>('system')
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Fit to screen calculation
+  const handleFitToScreen = useCallback(() => {
+    if (!containerRef.current) return
+    const container = containerRef.current
+    const containerWidth = container.clientWidth - 48 // padding
+    const containerHeight = container.clientHeight - 48
+    const scaleX = containerWidth / width
+    const scaleY = containerHeight / height
+    const newScale = Math.min(scaleX, scaleY, 1)
+    setScale(Math.round(newScale * 100) / 100)
+  }, [width, height, setScale])
 
   // Set initial mode based on platform
   useEffect(() => {
@@ -132,117 +157,150 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
     window.open(previewUrl, '_blank')
   }
 
-  const PlatformIcon = platform === 'website' ? Globe : platform === 'mobile' ? Globe : AppWindow
+  const PlatformIcon = platform === 'website' ? Globe : platform === 'mobile' ? Smartphone : AppWindow
 
   return (
-    <div className="h-full flex flex-col bg-[#0d0d12]">
-      {/* Header */}
-      <div className="h-12 border-b border-white/[0.06] bg-[#0a0a0f] flex items-center justify-between px-3 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          {/* Platform Badge */}
+    <TooltipProvider delayDuration={300}>
+      <div className="h-full flex flex-col bg-[#0d0d12]">
+        {/* Header */}
+        <div className="h-12 border-b border-white/[0.06] bg-[#0a0a0f] flex items-center justify-between px-3 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <PlatformIcon className={cn('h-4 w-4', PLATFORM_COLORS[platform])} />
-            <Badge
-              variant="secondary"
-              className={cn(
-                'h-5 text-[10px] border',
-                platform === 'website' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                platform === 'webapp' && 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-                platform === 'mobile' && 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-              )}
-            >
-              {platform === 'website' ? 'Static' : platform === 'webapp' ? 'Next.js' : 'Expo'}
-            </Badge>
+            {/* Platform Badge */}
+            <div className="flex items-center gap-2">
+              <PlatformIcon className={cn('h-4 w-4', PLATFORM_COLORS[platform])} />
+              <Badge
+                variant="secondary"
+                className={cn(
+                  'h-5 text-[10px] border',
+                  platform === 'website' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                  platform === 'webapp' && 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+                  platform === 'mobile' && 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                )}
+              >
+                {platform === 'website' ? 'Static' : platform === 'webapp' ? 'Next.js' : 'Expo'}
+              </Badge>
+            </div>
+
+            <div className="h-4 w-px bg-white/[0.08] mx-1 hidden sm:block" />
+
+            {/* Device Frame Selector */}
+            <div className="hidden sm:block">
+              <DeviceFrameSelector />
+            </div>
+
+            {/* Orientation Toggle */}
+            <OrientationToggle />
+
+            {/* Responsive Indicators */}
+            <div className="hidden lg:block">
+              <ResponsiveIndicators compact />
+            </div>
           </div>
 
-          {/* Device Frame Selector */}
-          <DeviceFrameSelector />
+          <div className="flex items-center gap-1">
+            {/* Zoom Controls */}
+            <div className="hidden md:flex">
+              <ZoomControls
+                scale={scale}
+                onScaleChange={setScale}
+                onFitToScreen={handleFitToScreen}
+              />
+            </div>
 
-          {/* Orientation Toggle */}
-          <OrientationToggle />
+            <div className="h-4 w-px bg-white/[0.08] mx-1 hidden md:block" />
 
-          {/* Responsive Indicators */}
-          <div className="hidden sm:block">
-            <ResponsiveIndicators compact />
-          </div>
-        </div>
+            {/* Grid/Ruler Toggle */}
+            <div className="hidden sm:flex">
+              <GridToggle
+                showGrid={showGrid}
+                showRulers={showRulers}
+                onGridChange={setShowGrid}
+                onRulersChange={setShowRulers}
+              />
+            </div>
 
-        <div className="flex items-center gap-1">
-          {/* Viewport Dimensions */}
-          <div className="hidden md:block mr-2">
-            <ViewportDimensions showScale />
-          </div>
+            {/* Theme Toggle */}
+            <ThemeToggle
+              theme={previewTheme}
+              onThemeChange={setPreviewTheme}
+            />
 
-          <div className="h-4 w-px bg-white/[0.08] mx-1" />
+            {/* Screenshot Button */}
+            <ScreenshotButton
+              iframeRef={iframeRef}
+              deviceName={device?.name}
+            />
 
-          {/* Settings Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-7 w-7 hover:bg-white/[0.06]',
-              showSettings ? 'text-violet-400' : 'text-white/60 hover:text-white'
-            )}
-            onClick={() => setShowSettings(!showSettings)}
-            title="Preview Settings"
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-          </Button>
+            <div className="h-4 w-px bg-white/[0.08] mx-1" />
 
-          {/* Frame Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-7 w-7 hover:bg-white/[0.06]',
-              showFrame ? 'text-violet-400' : 'text-white/60 hover:text-white'
-            )}
-            onClick={() => setShowFrame(!showFrame)}
-            title={showFrame ? 'Hide device frame' : 'Show device frame'}
-          >
-            {showFrame ? (
-              <Minimize2 className="h-3.5 w-3.5" />
-            ) : (
-              <Maximize2 className="h-3.5 w-3.5" />
-            )}
-          </Button>
-
-          {/* QR Code Button (for mobile) */}
-          {platform === 'mobile' && (
+            {/* Settings Toggle */}
             <Button
               variant="ghost"
               size="icon"
               className={cn(
                 'h-7 w-7 hover:bg-white/[0.06]',
-                showQRCode ? 'text-cyan-400' : 'text-white/60 hover:text-white'
+                showSettings ? 'text-violet-400' : 'text-white/60 hover:text-white'
               )}
-              onClick={() => setShowQRCode(!showQRCode)}
-              title="Show QR Code"
+              onClick={() => setShowSettings(!showSettings)}
+              title="Preview Settings"
             >
-              <QrCode className="h-3.5 w-3.5" />
+              <Settings2 className="h-3.5 w-3.5" />
             </Button>
-          )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-white/60 hover:text-white hover:bg-white/[0.06]"
-            onClick={handleRefresh}
-            title="Refresh"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-white/60 hover:text-white hover:bg-white/[0.06]"
-            onClick={handleOpenExternal}
-            title="Open in new tab"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Button>
+            {/* Frame Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-7 w-7 hover:bg-white/[0.06]',
+                showFrame ? 'text-violet-400' : 'text-white/60 hover:text-white'
+              )}
+              onClick={() => setShowFrame(!showFrame)}
+              title={showFrame ? 'Hide device frame' : 'Show device frame'}
+            >
+              {showFrame ? (
+                <Minimize2 className="h-3.5 w-3.5" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
+
+            {/* QR Code Button (for mobile) */}
+            {platform === 'mobile' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'h-7 w-7 hover:bg-white/[0.06]',
+                  showQRCode ? 'text-cyan-400' : 'text-white/60 hover:text-white'
+                )}
+                onClick={() => setShowQRCode(!showQRCode)}
+                title="Show QR Code"
+              >
+                <QrCode className="h-3.5 w-3.5" />
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-white/60 hover:text-white hover:bg-white/[0.06]"
+              onClick={handleRefresh}
+              title="Refresh"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-white/60 hover:text-white hover:bg-white/[0.06]"
+              onClick={handleOpenExternal}
+              title="Open in new tab"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
-      </div>
 
       {/* Settings Panel */}
       {showSettings && (
@@ -269,61 +327,80 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
         </div>
       )}
 
-      {/* Preview Content */}
-      <div className="flex-1 overflow-auto p-4 flex items-start justify-center">
-        <DeviceFrame className="mx-auto">
-          <div className="relative w-full h-full">
-            {/* QR Code Overlay */}
-            {showQRCode && platform === 'mobile' && (
-              <div className="absolute inset-0 bg-white flex flex-col items-center justify-center z-30 p-6">
-                <div className="h-48 w-48 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                  <div className="text-center p-4">
-                    <QrCode className="h-24 w-24 text-gray-400 mx-auto mb-2" />
-                    <p className="text-xs text-gray-500">QR code will appear when running Expo</p>
-                  </div>
-                </div>
-                <p className="text-sm font-medium text-gray-800 mb-1">Scan with Expo Go</p>
-                <p className="text-xs text-gray-500 text-center max-w-[200px]">
-                  Install Expo Go on your device and scan this code to preview your app
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => setShowQRCode(false)}
-                >
-                  Close
-                </Button>
-              </div>
-            )}
-
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-                <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
-              </div>
-            )}
-            <iframe
-              key={key}
-              ref={iframeRef}
-              src={previewUrl}
-              className="w-full h-full border-0"
-              style={{
-                width,
-                height,
-              }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              onLoad={() => setIsLoading(false)}
-              title="Preview"
-            />
+        {/* URL Bar for web platforms */}
+        {(platform === 'website' || platform === 'webapp') && !showFrame && (
+          <div className="border-b border-white/[0.06] bg-[#0a0a0f] px-4 py-2 flex items-center justify-center">
+            <UrlBar url="localhost:3000" isSecure={true} />
           </div>
-        </DeviceFrame>
-      </div>
+        )}
 
-      {/* Responsive Indicator Bar (Bottom) */}
-      <div className="h-8 border-t border-white/[0.06] bg-[#0a0a0f] flex items-center justify-center px-3">
-        <ResponsiveIndicators showLabel />
+        {/* Preview Content */}
+        <div ref={containerRef} className="flex-1 overflow-auto p-4 flex items-start justify-center">
+          <DeviceFrame className="mx-auto">
+            <div className="relative w-full h-full">
+              {/* Grid Overlay */}
+              <GridOverlay show={showGrid} showRulers={showRulers} />
+
+              {/* QR Code Overlay */}
+              {showQRCode && platform === 'mobile' && (
+                <div className="absolute inset-0 bg-white flex flex-col items-center justify-center z-30 p-6">
+                  <div className="h-48 w-48 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                    <div className="text-center p-4">
+                      <QrCode className="h-24 w-24 text-gray-400 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">QR code will appear when running Expo</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 mb-1">Scan with Expo Go</p>
+                  <p className="text-xs text-gray-500 text-center max-w-[200px]">
+                    Install Expo Go on your device and scan this code to preview your app
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => setShowQRCode(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              )}
+
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
+                </div>
+              )}
+              <iframe
+                key={key}
+                ref={iframeRef}
+                src={previewUrl}
+                className={cn(
+                  'w-full h-full border-0',
+                  previewTheme === 'dark' && 'dark'
+                )}
+                style={{
+                  width,
+                  height,
+                  colorScheme: previewTheme === 'system' ? 'light dark' : previewTheme,
+                }}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                onLoad={() => setIsLoading(false)}
+                title="Preview"
+              />
+            </div>
+          </DeviceFrame>
+        </div>
+
+        {/* Bottom Bar with Viewport Info */}
+        <div className="h-9 border-t border-white/[0.06] bg-[#0a0a0f] flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <ViewportDimensions />
+            <BreakpointBadge />
+          </div>
+          <ResponsiveIndicators showLabel />
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
 
