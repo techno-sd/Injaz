@@ -33,7 +33,7 @@ export function Terminal({ projectId }: TerminalProps) {
   const { webcontainer } = useWebContainer()
   const [lines, setLines] = useState<string[]>([
     '╔════════════════════════════════════════════════╗',
-    '║   Welcome to iEditor WebContainer Terminal    ║',
+    '║   Welcome to Injaz.ai WebContainer Terminal   ║',
     '║   Type "help" for common commands              ║',
     '╚════════════════════════════════════════════════╝',
     '',

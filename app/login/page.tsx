@@ -32,7 +32,7 @@ export default async function LoginPage() {
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-xl group-hover:shadow-violet-500/30 transition-all duration-300">
               <Code2 className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-lg text-gray-900">iEditor</span>
+            <span className="font-bold text-lg text-gray-900">Injaz.ai</span>
           </Link>
         </div>
       </header>

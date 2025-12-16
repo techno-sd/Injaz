@@ -9,7 +9,7 @@ interface ImportRequest {
 }
 
 /**
- * Import a GitHub repository into iEditor
+ * Import a GitHub repository into Injaz.ai
  * Creates a new project and imports all files from the repository
  */
 export async function POST(request: NextRequest) {

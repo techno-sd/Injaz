@@ -7,7 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'iEditor - AI-Powered App Builder',
+  title: 'Injaz.ai - AI-Powered App Builder',
   description: 'Build applications with AI assistance',
 }
 

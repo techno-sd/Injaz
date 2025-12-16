@@ -27,7 +27,7 @@ export class OpenAIProvider implements AIProvider {
           baseURL: 'https://openrouter.ai/api/v1',
           defaultHeaders: {
             'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-            'X-Title': 'iEditor',
+            'X-Title': 'Injaz.ai',
           },
         })
       } else if (process.env.OPENAI_API_KEY) {

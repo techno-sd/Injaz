@@ -121,7 +121,7 @@ export function RepoBrowser() {
             Import Repository from GitHub
           </DialogTitle>
           <DialogDescription>
-            Select a repository to import into iEditor
+            Select a repository to import into Injaz.ai
           </DialogDescription>
         </DialogHeader>
 

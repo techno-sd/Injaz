@@ -778,7 +778,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-violet-400" />
-            <span className="text-sm font-medium text-white/80">iEditor AI</span>
+            <span className="text-sm font-medium text-white/80">Injaz.ai</span>
           </div>
           <div className={cn(
             'flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium',

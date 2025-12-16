@@ -47,7 +47,7 @@ export const GUEST_TEMPLATES: Record<string, GuestTemplate> = {
         </div>
 
         <h1 class="hero-title">
-          Welcome to iEditor!
+          Welcome to Injaz.ai!
         </h1>
         <p class="hero-subtitle">
           Start building your app by chatting with AI. Transform your ideas into reality.
@@ -323,7 +323,7 @@ html {
       {
         path: 'app.js',
         content: `// Modern JavaScript with enhanced interactions
-console.log('🚀 Welcome to iEditor!');
+console.log('🚀 Welcome to Injaz.ai!');
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✨ App loaded successfully!');

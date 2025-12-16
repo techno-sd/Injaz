@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { PricingPageClient } from "@/components/pricing/pricing-page-client"
 
 export const metadata = {
-  title: "Pricing - iEditor",
+  title: "Pricing - Injaz.ai",
   description: "Choose the perfect plan for your needs",
 }
 
@@ -36,7 +36,7 @@ export default async function PricingPage() {
     {
       id: "free",
       name: "Free",
-      description: "Perfect for trying out iEditor",
+      description: "Perfect for trying out Injaz.ai",
       price_monthly_cents: 0,
       price_yearly_cents: null,
       features: [
@@ -90,7 +90,7 @@ export default async function PricingPage() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <a href="/" className="text-xl font-bold">
-            iEditor
+            Injaz.ai
           </a>
           <nav className="flex items-center gap-4">
             {user ? (
@@ -187,7 +187,7 @@ export default async function PricingPage() {
       {/* Footer */}
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} iEditor. All rights reserved.
+          © {new Date().getFullYear()} Injaz.ai. All rights reserved.
         </div>
       </footer>
     </div>

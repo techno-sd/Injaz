@@ -43,7 +43,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             <div className="h-12 w-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
               <Code2 className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold">iEditor</span>
+            <span className="text-2xl font-bold">Injaz.ai</span>
           </Link>
 
           <h1 className="text-5xl font-bold mb-6 leading-tight animate-slide-in">
@@ -95,7 +95,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                 <Code2 className="h-6 w-6 text-white" />
               </div>
               <span className="text-2xl font-bold text-gradient">
-                iEditor
+                Injaz.ai
               </span>
             </Link>
           </div>

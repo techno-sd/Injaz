@@ -28,7 +28,7 @@ interface OnboardingProps {
 
 const steps = [
   {
-    title: 'Welcome to iEditor',
+    title: 'Welcome to Injaz.ai',
     description: 'Build AI-powered applications with ease',
     icon: Zap,
     features: [
