@@ -20,30 +20,9 @@ export interface AISuggestion {
 // =============================================================================
 
 export const PLATFORM_SUGGESTIONS: Record<PlatformType, AISuggestion[]> = {
-  website: [
-    { id: 'w1', text: 'Build a modern portfolio with project showcase', emoji: '💼', tags: ['portfolio'], complexity: 'medium' },
-    { id: 'w2', text: 'Create a startup landing page with animations', emoji: '✨', tags: ['landing'], complexity: 'medium' },
-    { id: 'w3', text: 'Design a blog with dark mode & newsletter signup', emoji: '📝', tags: ['blog'], complexity: 'medium' },
-    { id: 'w4', text: 'Build a professional business website', emoji: '🏢', tags: ['business'], complexity: 'simple' },
-    { id: 'w5', text: 'Create a restaurant website with menu & reservations', emoji: '🍽️', tags: ['business'], complexity: 'medium' },
-    { id: 'w6', text: 'Design a photography portfolio with gallery', emoji: '📸', tags: ['portfolio'], complexity: 'simple' },
-  ],
-  webapp: [
-    { id: 'a1', text: 'Build a SaaS landing page with pricing & features', emoji: '🚀', tags: ['saas', 'landing'], complexity: 'medium' },
-    { id: 'a2', text: 'Create an admin dashboard with charts & tables', emoji: '📊', tags: ['dashboard'], complexity: 'complex' },
-    { id: 'a3', text: 'Design an e-commerce store with product catalog', emoji: '🛒', tags: ['ecommerce'], complexity: 'complex' },
-    { id: 'a4', text: 'Build a social platform with user profiles', emoji: '👥', tags: ['social'], complexity: 'complex' },
-    { id: 'a5', text: 'Create a project management tool with kanban board', emoji: '📋', tags: ['dashboard', 'saas'], complexity: 'complex' },
-    { id: 'a6', text: 'Build a real-time chat application', emoji: '💬', tags: ['social'], complexity: 'complex' },
-  ],
-  mobile: [
-    { id: 'm1', text: 'Build a fitness tracking app with workout plans', emoji: '💪', tags: ['fitness'], complexity: 'medium' },
-    { id: 'm2', text: 'Create a food delivery app with cart & checkout', emoji: '🍕', tags: ['ecommerce'], complexity: 'complex' },
-    { id: 'm3', text: 'Design a social media app with stories & chat', emoji: '💬', tags: ['social'], complexity: 'complex' },
-    { id: 'm4', text: 'Build a productivity app with notes & tasks', emoji: '📋', tags: ['utility'], complexity: 'medium' },
-    { id: 'm5', text: 'Create a meditation app with timer & sounds', emoji: '🧘', tags: ['fitness', 'utility'], complexity: 'simple' },
-    { id: 'm6', text: 'Design a habit tracker with streaks & reminders', emoji: '✅', tags: ['utility', 'fitness'], complexity: 'medium' },
-  ],
+  website: [],
+  webapp: [],
+  mobile: [],
 }
 
 // =============================================================================
