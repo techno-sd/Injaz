@@ -8,38 +8,29 @@ import { useToast } from '@/components/ui/use-toast'
 import {
   Sparkles,
   Send,
-  Loader2,
   Bot,
-  User,
-  MoreHorizontal,
-  CheckCircle2,
-  Circle,
-  Cpu,
-  Code2,
-  FileCode,
   Globe,
   AppWindow,
   Smartphone,
-  ChevronDown,
-  ChevronRight,
   Zap,
-  Clock,
-  Braces,
-  FolderTree,
-  Rocket,
-  AlertCircle,
+  MoreHorizontal,
   RefreshCw,
-  Terminal,
-  Wand2,
-  Layers,
-  FileText,
-  Check,
-  Play,
-  Pause,
+  Cpu,
+  Code2,
+  Loader2,
 } from 'lucide-react'
 import type { Message, File, PlatformType } from '@/types'
 import { cn } from '@/lib/utils'
 import { getSuggestionsForPlatform, WELCOME_MESSAGES, WELCOME_SUBTITLES } from '@/lib/ai-suggestions'
+import {
+  GenerationProgress,
+  ThinkingIndicator,
+  type AIStage,
+  type GenerationState,
+  type ActivityLogItem,
+  type SubStep,
+  STAGES,
+} from './generation-progress'
 
 interface AIChatbotProps {
   projectId: string
@@ -48,356 +39,10 @@ interface AIChatbotProps {
   platform?: PlatformType
 }
 
-type AIStage = 'idle' | 'analyzing' | 'planning' | 'schema' | 'generating' | 'writing' | 'complete' | 'error'
-
-interface StageInfo {
-  id: AIStage
-  label: string
-  description: string
-  icon: typeof Cpu
-  color: string
-  bgColor: string
-  borderColor: string
-}
-
-const STAGES: StageInfo[] = [
-  { id: 'analyzing', label: 'Analyzing', description: 'Understanding your requirements', icon: Sparkles, color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30' },
-  { id: 'planning', label: 'Planning', description: 'Designing architecture', icon: Braces, color: 'text-violet-400', bgColor: 'bg-violet-500/10', borderColor: 'border-violet-500/30' },
-  { id: 'schema', label: 'Structuring', description: 'Building app structure', icon: FolderTree, color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30' },
-  { id: 'generating', label: 'Generating', description: 'Writing code', icon: Code2, color: 'text-cyan-400', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/30' },
-  { id: 'complete', label: 'Complete', description: 'Your app is ready!', icon: Rocket, color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
-]
-
-interface ActivityLogItem {
-  id: string
-  type: 'stage' | 'file' | 'info' | 'success' | 'error'
-  message: string
-  timestamp: number
-  icon?: typeof Cpu
-  color?: string
-}
-
-interface GenerationState {
-  stage: AIStage
-  message: string
-  currentFile?: string
-  progress?: number
-  total?: number
-  startTime?: number
-  completedStages: AIStage[]
-  error?: string
-  activityLog: ActivityLogItem[]
-}
-
 const PLATFORM_INFO: Record<PlatformType, { icon: typeof Globe; label: string; color: string }> = {
   website: { icon: Globe, label: 'Website', color: 'text-emerald-400' },
   webapp: { icon: AppWindow, label: 'Web App', color: 'text-violet-400' },
   mobile: { icon: Smartphone, label: 'Mobile', color: 'text-cyan-400' },
-}
-
-// Progress Circle Component
-function ProgressCircle({ progress, size = 40, strokeWidth = 3 }: { progress: number; size?: number; strokeWidth?: number }) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = radius * 2 * Math.PI
-  const offset = circumference - (progress / 100) * circumference
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg className="transform -rotate-90" width={size} height={size}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-white/10"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="url(#progressGradient)"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-all duration-500 ease-out"
-        />
-        <defs>
-          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#8b5cf6" />
-            <stop offset="100%" stopColor="#06b6d4" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-[10px] font-medium text-white/70">{Math.round(progress)}%</span>
-      </div>
-    </div>
-  )
-}
-
-// Animated Thinking Indicator
-function ThinkingIndicator({ message }: { message: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="relative">
-        <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 flex items-center justify-center ring-1 ring-white/[0.08]">
-          <Wand2 className="h-4 w-4 text-violet-400 animate-pulse" />
-        </div>
-        <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-violet-500 animate-ping" />
-        <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-violet-500" />
-      </div>
-      <div className="flex-1">
-        <p className="text-sm text-white/70">{message}</p>
-        <div className="flex items-center gap-1 mt-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-          <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Inline Progress Card Component (Lovable-style)
-function InlineProgressCard({
-  generationState,
-  elapsedTime,
-  generatedFiles,
-  formatTime,
-}: {
-  generationState: GenerationState
-  elapsedTime: number
-  generatedFiles: string[]
-  formatTime: (seconds: number) => string
-}) {
-  const [showActivityLog, setShowActivityLog] = useState(false)
-  const [showFiles, setShowFiles] = useState(true)
-  const currentStageInfo = STAGES.find(s => s.id === generationState.stage) || STAGES[0]
-  const isComplete = generationState.stage === 'complete'
-  const isError = generationState.stage === 'error'
-
-  // Calculate overall progress
-  const stageOrder: AIStage[] = ['analyzing', 'planning', 'schema', 'generating', 'complete']
-  const currentIndex = stageOrder.indexOf(generationState.stage)
-  const overallProgress = isComplete ? 100 : isError ? 0 : Math.min(95, ((currentIndex + 1) / stageOrder.length) * 100)
-
-  return (
-    <div className="w-full animate-fade-in-up">
-      <div className={cn(
-        'rounded-2xl border overflow-hidden transition-all duration-300',
-        isComplete ? 'border-emerald-500/30 bg-emerald-500/[0.03]' :
-        isError ? 'border-red-500/30 bg-red-500/[0.03]' :
-        'border-white/[0.08] bg-white/[0.02]'
-      )}>
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              'h-10 w-10 rounded-xl flex items-center justify-center transition-all',
-              isComplete ? 'bg-emerald-500/20' : isError ? 'bg-red-500/20' : currentStageInfo.bgColor
-            )}>
-              {isComplete ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              ) : isError ? (
-                <AlertCircle className="h-5 w-5 text-red-400" />
-              ) : (
-                <currentStageInfo.icon className={cn('h-5 w-5 animate-pulse', currentStageInfo.color)} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  'text-sm font-medium',
-                  isComplete ? 'text-emerald-400' : isError ? 'text-red-400' : 'text-white/90'
-                )}>
-                  {isComplete ? 'Generation Complete' : isError ? 'Generation Failed' : currentStageInfo.label}
-                </span>
-                {!isComplete && !isError && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-500/20 text-violet-400">
-                    In Progress
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-white/50 mt-0.5">{generationState.message}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-white/40">
-              <Clock className="h-3.5 w-3.5" />
-              <span className="tabular-nums">{formatTime(elapsedTime)}</span>
-            </div>
-            {!isComplete && !isError && (
-              <ProgressCircle progress={overallProgress} size={36} strokeWidth={3} />
-            )}
-          </div>
-        </div>
-
-        {/* Stage Pipeline */}
-        {!isComplete && !isError && (
-          <div className="px-4 py-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-1">
-              {STAGES.slice(0, -1).map((stage, index) => {
-                const isCompleted = generationState.completedStages.includes(stage.id)
-                const isCurrent = generationState.stage === stage.id
-
-                return (
-                  <div key={stage.id} className="flex items-center flex-1">
-                    <div className={cn(
-                      'h-1.5 flex-1 rounded-full transition-all duration-500',
-                      isCompleted ? 'bg-emerald-500' :
-                      isCurrent ? 'bg-gradient-to-r from-violet-500 to-violet-500/50 animate-pulse' :
-                      'bg-white/[0.08]'
-                    )} />
-                    {index < STAGES.length - 2 && (
-                      <div className={cn(
-                        'h-2 w-2 rounded-full mx-0.5 flex-shrink-0 transition-all',
-                        isCompleted ? 'bg-emerald-500' :
-                        isCurrent ? 'bg-violet-500 animate-pulse' :
-                        'bg-white/[0.08]'
-                      )} />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="flex justify-between mt-2">
-              {STAGES.slice(0, -1).map((stage) => {
-                const isCompleted = generationState.completedStages.includes(stage.id)
-                const isCurrent = generationState.stage === stage.id
-
-                return (
-                  <span
-                    key={stage.id}
-                    className={cn(
-                      'text-[10px] transition-colors',
-                      isCompleted ? 'text-emerald-400' :
-                      isCurrent ? 'text-white/70' :
-                      'text-white/30'
-                    )}
-                  >
-                    {stage.label}
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Current File Being Generated */}
-        {generationState.currentFile && !isComplete && !isError && (
-          <div className="px-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
-            <div className="flex items-center gap-2">
-              <Terminal className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
-              <code className="text-xs text-cyan-400/80 font-mono truncate flex-1">
-                {generationState.currentFile}
-              </code>
-              {generationState.progress !== undefined && generationState.total !== undefined && (
-                <span className="text-[10px] text-white/40 tabular-nums">
-                  {generationState.progress}/{generationState.total}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Generated Files */}
-        {generatedFiles.length > 0 && (
-          <div className="border-b border-white/[0.06]">
-            <button
-              onClick={() => setShowFiles(!showFiles)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <FileCode className="h-3.5 w-3.5 text-white/50" />
-                <span className="text-xs text-white/70">Generated Files</span>
-                <span className="px-1.5 py-0.5 rounded bg-white/[0.06] text-[10px] text-white/50 tabular-nums">
-                  {generatedFiles.length}
-                </span>
-              </div>
-              {showFiles ? (
-                <ChevronDown className="h-3.5 w-3.5 text-white/40" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-white/40" />
-              )}
-            </button>
-            {showFiles && (
-              <div className="px-4 pb-3">
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {generatedFiles.map((file, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-2 text-xs group animate-fade-in"
-                      style={{ animationDelay: `${i * 50}ms` }}
-                    >
-                      <Check className="h-3 w-3 text-emerald-400 flex-shrink-0" />
-                      <FileText className="h-3 w-3 text-white/30 flex-shrink-0" />
-                      <span className="text-white/60 group-hover:text-white/80 truncate transition-colors font-mono">
-                        {file}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Activity Log */}
-        {generationState.activityLog.length > 0 && (
-          <div>
-            <button
-              onClick={() => setShowActivityLog(!showActivityLog)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Layers className="h-3.5 w-3.5 text-white/50" />
-                <span className="text-xs text-white/70">Activity Log</span>
-              </div>
-              {showActivityLog ? (
-                <ChevronDown className="h-3.5 w-3.5 text-white/40" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-white/40" />
-              )}
-            </button>
-            {showActivityLog && (
-              <div className="px-4 pb-3">
-                <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {generationState.activityLog.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-start gap-2 text-xs"
-                    >
-                      <span className="text-white/30 tabular-nums flex-shrink-0 w-12">
-                        {new Date(item.timestamp).toLocaleTimeString('en-US', {
-                          hour12: false,
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit'
-                        })}
-                      </span>
-                      <span className={cn(
-                        'flex-1',
-                        item.type === 'success' ? 'text-emerald-400' :
-                        item.type === 'error' ? 'text-red-400' :
-                        item.type === 'file' ? 'text-cyan-400/80' :
-                        'text-white/50'
-                      )}>
-                        {item.message}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
 }
 
 export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp' }: AIChatbotProps) {
@@ -840,7 +485,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                           <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                         ) : (
                           isLoading && index === messages.length - 1 && (
-                            <ThinkingIndicator message={generationState.message || 'Thinking...'} />
+                            <ThinkingIndicator message={generationState.message || 'Thinking...'} stage={generationState.stage} />
                           )
                         )}
                       </div>
@@ -849,7 +494,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     {/* Inline Progress Card - Show during and after generation */}
                     {index === messages.length - 1 && showInlineProgress && (
                       <div className="ml-11 mt-4">
-                        <InlineProgressCard
+                        <GenerationProgress
                           generationState={generationState}
                           elapsedTime={elapsedTime}
                           generatedFiles={generatedFiles}
@@ -870,12 +515,12 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     <Bot className="h-4 w-4 text-violet-400" />
                   </div>
                   <div className="flex-1 pt-1">
-                    <ThinkingIndicator message={generationState.message || 'Starting...'} />
+                    <ThinkingIndicator message={generationState.message || 'Starting...'} stage={generationState.stage} />
                   </div>
                 </div>
                 {showInlineProgress && (
                   <div className="ml-11 mt-4">
-                    <InlineProgressCard
+                    <GenerationProgress
                       generationState={generationState}
                       elapsedTime={elapsedTime}
                       generatedFiles={generatedFiles}
