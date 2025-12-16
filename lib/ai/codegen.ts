@@ -99,7 +99,7 @@ CRITICAL REQUIREMENTS FOR PRODUCTION-READY CODE:
 7. ALL text content MUST be realistic - no "Lorem ipsum" or generic placeholder text
 
 OUTPUT FORMAT:
-IMPORTANT: Return ONLY raw JSON. Do NOT wrap in markdown code blocks like ```json. Do NOT include any text before or after the JSON.
+IMPORTANT: Return ONLY raw JSON. Do NOT wrap in markdown code blocks like \`\`\`json. Do NOT include any text before or after the JSON.
 
 You must respond with a JSON object:
 {
