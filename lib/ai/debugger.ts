@@ -121,7 +121,7 @@ Analyze this error and provide specific fixes. Return valid JSON only.`
 
     try {
       const result = await this.provider.chat({
-        model: 'gpt-4o-mini',
+        model: process.env.DEFAULT_AI_MODEL || 'qwen/qwen3-coder-plus',
         messages: [
           { role: 'system', content: DEBUG_SYSTEM_PROMPT },
           { role: 'user', content: userMessage },
@@ -178,7 +178,7 @@ Analyze this error step by step:
 
     try {
       const stream = this.provider.streamChat({
-        model: 'gpt-4o-mini',
+        model: process.env.DEFAULT_AI_MODEL || 'qwen/qwen3-coder-plus',
         messages: [
           {
             role: 'system',

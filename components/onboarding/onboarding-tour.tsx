@@ -317,7 +317,7 @@ export function useOnboarding(storageKey = 'onboarding-completed') {
 export const WORKSPACE_TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to iEditor!',
+    title: 'Welcome to Injaz.ai!',
     description: "Let's take a quick tour to help you get started building amazing apps with AI assistance.",
     position: 'center',
   },

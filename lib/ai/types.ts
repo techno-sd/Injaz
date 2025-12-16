@@ -36,9 +36,5 @@ export interface AIProvider {
   streamChat(options: AICompletionOptions): AsyncGenerator<AIStreamChunk>
 }
 
-// Default fallback (used if .env not set)
-// Prefer GPT-5.2 (Preview) by default; provider will fall back if unavailable.
-export const DEFAULT_MODEL = 'gpt-5.2-preview'
-
-// Hard fallback if the preferred/default model isn't available.
-export const HARD_FALLBACK_MODEL = 'gpt-4o-mini'
+// Default fallback (used if .env not set) - OpenRouter model ID
+export const DEFAULT_MODEL = 'qwen/qwen3-coder-plus'

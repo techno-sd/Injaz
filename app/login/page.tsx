@@ -35,7 +35,7 @@ export default async function LoginPage() {
             <div className="h-9 w-9 rounded-xl icon-box-brand group-hover:glow-purple transition-all duration-300">
               <Code2 className="h-5 w-5 text-white" />
             </div>
-            <span className="font-semibold text-lg text-white">iEditor</span>
+<span className="font-semibold text-lg text-white">Injaz.ai</span>
           </Link>
         </div>
       </header>

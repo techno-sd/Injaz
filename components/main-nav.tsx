@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   },
   {
     title: 'GitHub',
-    href: 'https://github.com/techno-sd/iEditor',
+    href: 'https://github.com/injaz-ai/injaz',
     icon: <Github className="h-4 w-4" />,
     external: true,
   },

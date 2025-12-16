@@ -5,8 +5,8 @@ import type { File } from '@/types'
 
 export const runtime = 'edge'
 
-// Model from .env (or fallback)
-const COMPLETION_MODEL = process.env.COMPLETION_AI_MODEL || DEFAULT_MODEL
+// Use Qwen3 Coder Plus via OpenRouter for code completion (can be overridden via env)
+const COMPLETION_MODEL = process.env.COMPLETION_AI_MODEL || 'qwen/qwen3-coder-plus'
 
 interface CompletionRequest {
   projectId: string

@@ -119,7 +119,7 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
 
         // Provide helpful error messages
         if (errorMessage.includes('Unable to create more instances')) {
-          setError('WebContainer limit reached. Please close other tabs using iEditor and refresh this page.')
+          setError('WebContainer limit reached. Please close other tabs using Injaz.ai and refresh this page.')
         } else if (errorMessage.includes('SharedArrayBuffer') || errorMessage.includes('cross-origin')) {
           setError('Cross-origin isolation required. Please restart the dev server and ensure COOP/COEP headers are set.')
         } else if (errorMessage.includes('timed out')) {

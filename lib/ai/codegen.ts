@@ -1,4 +1,4 @@
-// CodeGen Service - GPT-4o
+// CodeGen Service - OpenRouter (GPT-OSS-120B)
 // Responsible for converting Unified App Schema to production-ready code
 
 import OpenAI from 'openai'
@@ -10,8 +10,8 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Use GPT-4o for powerful code generation (can be overridden via env)
-const CODEGEN_MODEL = process.env.CODEGEN_MODEL || 'gpt-4o'
+// Use Qwen3 Coder Plus via OpenRouter for code generation (can be overridden via env)
+const CODEGEN_MODEL = process.env.CODEGEN_MODEL || 'qwen/qwen3-coder-plus'
 
 // Helper to extract JSON from response (handles markdown code blocks)
 function extractJSON(content: string): string {
@@ -683,7 +683,121 @@ Before generating, ensure these premium details:
 □ Form validation feedback
 □ Responsive images with srcset
 □ Proper semantic HTML
-□ ARIA labels for accessibility`
+□ ARIA labels for accessibility
+
+=== MANDATORY MOBILE-RESPONSIVE DESIGN ===
+
+ALL generated code MUST be mobile-responsive by default. This is non-negotiable.
+
+MOBILE-FIRST APPROACH (Required):
+- Start with mobile styles as the base
+- Add complexity for larger screens using min-width breakpoints
+- Never design desktop-first and then retrofit for mobile
+
+TAILWIND RESPONSIVE CLASS PATTERNS (Use These Exactly):
+
+Layout Containers:
+- "container mx-auto px-4 sm:px-6 lg:px-8"
+- "max-w-7xl mx-auto"
+- "w-full max-w-screen-xl"
+
+Grid Systems:
+- "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"
+- "grid grid-cols-1 md:grid-cols-2 gap-6"
+- "flex flex-col md:flex-row"
+
+Typography Scaling:
+- Headlines: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl"
+- Subheadings: "text-lg sm:text-xl md:text-2xl"
+- Body: "text-sm sm:text-base"
+
+Spacing:
+- Padding: "p-4 sm:p-6 md:p-8 lg:p-10"
+- Margins: "my-8 sm:my-12 md:my-16 lg:my-20"
+- Section gaps: "py-12 sm:py-16 md:py-20 lg:py-24"
+
+Navigation Patterns:
+- Mobile: Hidden by default, hamburger menu
+- Desktop: Horizontal navigation
+- Pattern: "hidden md:flex" for desktop nav, "md:hidden" for mobile toggle
+- Mobile menu: Full-screen overlay or slide-in drawer
+
+Touch-Friendly Targets:
+- Minimum 44x44px for all interactive elements
+- "min-h-[44px] min-w-[44px]" on buttons/links
+- "py-3 px-4" minimum padding on buttons
+
+Image Responsiveness:
+- Always use: "w-full h-auto object-cover"
+- Aspect ratios: "aspect-video", "aspect-square", "aspect-[16/9]"
+
+Form Inputs:
+- Full width on mobile: "w-full"
+- Stack labels on mobile: "flex flex-col sm:flex-row"
+- Touch-friendly size: "h-12 px-4" minimum
+
+RESPONSIVE COMPONENT PATTERNS:
+
+Hero Section:
+<section className="min-h-screen sm:min-h-[80vh] flex items-center py-12 sm:py-16 lg:py-20">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6">
+      Headline
+    </h1>
+    <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-8">
+      Description
+    </p>
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+      <Button size="lg" className="w-full sm:w-auto">Primary CTA</Button>
+      <Button variant="outline" size="lg" className="w-full sm:w-auto">Secondary CTA</Button>
+    </div>
+  </div>
+</section>
+
+Card Grid:
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+  {items.map(item => (
+    <Card className="p-4 sm:p-6">
+      <CardContent>...</CardContent>
+    </Card>
+  ))}
+</div>
+
+Responsive Navigation:
+<header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
+  <nav className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <Logo />
+    {/* Desktop Navigation */}
+    <div className="hidden md:flex items-center gap-6">
+      {navItems.map(item => <NavLink key={item.id} {...item} />)}
+    </div>
+    {/* Mobile Menu Toggle */}
+    <button className="md:hidden p-2 -mr-2">
+      <MenuIcon />
+    </button>
+  </nav>
+</header>
+
+BREAKPOINT REFERENCE:
+- Default (mobile): 0-639px
+- sm: 640px+ (landscape phones, small tablets)
+- md: 768px+ (tablets)
+- lg: 1024px+ (laptops, small desktops)
+- xl: 1280px+ (desktops)
+- 2xl: 1536px+ (large desktops)
+
+RESPONSIVE TESTING CHECKLIST:
+□ Works on 320px width (small mobile)
+□ Works on 375px width (iPhone)
+□ Works on 768px width (tablet)
+□ Works on 1024px width (laptop)
+□ Works on 1440px width (desktop)
+□ Navigation collapses properly on mobile
+□ Text is readable at all sizes
+□ Touch targets are minimum 44px
+□ No horizontal scrolling on mobile
+□ Images scale properly
+□ Forms are usable on mobile`
 
   const platformPrompts: Record<PlatformType, string> = {
     website: `
@@ -1176,7 +1290,124 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-export { Button, buttonVariants }`,
+export { Button, buttonVariants }
+
+=== PROGRESSIVE WEB APP (PWA) SUPPORT ===
+
+For web apps, ALWAYS include PWA support for installability and offline capability.
+
+MANDATORY PWA FILES (Generate ALL):
+
+1. public/manifest.json:
+{
+  "name": "App Name",
+  "short_name": "AppName",
+  "description": "App description",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "categories": ["productivity"]
+}
+
+2. public/sw.js (Service Worker):
+const CACHE_NAME = 'app-cache-v1';
+const OFFLINE_URL = '/offline';
+
+const PRECACHE_ASSETS = [
+  '/',
+  '/offline',
+  '/manifest.json'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
+    );
+  } else {
+    event.respondWith(
+      caches.match(event.request).then((response) => response || fetch(event.request))
+    );
+  }
+});
+
+3. app/offline/page.tsx:
+export default function OfflinePage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center p-8">
+        <div className="mb-6">
+          <svg className="w-24 h-24 mx-auto text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636a9 9 0 010 12.728m-3.536-3.536a4 4 0 010-5.656m-7.072 7.072a9 9 0 010-12.728m3.536 3.536a4 4 0 010 5.656" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold mb-2">You're Offline</h1>
+        <p className="text-muted-foreground mb-6">Please check your internet connection and try again.</p>
+        <button onClick={() => window.location.reload()} className="px-6 py-3 bg-primary text-primary-foreground rounded-lg">
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+}
+
+4. components/pwa-provider.tsx:
+'use client'
+import { useEffect } from 'react'
+
+export function PWAProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(console.error)
+    }
+  }, [])
+  return <>{children}</>
+}
+
+5. Update app/layout.tsx to include PWA meta tags:
+<head>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#8b5cf6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+</head>
+
+And wrap app with PWAProvider:
+import { PWAProvider } from '@/components/pwa-provider'
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <PWAProvider>{children}</PWAProvider>
+      </body>
+    </html>
+  )
+}`,
 
     mobile: `
 PLATFORM: Mobile Application (React Native + Expo Router)
@@ -1270,12 +1501,23 @@ export class CodeGen {
   private config: CodeGenConfig
 
   constructor(config: CodeGenConfig = {}) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured')
+    // Prefer OpenRouter, fallback to OpenAI
+    if (process.env.OPENROUTER_API_KEY) {
+      this.client = new OpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+        defaultHeaders: {
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          'X-Title': 'Injaz.ai',
+        },
+      })
+    } else if (process.env.OPENAI_API_KEY) {
+      this.client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      })
+    } else {
+      throw new Error('No AI API key configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY')
     }
-    this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
     this.config = {
       temperature: config.temperature ?? 0.2, // Low temperature for consistent code
       maxTokens: config.maxTokens ?? 16384, // High token limit for code generation

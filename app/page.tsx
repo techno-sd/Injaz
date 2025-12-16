@@ -49,7 +49,7 @@ export default function HomePage() {
             <div className="h-9 w-9 rounded-xl icon-box-brand group-hover:glow-purple transition-all duration-300">
               <Code2 className="h-5 w-5 text-white" />
             </div>
-            <span className="font-semibold text-lg text-white">iEditor</span>
+            <span className="font-semibold text-lg text-white">Injaz.ai</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -217,7 +217,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-white/40">
             <Code2 className="h-4 w-4" />
-            <span className="text-sm font-medium">iEditor</span>
+            <span className="text-sm font-medium">Injaz.ai</span>
           </div>
           <div className="flex items-center gap-8 text-sm text-white/50 font-medium">
             <Link href="/templates" className="hover:text-purple-400 transition-colors">
