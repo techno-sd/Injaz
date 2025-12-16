@@ -1,3 +1,5 @@
+import type { PlatformType, SubPlatformType } from '@/types/app-schema'
+
 export interface TemplateMetadata {
   id: string
   name: string
@@ -10,6 +12,11 @@ export interface TemplateMetadata {
   techStack: string[]
   features: string[]
   files: { path: string; content: string }[]
+  // Platform categorization
+  platform?: PlatformType
+  subPlatform?: SubPlatformType
+  // Thumbnail gradient for UI
+  thumbnailGradient?: string
 }
 
 export const PROJECT_TEMPLATES: TemplateMetadata[] = [
@@ -24,6 +31,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     difficulty: 'Beginner',
     techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
     features: ['Hero Section', 'Feature Grid', 'Responsive Design', 'Call-to-Action'],
+    platform: 'webapp',
+    subPlatform: 'landing',
+    thumbnailGradient: 'from-amber-500 to-orange-600',
     files: [
       {
         path: 'app/page.tsx',

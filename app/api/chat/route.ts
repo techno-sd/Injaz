@@ -525,13 +525,39 @@ async function handleLegacyChat({
 
 // API endpoint to get available models and platform info
 export async function GET() {
+  const providerName = process.env.OPENROUTER_API_KEY ? 'OpenRouter' : 'OpenAI'
+
+  // Models list - configured in code, can be customized via CUSTOM_MODELS env
+  const defaultModels = [
+    { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', description: 'Best open-source ($0.35/$0.75 per 1M)', category: 'recommended' },
+    { id: 'qwen/qwen3-coder-plus', name: 'Qwen3 Coder Plus', description: 'Strong coding model', category: 'recommended' },
+    { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', description: 'Budget ($0.14/1M tokens)', category: 'budget' },
+    { id: 'deepseek/deepseek-coder', name: 'DeepSeek Coder', description: 'Budget code generation', category: 'budget' },
+    { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B', description: 'Free tier model', category: 'free' },
+    { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B', description: 'Free tier model', category: 'free' },
+    { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', description: 'Premium quality', category: 'premium' },
+    { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Premium quality', category: 'premium' },
+  ]
+
+  let models = defaultModels
+  if (process.env.CUSTOM_MODELS) {
+    try {
+      models = JSON.parse(process.env.CUSTOM_MODELS)
+    } catch {
+      console.warn('Failed to parse CUSTOM_MODELS env var')
+    }
+  }
+
   return new Response(JSON.stringify({
-    models: [
-      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: 'Fast planning & architecture' },
-      { id: 'gpt-4.1', name: 'GPT-4.1', description: 'Powerful code generation' },
-    ],
-    providers: [{ name: 'OpenAI' }],
+    models,
+    providers: [{ name: providerName }],
     defaultModel: DEFAULT_MODEL,
+    config: {
+      controller: process.env.CONTROLLER_MODEL || DEFAULT_MODEL,
+      codegen: process.env.CODEGEN_MODEL || DEFAULT_MODEL,
+      completion: process.env.COMPLETION_AI_MODEL || DEFAULT_MODEL,
+      debugger: process.env.DEFAULT_AI_MODEL || DEFAULT_MODEL,
+    },
     supportedPlatforms: ['website', 'webapp', 'mobile'],
     supportedModes: ['auto', 'controller', 'codegen'],
   }), {

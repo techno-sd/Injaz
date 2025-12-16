@@ -1,6 +1,6 @@
 // Unified App Schema Types for Multi-Platform Support
-// Used by Controller (GPT-4.1-mini) to output structured planning data
-// Used by CodeGen (GPT-4.1) to generate platform-specific code
+// Used by Controller (GPT-5 Nano) to output structured planning data
+// Used by CodeGen (GPT-5 Nano) to generate platform-specific code
 
 // =============================================================================
 // PLATFORM TYPES
@@ -8,9 +8,69 @@
 
 export type PlatformType = 'website' | 'webapp' | 'mobile'
 
+// Sub-platform categories for more specific project types
+export type WebsiteSubType = 'portfolio' | 'blog' | 'landing' | 'business'
+export type WebappSubType = 'dashboard' | 'ecommerce' | 'saas' | 'social'
+export type MobileSubType = 'social' | 'ecommerce' | 'fitness' | 'utility'
+export type SubPlatformType = WebsiteSubType | WebappSubType | MobileSubType
+
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 export type SpacingMode = 'compact' | 'normal' | 'spacious'
+
+// =============================================================================
+// RESPONSIVE CONFIGURATION
+// =============================================================================
+
+export interface ResponsiveBreakpoints {
+  sm: number   // default: 640
+  md: number   // default: 768
+  lg: number   // default: 1024
+  xl: number   // default: 1280
+  '2xl': number // default: 1536
+}
+
+export interface ResponsiveConfig {
+  strategy: 'mobile-first' | 'desktop-first'
+  breakpoints: ResponsiveBreakpoints
+  containerMaxWidths?: ResponsiveBreakpoints
+  defaultPadding?: {
+    mobile: string
+    tablet: string
+    desktop: string
+  }
+}
+
+// =============================================================================
+// PWA CONFIGURATION
+// =============================================================================
+
+export interface PWAIcon {
+  src: string
+  sizes: string
+  type: string
+  purpose?: 'any' | 'maskable' | 'monochrome'
+}
+
+export interface PWAServiceWorkerConfig {
+  enabled: boolean
+  cachingStrategy: 'cache-first' | 'network-first' | 'stale-while-revalidate'
+  precacheAssets?: string[]
+}
+
+export interface PWAConfig {
+  enabled: boolean
+  name: string
+  shortName: string
+  description?: string
+  themeColor: string
+  backgroundColor: string
+  display: 'standalone' | 'fullscreen' | 'minimal-ui' | 'browser'
+  orientation: 'portrait' | 'landscape' | 'any'
+  startUrl: string
+  icons: PWAIcon[]
+  serviceWorker: PWAServiceWorkerConfig
+}
 
 // =============================================================================
 // META SCHEMA
@@ -20,6 +80,7 @@ export interface AppMeta {
   name: string
   description: string
   platform: PlatformType
+  subPlatform?: SubPlatformType
   version: string
   icon?: string
   keywords?: string[]
@@ -57,6 +118,7 @@ export interface DesignSchema {
   spacing: SpacingMode
   borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full'
   shadows: boolean
+  responsive?: ResponsiveConfig
 }
 
 // =============================================================================
@@ -356,6 +418,7 @@ export interface FeaturesSchema {
   database?: DatabaseSchema
   api?: ApiSchema[]
   storage?: StorageSchema
+  pwa?: PWAConfig
 }
 
 // =============================================================================
@@ -509,12 +572,57 @@ export function isValidAIMode(mode: string): mode is AIMode {
   return ['auto', 'controller', 'codegen'].includes(mode)
 }
 
-export function createEmptySchema(platform: PlatformType): UnifiedAppSchema {
+export function createEmptySchema(platform: PlatformType, subPlatform?: SubPlatformType): UnifiedAppSchema {
+  const defaultResponsive: ResponsiveConfig = {
+    strategy: 'mobile-first',
+    breakpoints: {
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+      '2xl': 1536,
+    },
+    containerMaxWidths: {
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+      '2xl': 1536,
+    },
+    defaultPadding: {
+      mobile: '1rem',
+      tablet: '1.5rem',
+      desktop: '2rem',
+    },
+  }
+
+  const defaultPWA: PWAConfig | undefined = platform === 'webapp' ? {
+    enabled: true,
+    name: '',
+    shortName: '',
+    description: '',
+    themeColor: '#6366f1',
+    backgroundColor: '#ffffff',
+    display: 'standalone',
+    orientation: 'any',
+    startUrl: '/',
+    icons: [
+      { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+    serviceWorker: {
+      enabled: true,
+      cachingStrategy: 'stale-while-revalidate',
+      precacheAssets: ['/', '/offline'],
+    },
+  } : undefined
+
   return {
     meta: {
       name: '',
       description: '',
       platform,
+      subPlatform,
       version: '1.0.0',
     },
     design: {
@@ -540,17 +648,40 @@ export function createEmptySchema(platform: PlatformType): UnifiedAppSchema {
       spacing: 'normal',
       borderRadius: 'md',
       shadows: true,
+      responsive: defaultResponsive,
     },
     structure: {
       pages: [],
       navigation: {
-        type: 'header',
+        type: platform === 'mobile' ? 'tabs' : 'header',
         items: [],
       },
       layouts: [],
     },
-    features: {},
+    features: {
+      pwa: defaultPWA,
+    },
     components: [],
     integrations: [],
   }
+}
+
+// Helper to get sub-platforms for a given platform
+export function getSubPlatformsForPlatform(platform: PlatformType): SubPlatformType[] {
+  switch (platform) {
+    case 'website':
+      return ['portfolio', 'blog', 'landing', 'business']
+    case 'webapp':
+      return ['dashboard', 'ecommerce', 'saas', 'social']
+    case 'mobile':
+      return ['social', 'ecommerce', 'fitness', 'utility']
+    default:
+      return []
+  }
+}
+
+// Validate sub-platform matches platform
+export function isValidSubPlatform(platform: PlatformType, subPlatform: string): subPlatform is SubPlatformType {
+  const validSubs = getSubPlatformsForPlatform(platform)
+  return validSubs.includes(subPlatform as SubPlatformType)
 }

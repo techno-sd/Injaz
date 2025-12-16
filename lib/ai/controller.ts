@@ -1,4 +1,4 @@
-// Controller Service - GPT-4o-mini
+// Controller Service - OpenRouter (GPT-OSS-120B)
 // Responsible for planning and outputting Unified App Schema (JSON only, no code)
 
 import OpenAI from 'openai'
@@ -10,8 +10,8 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Use GPT-4o-mini for fast, efficient planning (can be overridden via env)
-const CONTROLLER_MODEL = process.env.CONTROLLER_MODEL || 'gpt-4o-mini'
+// Use Qwen3 Coder Plus via OpenRouter for planning (can be overridden via env)
+const CONTROLLER_MODEL = process.env.CONTROLLER_MODEL || 'qwen/qwen3-coder-plus'
 
 // Helper to extract JSON from response (handles markdown code blocks)
 function extractJSON(content: string): string {
@@ -70,12 +70,20 @@ PLATFORM SUPPORT:
 - "webapp": Next.js + Supabase + Authentication
 - "mobile": React Native + Expo (iOS & Android)
 
+SUB-PLATFORM CATEGORIES (Use to specialize the app):
+Website sub-platforms: "portfolio", "blog", "landing", "business"
+Webapp sub-platforms: "dashboard", "ecommerce", "saas", "social"
+Mobile sub-platforms: "social", "ecommerce", "fitness", "utility"
+
+Always set the appropriate subPlatform in meta based on user's request.
+
 UNIFIED APP SCHEMA STRUCTURE:
 {
   "meta": {
     "name": "string - App name",
     "description": "string - App description",
     "platform": "website | webapp | mobile",
+    "subPlatform": "string - portfolio | blog | landing | business | dashboard | ecommerce | saas | social | fitness | utility",
     "version": "string - Semantic version"
   },
   "design": {
@@ -100,7 +108,12 @@ UNIFIED APP SCHEMA STRUCTURE:
     },
     "spacing": "compact | normal | spacious",
     "borderRadius": "none | sm | md | lg | full",
-    "shadows": boolean
+    "shadows": boolean,
+    "responsive": {
+      "strategy": "mobile-first | desktop-first",
+      "breakpoints": { "sm": 640, "md": 768, "lg": 1024, "xl": 1280, "2xl": 1536 },
+      "defaultPadding": { "mobile": "1rem", "tablet": "1.5rem", "desktop": "2rem" }
+    }
   },
   "structure": {
     "pages": [{
@@ -166,6 +179,18 @@ UNIFIED APP SCHEMA STRUCTURE:
         "name": "string",
         "public": boolean
       }]
+    },
+    "pwa": {
+      "enabled": boolean,
+      "name": "string - PWA app name",
+      "shortName": "string - Short name for home screen",
+      "themeColor": "#hex",
+      "backgroundColor": "#hex",
+      "display": "standalone | fullscreen | minimal-ui",
+      "serviceWorker": {
+        "enabled": boolean,
+        "cachingStrategy": "cache-first | network-first | stale-while-revalidate"
+      }
     }
   },
   "components": [{
@@ -201,6 +226,10 @@ RULES:
 5. Use descriptive IDs like "hero-section", "login-form", "nav-header"
 6. Match the platform to user's needs (default to webapp if unclear)
 7. Keep the schema focused and minimal - don't over-engineer
+8. ALWAYS set subPlatform based on the app type (portfolio, dashboard, ecommerce, etc.)
+9. ALWAYS include responsive config with mobile-first strategy
+10. For webapps: ALWAYS enable PWA in features for installability and offline support
+11. Plan navigation for both desktop (header) and mobile (hamburger/drawer)
 
 INDUSTRY BEST PRACTICES - Apply these when planning:
 
@@ -329,12 +358,23 @@ export class Controller {
   private config: ControllerConfig
 
   constructor(config: ControllerConfig = {}) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured')
+    // Prefer OpenRouter, fallback to OpenAI
+    if (process.env.OPENROUTER_API_KEY) {
+      this.client = new OpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+        defaultHeaders: {
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          'X-Title': 'iEditor',
+        },
+      })
+    } else if (process.env.OPENAI_API_KEY) {
+      this.client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      })
+    } else {
+      throw new Error('No AI API key configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY')
     }
-    this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
     this.config = {
       temperature: config.temperature ?? 0.3, // Lower temperature for consistent JSON
       maxTokens: config.maxTokens ?? 4096,

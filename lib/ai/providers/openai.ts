@@ -6,22 +6,38 @@ import type {
   AIStreamChunk,
 } from '../types'
 
+// Determine which provider to use based on environment variables
+const useOpenRouter = !!process.env.OPENROUTER_API_KEY
+const providerName = useOpenRouter ? 'OpenRouter' : 'OpenAI'
+
 export class OpenAIProvider implements AIProvider {
-  name = 'OpenAI'
+  name = providerName
   private client: OpenAI | null = null
 
   isConfigured(): boolean {
-    return !!process.env.OPENAI_API_KEY
+    return !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY)
   }
 
   private getClient(): OpenAI {
     if (!this.client) {
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OPENAI_API_KEY is not configured')
+      // Prefer OpenRouter if configured, fallback to OpenAI
+      if (process.env.OPENROUTER_API_KEY) {
+        this.client = new OpenAI({
+          apiKey: process.env.OPENROUTER_API_KEY,
+          baseURL: 'https://openrouter.ai/api/v1',
+          defaultHeaders: {
+            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+            'X-Title': 'iEditor',
+          },
+        })
+      } else if (process.env.OPENAI_API_KEY) {
+        this.client = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+          baseURL: process.env.OPENAI_BASE_URL, // Optional custom base URL
+        })
+      } else {
+        throw new Error('No AI API key configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY')
       }
-      this.client = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      })
     }
     return this.client
   }

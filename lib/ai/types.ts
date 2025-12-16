@@ -36,5 +36,5 @@ export interface AIProvider {
   streamChat(options: AICompletionOptions): AsyncGenerator<AIStreamChunk>
 }
 
-// Default fallback (used if .env not set)
-export const DEFAULT_MODEL = 'gpt-4o-mini'
+// Default fallback (used if .env not set) - OpenRouter model ID
+export const DEFAULT_MODEL = 'qwen/qwen3-coder-plus'
