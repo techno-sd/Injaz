@@ -38,3 +38,6 @@ export interface AIProvider {
 
 // Default fallback (used if .env not set) - OpenRouter model ID
 export const DEFAULT_MODEL = 'qwen/qwen3-coder-plus'
+
+// Hard fallback model for retry logic when primary model fails
+export const HARD_FALLBACK_MODEL = 'openai/gpt-4o-mini'
