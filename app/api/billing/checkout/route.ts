@@ -1,11 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-})
+// Lazy initialization to avoid build errors when STRIPE_SECRET_KEY is not set
+function getStripe(): Stripe | null {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-11-17.clover',
+  })
+}
 
 export async function POST(req: Request) {
+  const stripe = getStripe()
+
+  if (!stripe) {
+    return new Response(JSON.stringify({ error: 'Stripe is not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
   try {
     const { planId, billingCycle } = await req.json()
 
