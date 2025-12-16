@@ -360,6 +360,61 @@ function StageProgress({ stage, completedStages }: { stage: AIStage; completedSt
   )
 }
 
+// Activity log item component with enhanced styling
+function ActivityLogEntry({ item, isLatest }: { item: ActivityLogItem; isLatest: boolean }) {
+  const getIcon = () => {
+    switch (item.type) {
+      case 'success':
+        return <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+      case 'error':
+        return <AlertCircle className="h-3 w-3 text-red-400" />
+      case 'file':
+        return <FileCode className="h-3 w-3 text-cyan-400" />
+      case 'stage':
+        return <Sparkles className="h-3 w-3 text-violet-400" />
+      case 'substep':
+        return <ChevronRight className="h-3 w-3 text-white/40" />
+      default:
+        return <Circle className="h-3 w-3 text-white/30" />
+    }
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-2.5 py-1.5 px-2 rounded-lg transition-all duration-300',
+        isLatest && 'bg-white/[0.04] ring-1 ring-white/[0.06]',
+        'hover:bg-white/[0.03]'
+      )}
+    >
+      <div className="flex-shrink-0 mt-0.5">
+        {getIcon()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={cn(
+          'text-[11px] leading-relaxed',
+          item.type === 'success' ? 'text-emerald-400' :
+          item.type === 'error' ? 'text-red-400' :
+          item.type === 'file' ? 'text-cyan-400/90' :
+          item.type === 'stage' ? 'text-white/80 font-medium' :
+          item.type === 'substep' ? 'text-white/50' :
+          'text-white/60'
+        )}>
+          {item.message}
+        </p>
+      </div>
+      <span className="text-[9px] text-white/25 tabular-nums flex-shrink-0">
+        {new Date(item.timestamp).toLocaleTimeString('en-US', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })}
+      </span>
+    </div>
+  )
+}
+
 // Main enhanced progress card component
 export function GenerationProgress({
   generationState,
@@ -374,13 +429,20 @@ export function GenerationProgress({
   formatTime: (seconds: number) => string
   onCancel?: () => void
 }) {
-  const [showActivityLog, setShowActivityLog] = useState(false)
   const [showFiles, setShowFiles] = useState(true)
   const [showCodePreview, setShowCodePreview] = useState(true)
+  const activityLogRef = useRef<HTMLDivElement>(null)
   const currentStageInfo = STAGES.find(s => s.id === generationState.stage) || STAGES[0]
   const isComplete = generationState.stage === 'complete'
   const isError = generationState.stage === 'error'
   const isActive = !isComplete && !isError && generationState.stage !== 'idle'
+
+  // Auto-scroll activity log to bottom when new items are added
+  useEffect(() => {
+    if (activityLogRef.current && isActive) {
+      activityLogRef.current.scrollTop = activityLogRef.current.scrollHeight
+    }
+  }, [generationState.activityLog.length, isActive])
 
   // Calculate overall progress
   const stageOrder: AIStage[] = ['analyzing', 'planning', 'schema', 'generating', 'complete']
@@ -547,55 +609,49 @@ export function GenerationProgress({
           </div>
         )}
 
-        {/* Activity Log */}
+        {/* Activity Log - Always visible during generation */}
         {generationState.activityLog.length > 0 && (
-          <div>
-            <button
-              onClick={() => setShowActivityLog(!showActivityLog)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
-            >
+          <div className="border-t border-white/[0.06]">
+            {/* Header */}
+            <div className="px-4 py-2.5 flex items-center justify-between bg-white/[0.02]">
               <div className="flex items-center gap-2">
-                <Layers className="h-3.5 w-3.5 text-white/50" />
-                <span className="text-xs text-white/70">Activity Log</span>
-                <span className="text-[10px] text-white/30">({generationState.activityLog.length})</span>
-              </div>
-              {showActivityLog ? (
-                <ChevronDown className="h-3.5 w-3.5 text-white/40" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-white/40" />
-              )}
-            </button>
-            {showActivityLog && (
-              <div className="px-4 pb-3">
-                <div className="space-y-1 max-h-48 overflow-y-auto font-mono">
-                  {generationState.activityLog.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-start gap-2 text-[11px] py-1 px-2 rounded hover:bg-white/[0.02]"
-                    >
-                      <span className="text-white/25 tabular-nums flex-shrink-0 w-14">
-                        {new Date(item.timestamp).toLocaleTimeString('en-US', {
-                          hour12: false,
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit'
-                        })}
-                      </span>
-                      <span className={cn(
-                        'flex-1',
-                        item.type === 'success' ? 'text-emerald-400' :
-                        item.type === 'error' ? 'text-red-400' :
-                        item.type === 'file' ? 'text-cyan-400/80' :
-                        item.type === 'substep' ? 'text-violet-400/80' :
-                        'text-white/50'
-                      )}>
-                        {item.message}
-                      </span>
-                    </div>
-                  ))}
+                <div className="relative">
+                  <Terminal className="h-3.5 w-3.5 text-white/50" />
+                  {isActive && (
+                    <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  )}
                 </div>
+                <span className="text-xs text-white/70 font-medium">Activity Log</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-white/[0.06] text-[10px] text-white/40 tabular-nums">
+                  {generationState.activityLog.length}
+                </span>
               </div>
-            )}
+              {isActive && (
+                <span className="text-[10px] text-emerald-400/70 flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live
+                </span>
+              )}
+            </div>
+            {/* Log entries - Always expanded */}
+            <div
+              ref={activityLogRef}
+              className="px-3 py-2 max-h-56 overflow-y-auto scroll-smooth"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.1) transparent'
+              }}
+            >
+              <div className="space-y-0.5">
+                {generationState.activityLog.map((item, index) => (
+                  <ActivityLogEntry
+                    key={item.id}
+                    item={item}
+                    isLatest={index === generationState.activityLog.length - 1 && isActive}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
