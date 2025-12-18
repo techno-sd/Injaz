@@ -5,7 +5,9 @@ import type {
   AICompletionResult,
   AIStreamChunk,
 } from '../types'
-import { HARD_FALLBACK_MODEL } from '../types'
+
+// Fallback model for retry logic (configured via env or default)
+const HARD_FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'openai/gpt-4o-mini'
 
 // Determine which provider to use based on environment variables
 const useOpenRouter = !!process.env.OPENROUTER_API_KEY

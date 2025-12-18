@@ -72,8 +72,8 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
       })
     } else {
       onFilesChange(files.filter(f => f.id !== fileToDelete))
-      if (activeFileId === fileToDelete) {
-        onFileSelect(files[0]?.id || null)
+      if (activeFileId === fileToDelete && files[0]) {
+        onFileSelect(files[0].id)
       }
       toast({
         title: 'File deleted',

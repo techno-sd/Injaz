@@ -1,12 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel } from '@/lib/ai/providers'
-import { DEFAULT_MODEL } from '@/lib/ai/types'
 import type { File } from '@/types'
 
 export const runtime = 'edge'
 
-// Use Qwen3 Coder Plus via OpenRouter for code completion (can be overridden via env)
-const COMPLETION_MODEL = process.env.COMPLETION_AI_MODEL || 'qwen/qwen3-coder-plus'
+// Model from env (required)
+const COMPLETION_MODEL = process.env.COMPLETION_AI_MODEL || 'deepseek/deepseek-chat-v3-0324'
 
 interface CompletionRequest {
   projectId: string

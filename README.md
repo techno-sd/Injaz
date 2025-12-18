@@ -90,6 +90,19 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Available Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run type-check   # Run TypeScript type checking
+npm test             # Run Jest tests
+npm run test:watch   # Run tests in watch mode
+npm run test:coverage # Run tests with coverage report
+```
+
 ## Project Structure
 
 ```
@@ -252,6 +265,32 @@ Deploys project to Vercel.
   "status": "pending"
 }
 ```
+
+## Testing
+
+The project includes a comprehensive testing setup with Jest and React Testing Library.
+
+### Running Tests
+
+```bash
+npm test              # Run all tests
+npm run test:watch    # Run tests in watch mode
+npm run test:coverage # Run tests with coverage report
+```
+
+### Test Structure
+
+- **Unit Tests**: Test individual functions and utilities
+- **Component Tests**: Test React components with user interactions
+- **Integration Tests**: Test complete user workflows
+
+### CI/CD
+
+GitHub Actions automatically runs tests on every push and pull request:
+- TypeScript type checking
+- ESLint linting
+- Jest test suite with coverage
+- Production build verification
 
 ## Environment Variables
 

@@ -3,6 +3,9 @@ import { OpenAIProvider } from './providers/openai'
 import { parseStackTrace, getErrorContext, type DetectedError } from './error-detector'
 import type { File } from '@/types'
 
+// Model from env (required)
+const DEFAULT_MODEL = process.env.DEFAULT_AI_MODEL || 'deepseek/deepseek-chat-v3-0324'
+
 export interface DebugContext {
   error: RuntimeError | ConsoleError
   files: File[]
@@ -121,7 +124,7 @@ Analyze this error and provide specific fixes. Return valid JSON only.`
 
     try {
       const result = await this.provider.chat({
-        model: process.env.DEFAULT_AI_MODEL || 'qwen/qwen3-coder-plus',
+        model: process.env.DEFAULT_AI_MODEL || DEFAULT_MODEL,
         messages: [
           { role: 'system', content: DEBUG_SYSTEM_PROMPT },
           { role: 'user', content: userMessage },
@@ -178,7 +181,7 @@ Analyze this error step by step:
 
     try {
       const stream = this.provider.streamChat({
-        model: process.env.DEFAULT_AI_MODEL || 'qwen/qwen3-coder-plus',
+        model: process.env.DEFAULT_AI_MODEL || DEFAULT_MODEL,
         messages: [
           {
             role: 'system',

@@ -61,6 +61,16 @@ const deviceModes = {
   mobile: { width: '375px', maxWidth: '375px', icon: Smartphone, label: 'Mobile' },
 }
 
+// Platform-specific device modes
+// Mobile apps: Only phone and tablet (no desktop)
+// Websites/Webapps: All device types
+const getAvailableDeviceModes = (platform: PlatformType): DeviceMode[] => {
+  if (platform === 'mobile') {
+    return ['mobile', 'tablet']
+  }
+  return ['desktop', 'tablet', 'mobile']
+}
+
 // Debounce helper
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   let timeoutId: NodeJS.Timeout
@@ -100,6 +110,14 @@ export function LivePreview({
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const previousContentRef = useRef<string>('')
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Ensure device mode is valid for the platform
+  useEffect(() => {
+    const availableModes = getAvailableDeviceModes(platform)
+    if (!availableModes.includes(deviceMode)) {
+      setDeviceMode(availableModes[0])
+    }
+  }, [platform, deviceMode])
 
   // AI Debug function
   const analyzeWithAI = async () => {
@@ -396,9 +414,26 @@ export function LivePreview({
         {/* Left - Status & Device Selector */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-400" />
-            <span className="text-xs font-medium text-white">Live Preview</span>
+            {platform === 'mobile' ? (
+              <Smartphone className="h-4 w-4 text-cyan-400" />
+            ) : (
+              <Globe className="h-4 w-4 text-emerald-400" />
+            )}
+            <span className="text-xs font-medium text-white">
+              {platform === 'mobile' ? 'Mobile Preview' : 'Live Preview'}
+            </span>
           </div>
+
+          {/* Platform Badge for Mobile */}
+          {platform === 'mobile' && (
+            <Badge
+              variant="secondary"
+              className="h-5 gap-1 text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
+            >
+              <Smartphone className="h-3 w-3" />
+              Expo
+            </Badge>
+          )}
 
           {/* Status Badge */}
           {isHotReloading ? (
@@ -421,9 +456,13 @@ export function LivePreview({
         </div>
 
         {/* Center - Device Switcher */}
-        <div className="flex items-center gap-1 bg-white/[0.04] rounded-lg p-0.5">
-          {(Object.keys(deviceModes) as DeviceMode[]).map((mode) => {
+        <div className={cn(
+          'flex items-center gap-1 rounded-lg p-0.5',
+          platform === 'mobile' ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-white/[0.04]'
+        )}>
+          {getAvailableDeviceModes(platform).map((mode) => {
             const DeviceIcon = deviceModes[mode].icon
+            const isMobileApp = platform === 'mobile'
             return (
               <button
                 key={mode}
@@ -431,7 +470,9 @@ export function LivePreview({
                 className={cn(
                   'p-1.5 rounded-md transition-all duration-200',
                   deviceMode === mode
-                    ? 'bg-white/[0.1] text-white shadow-sm'
+                    ? isMobileApp
+                      ? 'bg-cyan-500/20 text-cyan-400 shadow-sm'
+                      : 'bg-white/[0.1] text-white shadow-sm'
                     : 'text-white/40 hover:text-white/70'
                 )}
                 title={deviceModes[mode].label}

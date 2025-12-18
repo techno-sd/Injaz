@@ -101,7 +101,7 @@ export function PresenceIndicator({
                   >
                     <Avatar
                       className="h-8 w-8 border-2 border-background ring-2 transition-transform hover:scale-110 hover:z-10"
-                      style={{ ringColor: user.color }}
+                      style={{ '--tw-ring-color': user.color } as React.CSSProperties}
                     >
                       {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                       <AvatarFallback

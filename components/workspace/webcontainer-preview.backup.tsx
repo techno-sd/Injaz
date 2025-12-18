@@ -158,6 +158,8 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
     if (!webcontainer || !previewUrl) return
 
     async function updateFiles() {
+      if (!webcontainer) return
+      
       try {
         for (const file of files) {
           await webcontainer.fs.writeFile(file.path, file.content)

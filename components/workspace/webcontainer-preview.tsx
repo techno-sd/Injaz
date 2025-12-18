@@ -6,19 +6,30 @@ import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet,
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { File } from '@/types'
+import type { File, PlatformType } from '@/types'
 
 type DeviceMode = 'desktop' | 'tablet' | 'mobile'
 
 interface WebContainerPreviewProps {
   projectId: string
   files: File[]
+  platform?: PlatformType
 }
 
 const deviceModes = {
   desktop: { width: '100%', icon: Monitor, label: 'Desktop' },
   tablet: { width: '768px', icon: Tablet, label: 'Tablet' },
   mobile: { width: '375px', icon: Smartphone, label: 'Mobile' },
+}
+
+// Platform-specific device modes
+// Mobile apps: Only phone and tablet (no desktop)
+// Websites/Webapps: All device types
+const getAvailableDeviceModes = (platform: PlatformType): DeviceMode[] => {
+  if (platform === 'mobile') {
+    return ['mobile', 'tablet']
+  }
+  return ['desktop', 'tablet', 'mobile']
 }
 
 // Debounce helper
@@ -30,7 +41,7 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   }
 }
 
-export function WebContainerPreview({ projectId, files }: WebContainerPreviewProps) {
+export function WebContainerPreview({ projectId, files, platform = 'webapp' }: WebContainerPreviewProps) {
   const { webcontainer, isBooting, error: bootError, restart } = useWebContainer()
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [isInstalling, setIsInstalling] = useState(false)
@@ -38,11 +49,20 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
   const [logs, setLogs] = useState<string[]>([])
   const [showTerminal, setShowTerminal] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>(platform === 'mobile' ? 'mobile' : 'desktop')
   const [isHotReloading, setIsHotReloading] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const hasStarted = useRef(false)
   const previousFilesRef = useRef<Map<string, string>>(new Map())
+  const isMobileApp = platform === 'mobile'
+
+  // Ensure device mode is valid for the platform
+  useEffect(() => {
+    const availableModes = getAvailableDeviceModes(platform)
+    if (!availableModes.includes(deviceMode)) {
+      setDeviceMode(availableModes[0])
+    }
+  }, [platform, deviceMode])
 
   // Build file tree from files array
   function buildFileTree(files: File[]) {
@@ -378,8 +398,20 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
       {/* Enhanced Header */}
       <div className="glass-card border-b px-4 py-2.5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Globe className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">Live Preview</span>
+          {isMobileApp ? (
+            <Smartphone className="h-4 w-4 text-cyan-400" />
+          ) : (
+            <Globe className="h-4 w-4 text-primary" />
+          )}
+          <span className="text-sm font-semibold">
+            {isMobileApp ? 'Mobile Preview' : 'Live Preview'}
+          </span>
+          {isMobileApp && (
+            <Badge variant="secondary" className="gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <Smartphone className="h-3 w-3" />
+              Expo
+            </Badge>
+          )}
           {isHotReloading ? (
             <Badge variant="secondary" className="gap-1 text-xs bg-yellow-500/20 text-yellow-600">
               <Zap className="h-3 w-3 animate-pulse" />
@@ -395,8 +427,11 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
 
         <div className="flex items-center gap-2">
           {/* Device Mode Switcher */}
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-            {(Object.keys(deviceModes) as DeviceMode[]).map((mode) => {
+          <div className={cn(
+            'flex items-center gap-1 p-1 rounded-lg',
+            isMobileApp ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-muted/50'
+          )}>
+            {getAvailableDeviceModes(platform).map((mode) => {
               const DeviceIcon = deviceModes[mode].icon
               return (
                 <Button
@@ -406,7 +441,7 @@ export function WebContainerPreview({ projectId, files }: WebContainerPreviewPro
                   onClick={() => setDeviceMode(mode)}
                   className={cn(
                     'h-8 w-8 p-0',
-                    deviceMode === mode && 'gradient-primary shadow-md'
+                    deviceMode === mode && (isMobileApp ? 'bg-cyan-500/20 text-cyan-400' : 'gradient-primary shadow-md')
                   )}
                   title={deviceModes[mode].label}
                 >

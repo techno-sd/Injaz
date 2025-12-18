@@ -1,4 +1,4 @@
-// Controller Service - OpenRouter (GPT-OSS-120B)
+// Controller Service - DeepSeek V3.2 via OpenRouter
 // Responsible for planning and outputting Unified App Schema (JSON only, no code)
 
 import OpenAI from 'openai'
@@ -10,8 +10,66 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Use Qwen3 Coder Plus via OpenRouter for planning (can be overridden via env)
-const CONTROLLER_MODEL = process.env.CONTROLLER_MODEL || 'qwen/qwen3-coder-plus'
+// Model from env (required)
+const CONTROLLER_MODEL = process.env.CONTROLLER_MODEL || 'deepseek/deepseek-chat-v3-0324'
+
+// Helper to repair truncated JSON by closing unclosed braces/brackets
+function repairTruncatedJSON(content: string): string {
+  let repaired = content.trim()
+
+  // Remove trailing commas before closing braces
+  repaired = repaired.replace(/,(\s*[}\]])/g, '$1')
+
+  // Count open/close braces and brackets
+  let braceCount = 0
+  let bracketCount = 0
+  let inString = false
+  let escapeNext = false
+
+  for (let i = 0; i < repaired.length; i++) {
+    const char = repaired[i]
+
+    if (escapeNext) {
+      escapeNext = false
+      continue
+    }
+
+    if (char === '\\') {
+      escapeNext = true
+      continue
+    }
+
+    if (char === '"' && !escapeNext) {
+      inString = !inString
+      continue
+    }
+
+    if (!inString) {
+      if (char === '{') braceCount++
+      else if (char === '}') braceCount--
+      else if (char === '[') bracketCount++
+      else if (char === ']') bracketCount--
+    }
+  }
+
+  // If we're in the middle of a string, close it
+  if (inString) {
+    repaired += '"'
+  }
+
+  // Close unclosed brackets first, then braces
+  while (bracketCount > 0) {
+    repaired += ']'
+    bracketCount--
+  }
+
+  while (braceCount > 0) {
+    repaired += '}'
+    braceCount--
+  }
+
+  return repaired
+}
 
 // Helper to extract JSON from response (handles markdown code blocks)
 function extractJSON(content: string): string {
@@ -73,6 +131,19 @@ function extractJSON(content: string): string {
       return jsonMatch[0]
     } catch {
       // Not valid JSON object
+    }
+  }
+
+  // Try to repair truncated JSON
+  if (startIdx !== -1) {
+    const partialJSON = content.slice(startIdx)
+    const repaired = repairTruncatedJSON(partialJSON)
+    try {
+      JSON.parse(repaired)
+      console.warn('Controller response was truncated but successfully repaired')
+      return repaired
+    } catch {
+      // Repair failed
     }
   }
 
@@ -409,7 +480,7 @@ export class Controller {
     }
     this.config = {
       temperature: config.temperature ?? 0.3, // Lower temperature for consistent JSON
-      maxTokens: config.maxTokens ?? 4096,
+      maxTokens: config.maxTokens ?? 8192, // Increased for complex schemas
     }
   }
 
@@ -542,6 +613,11 @@ export class Controller {
 
       // Parse the complete response
       try {
+        // Check if we got any content at all
+        if (!fullContent || fullContent.trim() === '') {
+          throw new Error('Controller returned empty response - check API key and model availability')
+        }
+
         const jsonContent = extractJSON(fullContent)
         const parsed = JSON.parse(jsonContent) as ControllerOutput
 
@@ -562,9 +638,33 @@ export class Controller {
             suggestions: parsed.suggestions,
           },
         }
-      } catch (parseError) {
+      } catch (parseError: any) {
         console.error('Failed to parse Controller response:', fullContent)
-        throw new Error('Controller returned invalid JSON')
+        console.error('Parse error details:', parseError.message)
+
+        // Check for specific issues
+        const hasOpenBrace = fullContent?.includes('{')
+        const openBraces = (fullContent?.match(/{/g) || []).length
+        const closeBraces = (fullContent?.match(/}/g) || []).length
+        const isTruncated = openBraces > closeBraces
+
+        // Provide more helpful error message
+        let errorDetail: string
+        if (!hasOpenBrace) {
+          errorDetail = 'AI did not return JSON (check model/API key)'
+        } else if (isTruncated) {
+          errorDetail = `JSON truncated (${openBraces} open braces, ${closeBraces} close braces) - response may have been cut off`
+        } else {
+          errorDetail = `Invalid JSON structure: ${parseError.message}`
+        }
+
+        const contentPreview = fullContent?.slice(0, 300) || '(empty)'
+        const contentEnd = fullContent?.length > 300 ? fullContent?.slice(-100) : ''
+
+        console.error('Content preview:', contentPreview)
+        if (contentEnd) console.error('Content end:', contentEnd)
+
+        throw new Error(`Controller failed: ${errorDetail}`)
       }
     } catch (error: any) {
       console.error('Controller stream error:', error)

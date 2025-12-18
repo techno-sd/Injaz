@@ -12,6 +12,8 @@ import {
   Maximize2,
   Minimize2,
   Smartphone,
+  Fullscreen,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -60,8 +62,36 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
   const [showGrid, setShowGrid] = useState(false)
   const [showRulers, setShowRulers] = useState(false)
   const [previewTheme, setPreviewTheme] = useState<'light' | 'dark' | 'system'>('system')
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+
+  // Toggle fullscreen mode
+  const toggleFullscreen = useCallback(() => {
+    if (!previewContainerRef.current) return
+
+    if (!document.fullscreenElement) {
+      previewContainerRef.current.requestFullscreen().then(() => {
+        setIsFullscreen(true)
+      }).catch((err) => {
+        console.error('Fullscreen error:', err)
+      })
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false)
+      })
+    }
+  }, [])
+
+  // Listen for fullscreen changes (e.g., user presses Escape)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   // Fit to screen calculation
   const handleFitToScreen = useCallback(() => {
@@ -161,7 +191,10 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="h-full flex flex-col bg-[#0d0d12]">
+      <div ref={previewContainerRef} className={cn(
+        "h-full flex flex-col bg-[#0d0d12]",
+        isFullscreen && "fixed inset-0 z-50"
+      )}>
         {/* Header */}
         <div className="h-12 border-b border-white/[0.06] bg-[#0a0a0f] flex items-center justify-between px-3 flex-shrink-0">
           <div className="flex items-center gap-2">
@@ -185,7 +218,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
 
             {/* Device Frame Selector */}
             <div className="hidden sm:block">
-              <DeviceFrameSelector />
+              <DeviceFrameSelector platform={platform} />
             </div>
 
             {/* Orientation Toggle */}
@@ -258,7 +291,21 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
               onClick={() => setShowFrame(!showFrame)}
               title={showFrame ? 'Hide device frame' : 'Show device frame'}
             >
-              {showFrame ? (
+              <Smartphone className="h-3.5 w-3.5" />
+            </Button>
+
+            {/* Fullscreen Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-7 w-7 hover:bg-white/[0.06]',
+                isFullscreen ? 'text-violet-400' : 'text-white/60 hover:text-white'
+              )}
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? (
                 <Minimize2 className="h-3.5 w-3.5" />
               ) : (
                 <Maximize2 className="h-3.5 w-3.5" />
@@ -332,6 +379,19 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
           <div className="border-b border-white/[0.06] bg-[#0a0a0f] px-4 py-2 flex items-center justify-center">
             <UrlBar url="localhost:3000" isSecure={true} />
           </div>
+        )}
+
+        {/* Fullscreen Exit Button (floating) */}
+        {isFullscreen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="fixed top-4 right-4 z-[60] h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-sm"
+            onClick={toggleFullscreen}
+            title="Exit fullscreen (Esc)"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         )}
 
         {/* Preview Content */}

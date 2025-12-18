@@ -1,14 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel, isModelAvailable } from '@/lib/ai/providers'
 import { buildContext } from '@/lib/ai/context-manager'
-import { DEFAULT_MODEL as FALLBACK_MODEL } from '@/lib/ai/types'
 import { getOrchestrator, formatSSE } from '@/lib/ai/orchestrator'
 import type { Message, File, AIAction, PlatformType, AIMode, UnifiedAppSchema } from '@/types'
 
 export const runtime = 'edge'
 
-// Model from .env (or fallback)
-const DEFAULT_MODEL = process.env.DEFAULT_AI_MODEL || FALLBACK_MODEL
+// Model from env (required)
+const DEFAULT_MODEL = process.env.DEFAULT_AI_MODEL || 'deepseek/deepseek-chat-v3-0324'
 
 export async function POST(req: Request) {
   try {
@@ -527,19 +526,8 @@ async function handleLegacyChat({
 export async function GET() {
   const providerName = process.env.OPENROUTER_API_KEY ? 'OpenRouter' : 'OpenAI'
 
-  // Models list - configured in code, can be customized via CUSTOM_MODELS env
-  const defaultModels = [
-    { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', description: 'Best open-source ($0.35/$0.75 per 1M)', category: 'recommended' },
-    { id: 'qwen/qwen3-coder-plus', name: 'Qwen3 Coder Plus', description: 'Strong coding model', category: 'recommended' },
-    { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', description: 'Budget ($0.14/1M tokens)', category: 'budget' },
-    { id: 'deepseek/deepseek-coder', name: 'DeepSeek Coder', description: 'Budget code generation', category: 'budget' },
-    { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B', description: 'Free tier model', category: 'free' },
-    { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B', description: 'Free tier model', category: 'free' },
-    { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', description: 'Premium quality', category: 'premium' },
-    { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Premium quality', category: 'premium' },
-  ]
-
-  let models = defaultModels
+  // Models configured via CUSTOM_MODELS env variable only
+  let models: Array<{ id: string; name: string; description: string; category: string }> = []
   if (process.env.CUSTOM_MODELS) {
     try {
       models = JSON.parse(process.env.CUSTOM_MODELS)

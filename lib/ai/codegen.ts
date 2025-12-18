@@ -1,4 +1,4 @@
-// CodeGen Service - OpenRouter (GPT-OSS-120B)
+// CodeGen Service - DeepSeek V3.2 via OpenRouter
 // Responsible for converting Unified App Schema to production-ready code
 
 import OpenAI from 'openai'
@@ -10,8 +10,67 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Use Qwen3 Coder Plus via OpenRouter for code generation (can be overridden via env)
-const CODEGEN_MODEL = process.env.CODEGEN_MODEL || 'qwen/qwen3-coder-plus'
+// Model from env (required)
+const CODEGEN_MODEL = process.env.CODEGEN_MODEL || 'qwen/qwen3-coder:free'
+
+// Helper to repair truncated JSON by closing unclosed braces/brackets
+function repairTruncatedJSON(content: string): string {
+  let repaired = content.trim()
+
+  // Remove trailing commas before closing braces
+  repaired = repaired.replace(/,(\s*[}\]])/g, '$1')
+
+  // Count open/close braces and brackets, tracking if we're in a string
+  let braceCount = 0
+  let bracketCount = 0
+  let inString = false
+  let escapeNext = false
+
+  for (let i = 0; i < repaired.length; i++) {
+    const char = repaired[i]
+
+    if (escapeNext) {
+      escapeNext = false
+      continue
+    }
+
+    if (char === '\\') {
+      escapeNext = true
+      continue
+    }
+
+    if (char === '"' && !escapeNext) {
+      inString = !inString
+      continue
+    }
+
+    if (!inString) {
+      if (char === '{') braceCount++
+      else if (char === '}') braceCount--
+      else if (char === '[') bracketCount++
+      else if (char === ']') bracketCount--
+    }
+  }
+
+  // If we're in the middle of a string, close it
+  if (inString) {
+    // Try to find where the string was truncated and add closing quote
+    repaired += '"'
+  }
+
+  // Close unclosed brackets first, then braces
+  while (bracketCount > 0) {
+    repaired += ']'
+    bracketCount--
+  }
+
+  while (braceCount > 0) {
+    repaired += '}'
+    braceCount--
+  }
+
+  return repaired
+}
 
 // Helper to extract JSON from response (handles markdown code blocks)
 function extractJSON(content: string): string {
@@ -73,6 +132,19 @@ function extractJSON(content: string): string {
       return jsonMatch[0]
     } catch {
       // Not valid JSON object
+    }
+  }
+
+  // Try to repair truncated JSON
+  if (startIdx !== -1) {
+    const partialJSON = content.slice(startIdx)
+    const repaired = repairTruncatedJSON(partialJSON)
+    try {
+      JSON.parse(repaired)
+      console.warn('CodeGen response was truncated but successfully repaired')
+      return repaired
+    } catch {
+      // Repair failed
     }
   }
 
@@ -1520,7 +1592,7 @@ export class CodeGen {
     }
     this.config = {
       temperature: config.temperature ?? 0.2, // Low temperature for consistent code
-      maxTokens: config.maxTokens ?? 16384, // High token limit for code generation
+      maxTokens: config.maxTokens ?? 32768, // Very high token limit for large code generation
     }
   }
 
@@ -1673,13 +1745,33 @@ export class CodeGen {
           },
         }
       } catch (parseError: any) {
+        // Check for specific issues
+        const hasOpenBrace = fullContent?.includes('{')
+        const openBraces = (fullContent?.match(/{/g) || []).length
+        const closeBraces = (fullContent?.match(/}/g) || []).length
+        const isTruncated = openBraces > closeBraces
+
         console.error('Failed to parse CodeGen response:', {
           error: parseError.message,
           contentLength: fullContent.length,
+          openBraces,
+          closeBraces,
+          isTruncated,
           contentPreview: fullContent.slice(0, 1000),
           contentEnd: fullContent.slice(-500),
         })
-        throw new Error(`CodeGen returned invalid JSON: ${parseError.message}`)
+
+        // Provide more helpful error message
+        let errorDetail: string
+        if (!hasOpenBrace) {
+          errorDetail = 'AI did not return JSON (check model/API key)'
+        } else if (isTruncated) {
+          errorDetail = `Response truncated (${openBraces} open braces, ${closeBraces} close braces). Try a simpler prompt or check token limits.`
+        } else {
+          errorDetail = parseError.message
+        }
+
+        throw new Error(`CodeGen failed: ${errorDetail}`)
       }
     } catch (error: any) {
       console.error('CodeGen stream error:', error)

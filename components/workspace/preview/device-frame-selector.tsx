@@ -1,7 +1,7 @@
 // Device Frame Selector - Dropdown to select device presets
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Monitor,
   Smartphone,
@@ -18,6 +18,7 @@ import {
   type DevicePreset,
   type DeviceMode,
 } from '@/types/preview-types'
+import type { PlatformType } from '@/types'
 import { usePreviewDevice } from './use-preview-device'
 
 // =============================================================================
@@ -38,6 +39,15 @@ const MODE_LABELS: Record<DeviceMode, string> = {
   custom: 'Custom',
 }
 
+// Platform-specific mode configurations
+// Mobile apps: Only phone and tablet previews (no desktop)
+// Websites/Webapps: All device types including desktop
+const PLATFORM_MODES: Record<PlatformType, DeviceMode[]> = {
+  mobile: ['mobile', 'tablet'], // Mobile apps only show phone and tablet
+  website: ['desktop', 'tablet', 'mobile', 'custom'], // Websites show all
+  webapp: ['desktop', 'tablet', 'mobile', 'custom'], // Web apps show all
+}
+
 // =============================================================================
 // DEVICE FRAME SELECTOR
 // =============================================================================
@@ -45,17 +55,33 @@ const MODE_LABELS: Record<DeviceMode, string> = {
 interface DeviceFrameSelectorProps {
   className?: string
   compact?: boolean
+  platform?: PlatformType
 }
 
 export function DeviceFrameSelector({
   className,
   compact = false,
+  platform = 'webapp',
 }: DeviceFrameSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { device, mode, setDevice, setMode } = usePreviewDevice()
 
+  // Get available modes for the current platform
+  const availableModes = useMemo(() => PLATFORM_MODES[platform], [platform])
+  const isMobileApp = platform === 'mobile'
+
+  // Ensure current mode is valid for the platform, otherwise switch to first available
+  useEffect(() => {
+    if (!availableModes.includes(mode)) {
+      setMode(availableModes[0])
+    }
+  }, [availableModes, mode, setMode])
+
   const ModeIcon = MODE_ICONS[mode]
   const currentLabel = device?.name || MODE_LABELS[mode]
+
+  // Calculate grid columns based on available modes
+  const gridCols = availableModes.length === 2 ? 'grid-cols-2' : 'grid-cols-4'
 
   return (
     <div className={cn('relative', className)}>
@@ -66,13 +92,14 @@ export function DeviceFrameSelector({
           'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm',
           'bg-muted/50 hover:bg-muted border border-border/50',
           'transition-colors',
-          compact && 'px-2 py-1'
+          compact && 'px-2 py-1',
+          isMobileApp && 'border-cyan-500/30 bg-cyan-500/5'
         )}
       >
-        <ModeIcon className="w-4 h-4 text-muted-foreground" />
+        <ModeIcon className={cn('w-4 h-4 text-muted-foreground', isMobileApp && 'text-cyan-400')} />
         {!compact && (
           <>
-            <span className="font-medium truncate max-w-[120px]">{currentLabel}</span>
+            <span className={cn('font-medium truncate max-w-[120px]', isMobileApp && 'text-cyan-100')}>{currentLabel}</span>
             <ChevronDown
               className={cn(
                 'w-3 h-3 text-muted-foreground transition-transform',
@@ -93,11 +120,22 @@ export function DeviceFrameSelector({
           />
 
           {/* Menu */}
-          <div className="absolute top-full left-0 mt-2 z-50 w-72 bg-popover border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className={cn(
+            'absolute top-full left-0 mt-2 z-50 bg-popover border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200',
+            isMobileApp ? 'w-64' : 'w-72'
+          )}>
+            {/* Platform indicator for mobile */}
+            {isMobileApp && (
+              <div className="px-3 py-2 bg-cyan-500/10 border-b border-cyan-500/20 flex items-center gap-2">
+                <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-xs text-cyan-300 font-medium">Mobile App Preview</span>
+              </div>
+            )}
+
             {/* Quick Modes */}
             <div className="p-2 border-b border-border">
-              <div className="grid grid-cols-4 gap-1">
-                {(['desktop', 'tablet', 'mobile', 'custom'] as DeviceMode[]).map((m) => {
+              <div className={cn('grid gap-1', gridCols)}>
+                {availableModes.map((m) => {
                   const Icon = MODE_ICONS[m]
                   const isActive = mode === m
                   return (
@@ -112,7 +150,7 @@ export function DeviceFrameSelector({
                       className={cn(
                         'flex flex-col items-center gap-1 p-2 rounded-lg transition-colors',
                         isActive
-                          ? 'bg-primary/10 text-primary'
+                          ? isMobileApp ? 'bg-cyan-500/20 text-cyan-400' : 'bg-primary/10 text-primary'
                           : 'hover:bg-muted text-muted-foreground'
                       )}
                     >

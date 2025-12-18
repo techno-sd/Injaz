@@ -109,6 +109,16 @@ function generateIndexHtml(schema: UnifiedAppSchema): string {
 function generatePageHtml(schema: UnifiedAppSchema, page: PageSchema): string {
   const { meta, design, structure, components } = schema
   const pageComponents = page.components || []
+  const pageName = page.name?.toLowerCase() || ''
+
+  // Try to get content from components or generate based on page type
+  const componentContent = pageComponents
+    .map((id) => generateComponentHtml(components.find((c) => c.id === id)))
+    .filter(Boolean)
+    .join('\n    ')
+
+  // Generate page-specific content if no components available
+  const pageContent = componentContent || generateStaticPageContent(page, pageName)
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -127,10 +137,12 @@ function generatePageHtml(schema: UnifiedAppSchema, page: PageSchema): string {
 
   <main>
     <section class="page-header">
-      <h1>${page.title}</h1>
-      ${page.description ? `<p>${page.description}</p>` : ''}
+      <div class="container">
+        <h1>${page.title}</h1>
+        ${page.description ? `<p class="page-description">${page.description}</p>` : ''}
+      </div>
     </section>
-    ${pageComponents.map((id) => generateComponentHtml(components.find((c) => c.id === id))).join('\n    ')}
+    ${pageContent}
   </main>
 
   ${generateFooter(components)}
@@ -140,12 +152,534 @@ function generatePageHtml(schema: UnifiedAppSchema, page: PageSchema): string {
 </html>`
 }
 
+function generateStaticPageContent(page: PageSchema, pageName: string): string {
+  // Generate content based on page name/type
+  if (pageName.includes('about')) {
+    return generateStaticAboutContent()
+  }
+  if (pageName.includes('contact')) {
+    return generateStaticContactContent()
+  }
+  if (pageName.includes('service')) {
+    return generateStaticServicesContent()
+  }
+  if (pageName.includes('pricing') || pageName.includes('plan')) {
+    return generateStaticPricingContent()
+  }
+  if (pageName.includes('feature')) {
+    return generateStaticFeaturesContent()
+  }
+  if (pageName.includes('blog') || pageName.includes('post') || pageName.includes('article')) {
+    return generateStaticBlogContent()
+  }
+  if (pageName.includes('faq') || pageName.includes('help')) {
+    return generateStaticFaqContent()
+  }
+  if (pageName.includes('team') || pageName.includes('member')) {
+    return generateStaticTeamContent()
+  }
+  if (pageName.includes('portfolio') || pageName.includes('work') || pageName.includes('project')) {
+    return generateStaticPortfolioContent()
+  }
+  if (pageName.includes('testimonial') || pageName.includes('review')) {
+    return generateStaticTestimonialsContent()
+  }
+
+  // Default generic content
+  return generateStaticDefaultContent(page)
+}
+
+function generateStaticAboutContent(): string {
+  return `<section class="about-mission">
+      <div class="container">
+        <div class="about-grid">
+          <div class="about-text">
+            <h2>Our Mission</h2>
+            <p>We are dedicated to delivering exceptional solutions that empower businesses and individuals to achieve their goals. Our commitment to excellence drives everything we do.</p>
+            <p>Founded with a vision to make a difference, we continue to innovate and push boundaries in our industry.</p>
+          </div>
+          <div class="about-image">
+            <div class="placeholder-image">Company Image</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="values">
+      <div class="container">
+        <h2 class="section-title">Our Values</h2>
+        <div class="values-grid">
+          <div class="value-card">
+            <h3>Innovation</h3>
+            <p>We constantly push boundaries and embrace new ideas.</p>
+          </div>
+          <div class="value-card">
+            <h3>Integrity</h3>
+            <p>We conduct business with honesty and transparency.</p>
+          </div>
+          <div class="value-card">
+            <h3>Excellence</h3>
+            <p>We strive for the highest quality in everything we do.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <h2>Want to learn more?</h2>
+        <p>Get in touch with us today.</p>
+        <a href="contact.html" class="btn btn-primary">Contact Us</a>
+      </div>
+    </section>`
+}
+
+function generateStaticContactContent(): string {
+  return `<section class="contact-section">
+      <div class="container">
+        <div class="contact-grid">
+          <div class="contact-form-wrapper">
+            <h2>Get in Touch</h2>
+            <form class="contact-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="firstName">First Name</label>
+                  <input type="text" id="firstName" name="firstName" placeholder="John" required>
+                </div>
+                <div class="form-group">
+                  <label for="lastName">Last Name</label>
+                  <input type="text" id="lastName" name="lastName" placeholder="Doe" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="john@example.com" required>
+              </div>
+              <div class="form-group">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="5" placeholder="How can we help you?"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Send Message</button>
+            </form>
+          </div>
+          <div class="contact-info">
+            <h2>Contact Information</h2>
+            <div class="info-item">
+              <h3>Address</h3>
+              <p>123 Business Street, Suite 100<br>City, State 12345</p>
+            </div>
+            <div class="info-item">
+              <h3>Email</h3>
+              <p>contact@example.com</p>
+            </div>
+            <div class="info-item">
+              <h3>Phone</h3>
+              <p>+1 (555) 123-4567</p>
+            </div>
+            <div class="info-item">
+              <h3>Business Hours</h3>
+              <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>`
+}
+
+function generateStaticServicesContent(): string {
+  return `<section class="services-section">
+      <div class="container">
+        <div class="services-grid">
+          <div class="service-card">
+            <div class="service-icon">1</div>
+            <h3>Consulting</h3>
+            <p>Expert guidance to help you make informed decisions and achieve your objectives.</p>
+            <a href="#" class="btn btn-outline">Learn More</a>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">2</div>
+            <h3>Development</h3>
+            <p>Custom solutions built with cutting-edge technology to meet your unique needs.</p>
+            <a href="#" class="btn btn-outline">Learn More</a>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">3</div>
+            <h3>Support</h3>
+            <p>24/7 dedicated support to ensure your success and peace of mind.</p>
+            <a href="#" class="btn btn-outline">Learn More</a>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">4</div>
+            <h3>Training</h3>
+            <p>Comprehensive training programs to empower your team with new skills.</p>
+            <a href="#" class="btn btn-outline">Learn More</a>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">5</div>
+            <h3>Analytics</h3>
+            <p>Data-driven insights to optimize your operations and drive growth.</p>
+            <a href="#" class="btn btn-outline">Learn More</a>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">6</div>
+            <h3>Integration</h3>
+            <p>Seamless integration with your existing systems and workflows.</p>
+            <a href="#" class="btn btn-outline">Learn More</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta cta-primary">
+      <div class="container">
+        <h2>Need a custom solution?</h2>
+        <p>Contact us to discuss your specific requirements.</p>
+        <a href="contact.html" class="btn btn-secondary">Get a Quote</a>
+      </div>
+    </section>`
+}
+
+function generateStaticPricingContent(): string {
+  return `<section class="pricing-section">
+      <div class="container">
+        <div class="pricing-grid">
+          <div class="pricing-card">
+            <h3>Starter</h3>
+            <div class="price">$9<span>/month</span></div>
+            <ul class="features-list">
+              <li>5 Projects</li>
+              <li>10GB Storage</li>
+              <li>Email Support</li>
+              <li>Basic Analytics</li>
+            </ul>
+            <a href="#" class="btn btn-outline">Get Started</a>
+          </div>
+          <div class="pricing-card featured">
+            <span class="badge">Most Popular</span>
+            <h3>Professional</h3>
+            <div class="price">$29<span>/month</span></div>
+            <ul class="features-list">
+              <li>Unlimited Projects</li>
+              <li>100GB Storage</li>
+              <li>Priority Support</li>
+              <li>Advanced Analytics</li>
+              <li>API Access</li>
+            </ul>
+            <a href="#" class="btn btn-primary">Get Started</a>
+          </div>
+          <div class="pricing-card">
+            <h3>Enterprise</h3>
+            <div class="price">$99<span>/month</span></div>
+            <ul class="features-list">
+              <li>Unlimited Everything</li>
+              <li>Dedicated Support</li>
+              <li>Custom Integrations</li>
+              <li>SLA Guarantee</li>
+              <li>On-premise Option</li>
+            </ul>
+            <a href="#" class="btn btn-outline">Get Started</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq">
+      <div class="container">
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>Can I change plans later?</summary>
+            <p>Yes, you can upgrade or downgrade your plan at any time.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Is there a free trial?</summary>
+            <p>Yes, all plans come with a 14-day free trial.</p>
+          </details>
+          <details class="faq-item">
+            <summary>What payment methods do you accept?</summary>
+            <p>We accept all major credit cards and PayPal.</p>
+          </details>
+        </div>
+      </div>
+    </section>`
+}
+
+function generateStaticFeaturesContent(): string {
+  return `<section class="features-section">
+      <div class="container">
+        <div class="features-grid">
+          <div class="feature-item">
+            <div class="feature-icon">✓</div>
+            <div class="feature-content">
+              <h3>Easy to Use</h3>
+              <p>Intuitive interface designed for users of all skill levels.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">✓</div>
+            <div class="feature-content">
+              <h3>Fast & Reliable</h3>
+              <p>Built for performance with 99.9% uptime guarantee.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">✓</div>
+            <div class="feature-content">
+              <h3>Secure</h3>
+              <p>Enterprise-grade security to protect your data.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">✓</div>
+            <div class="feature-content">
+              <h3>Scalable</h3>
+              <p>Grows with your business, from startup to enterprise.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features-highlight">
+      <div class="container">
+        <div class="highlight-grid">
+          <div class="highlight-image">
+            <div class="placeholder-image">Feature Preview</div>
+          </div>
+          <div class="highlight-content">
+            <h2>Powerful Features</h2>
+            <p>Our platform provides everything you need to succeed, with powerful tools and features designed to streamline your workflow.</p>
+            <a href="#" class="btn btn-primary">Start Free Trial</a>
+          </div>
+        </div>
+      </div>
+    </section>`
+}
+
+function generateStaticBlogContent(): string {
+  return `<section class="blog-section">
+      <div class="container">
+        <div class="blog-grid">
+          ${[1, 2, 3, 4, 5, 6].map(i => `
+          <article class="blog-card">
+            <div class="blog-image">
+              <div class="placeholder-image">Blog Image</div>
+            </div>
+            <div class="blog-content">
+              <div class="blog-meta">
+                <span>Jan ${i}, 2024</span>
+                <span>•</span>
+                <span>5 min read</span>
+              </div>
+              <h3><a href="#">Blog Post Title ${i}</a></h3>
+              <p>A brief description of the blog post content that gives readers a preview...</p>
+              <a href="#" class="btn btn-outline">Read More</a>
+            </div>
+          </article>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="newsletter cta-primary">
+      <div class="container">
+        <h2>Subscribe to our Newsletter</h2>
+        <p>Get the latest updates delivered to your inbox.</p>
+        <form class="newsletter-form">
+          <input type="email" placeholder="Enter your email" required>
+          <button type="submit" class="btn btn-secondary">Subscribe</button>
+        </form>
+      </div>
+    </section>`
+}
+
+function generateStaticFaqContent(): string {
+  return `<section class="faq-section">
+      <div class="container">
+        <div class="faq-list">
+          <details class="faq-item" open>
+            <summary>What is your refund policy?</summary>
+            <p>We offer a 30-day money-back guarantee on all plans. If you are not satisfied, simply contact support for a full refund.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How do I get started?</summary>
+            <p>Simply sign up for a free account, choose your plan, and follow our quick setup guide. You will be up and running in minutes.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Do you offer customer support?</summary>
+            <p>Yes, we offer 24/7 customer support via email and live chat. Premium plans also include phone support.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I upgrade or downgrade my plan?</summary>
+            <p>Absolutely! You can change your plan at any time from your account settings. Changes take effect immediately.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Is my data secure?</summary>
+            <p>Yes, we use industry-standard encryption and security measures to protect your data. We are also SOC 2 compliant.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Do you offer a free trial?</summary>
+            <p>Yes, all plans come with a 14-day free trial. No credit card required to start.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <h2>Still have questions?</h2>
+        <p>Our support team is here to help.</p>
+        <a href="contact.html" class="btn btn-primary">Contact Support</a>
+      </div>
+    </section>`
+}
+
+function generateStaticTeamContent(): string {
+  return `<section class="team-section">
+      <div class="container">
+        <div class="team-grid">
+          ${[
+            { name: 'John Smith', role: 'CEO & Founder' },
+            { name: 'Sarah Johnson', role: 'CTO' },
+            { name: 'Mike Williams', role: 'Lead Designer' },
+            { name: 'Emily Brown', role: 'Marketing Director' },
+            { name: 'David Lee', role: 'Senior Developer' },
+            { name: 'Lisa Chen', role: 'Product Manager' },
+            { name: 'James Wilson', role: 'Sales Lead' },
+            { name: 'Anna Garcia', role: 'Customer Success' }
+          ].map(member => `
+          <div class="team-card">
+            <div class="team-avatar">${member.name.charAt(0)}</div>
+            <h3>${member.name}</h3>
+            <p>${member.role}</p>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="cta cta-primary">
+      <div class="container">
+        <h2>Join Our Team</h2>
+        <p>We are always looking for talented individuals.</p>
+        <a href="#" class="btn btn-secondary">View Open Positions</a>
+      </div>
+    </section>`
+}
+
+function generateStaticPortfolioContent(): string {
+  return `<section class="portfolio-section">
+      <div class="container">
+        <div class="portfolio-grid">
+          ${[1, 2, 3, 4, 5, 6].map(i => `
+          <div class="portfolio-card">
+            <div class="portfolio-image">
+              <div class="placeholder-image">Project ${i}</div>
+              <div class="portfolio-overlay">
+                <a href="#" class="btn btn-secondary">View Project</a>
+              </div>
+            </div>
+            <div class="portfolio-info">
+              <h3>Project Title ${i}</h3>
+              <p>Category</p>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <h2>Interested in working together?</h2>
+        <p>Let us discuss your project.</p>
+        <a href="contact.html" class="btn btn-primary">Start a Project</a>
+      </div>
+    </section>`
+}
+
+function generateStaticTestimonialsContent(): string {
+  return `<section class="testimonials-section">
+      <div class="container">
+        <div class="testimonials-grid">
+          ${[
+            { name: 'Alex Thompson', company: 'Tech Corp', quote: 'This product has transformed the way we work. Highly recommended!' },
+            { name: 'Maria Rodriguez', company: 'Design Studio', quote: 'Outstanding service and support. The team went above and beyond.' },
+            { name: 'Chris Park', company: 'Startup Inc', quote: 'Best investment we have made this year. The ROI has been incredible.' },
+            { name: 'Rachel Green', company: 'Marketing Co', quote: 'Easy to use and incredibly powerful. Exactly what we needed.' },
+            { name: 'Tom Harris', company: 'Finance Ltd', quote: 'The customer support is exceptional. They truly care about their users.' },
+            { name: 'Sophie Miller', company: 'E-commerce Plus', quote: 'We have seen a 40% increase in productivity since switching.' }
+          ].map(t => `
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p class="testimonial-text">"${t.quote}"</p>
+            <div class="testimonial-author">
+              <strong>${t.name}</strong>
+              <span>${t.company}</span>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="cta cta-primary">
+      <div class="container">
+        <h2>Ready to join them?</h2>
+        <p>Start your success story today.</p>
+        <a href="#" class="btn btn-secondary">Get Started Free</a>
+      </div>
+    </section>`
+}
+
+function generateStaticDefaultContent(page: PageSchema): string {
+  return `<section class="content-section">
+      <div class="container">
+        <div class="content-wrapper">
+          <p>Welcome to the ${page.title} page. This is where your content will appear. You can customize this page by adding components to your schema or editing the template.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="features-section">
+      <div class="container">
+        <div class="features-grid three-col">
+          <div class="feature-card">
+            <h3>Section 1</h3>
+            <p>Content for this section.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Section 2</h3>
+            <p>Content for this section.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Section 3</h3>
+            <p>Content for this section.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <h2>Get Started Today</h2>
+        <p>Ready to take the next step?</p>
+        <a href="contact.html" class="btn btn-primary">Contact Us</a>
+      </div>
+    </section>`
+}
+
+// Helper to convert route paths to HTML file paths for static sites
+function pathToHtmlHref(path: string | undefined): string {
+  if (!path || path === '#') return '#'
+  if (path === '/' || path === '/index') return 'index.html'
+  // Convert /about to about.html, /services/web to services/web.html
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path
+  return `${cleanPath}.html`
+}
+
 function generateNavigation(nav: any, design?: any): string {
   if (!nav?.items?.length) return ''
 
   return `<header class="header" role="banner">
     <nav class="nav container" aria-label="Main navigation">
-      <a href="/" class="nav-logo" aria-label="Home">Logo</a>
+      <a href="index.html" class="nav-logo" aria-label="Home">Logo</a>
       <div class="nav-actions">
         <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
           <svg class="icon-sun" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -164,7 +698,7 @@ function generateNavigation(nav: any, design?: any): string {
       <ul class="nav-menu" id="nav-menu" role="menubar">
         ${nav.items
           .map(
-            (item: any) => `<li role="none"><a href="${item.path || '#'}" class="nav-link" role="menuitem">${item.label}</a></li>`
+            (item: any) => `<li role="none"><a href="${pathToHtmlHref(item.path)}" class="nav-link" role="menuitem">${item.label}</a></li>`
           )
           .join('\n        ')}
       </ul>
@@ -1679,6 +2213,780 @@ section {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* === PAGE-SPECIFIC STYLES === */
+
+/* Page Header */
+.page-header {
+  padding: var(--spacing-3xl) 0 var(--spacing-2xl);
+  background: linear-gradient(to bottom, var(--color-surface-hover) 0%, transparent 100%);
+  text-align: center;
+}
+
+.page-header h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  color: var(--color-foreground);
+  margin-bottom: var(--spacing-md);
+}
+
+.page-description {
+  font-size: 1.125rem;
+  color: var(--color-muted);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* About Page */
+.about-mission,
+.values {
+  padding: var(--spacing-section) 0;
+}
+
+.values {
+  background: var(--color-surface-elevated);
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-2xl);
+  align-items: center;
+}
+
+.about-text h2 {
+  font-family: var(--font-heading);
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-lg);
+}
+
+.about-text p {
+  color: var(--color-muted);
+  line-height: 1.7;
+  margin-bottom: var(--spacing-md);
+}
+
+.about-image .placeholder-image {
+  aspect-ratio: 16/9;
+  background: var(--color-surface-hover);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.value-card {
+  background: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.value-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.value-card p {
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+
+/* Contact Page */
+.contact-section {
+  padding: var(--spacing-section) 0;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-3xl);
+}
+
+.contact-form-wrapper h2,
+.contact-info h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xl);
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: var(--spacing-sm);
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
+}
+
+.info-item {
+  margin-bottom: var(--spacing-xl);
+}
+
+.info-item h3 {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.info-item p {
+  color: var(--color-muted);
+}
+
+/* Services Page */
+.services-section {
+  padding: var(--spacing-section) 0;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.service-card {
+  background: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.service-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.service-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.service-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.service-card p {
+  color: var(--color-muted);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.9375rem;
+}
+
+/* Pricing Page */
+.pricing-section,
+.pricing {
+  padding: var(--spacing-section) 0;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.pricing-card {
+  background: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  text-align: center;
+  position: relative;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.pricing-card.featured {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
+  transform: scale(1.05);
+}
+
+.pricing-card .badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.pricing-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+.pricing-card .price {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--color-foreground);
+  margin-bottom: var(--spacing-lg);
+}
+
+.pricing-card .price span {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.features-list {
+  list-style: none;
+  text-align: left;
+  margin-bottom: var(--spacing-xl);
+}
+
+.features-list li {
+  padding: var(--spacing-sm) 0;
+  color: var(--color-muted);
+  position: relative;
+  padding-left: var(--spacing-xl);
+}
+
+.features-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+/* Features Page */
+.features-section {
+  padding: var(--spacing-section) 0;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.features-grid.three-col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.feature-item {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.feature-content h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.feature-content p {
+  color: var(--color-muted);
+}
+
+.feature-card {
+  background: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.feature-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.feature-card p {
+  color: var(--color-muted);
+}
+
+.features-highlight {
+  padding: var(--spacing-section) 0;
+  background: var(--color-surface-elevated);
+}
+
+.highlight-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-2xl);
+  align-items: center;
+}
+
+.highlight-image .placeholder-image {
+  aspect-ratio: 16/9;
+  background: var(--color-surface-hover);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+}
+
+.highlight-content h2 {
+  font-family: var(--font-heading);
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-md);
+}
+
+.highlight-content p {
+  color: var(--color-muted);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Blog Page */
+.blog-section {
+  padding: var(--spacing-section) 0;
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.blog-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.blog-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.blog-image .placeholder-image {
+  aspect-ratio: 16/9;
+  background: var(--color-surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+}
+
+.blog-content {
+  padding: var(--spacing-lg);
+}
+
+.blog-meta {
+  display: flex;
+  gap: var(--spacing-sm);
+  font-size: 0.875rem;
+  color: var(--color-muted);
+  margin-bottom: var(--spacing-sm);
+}
+
+.blog-content h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.blog-content h3 a {
+  color: var(--color-foreground);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.blog-content h3 a:hover {
+  color: var(--color-primary);
+}
+
+.blog-content p {
+  color: var(--color-muted);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.9375rem;
+}
+
+/* Newsletter */
+.newsletter {
+  padding: var(--spacing-section) 0;
+  background: var(--color-primary);
+  color: white;
+  text-align: center;
+}
+
+.newsletter h2 {
+  font-family: var(--font-heading);
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+.newsletter p {
+  opacity: 0.9;
+  margin-bottom: var(--spacing-lg);
+}
+
+.newsletter-form {
+  display: flex;
+  gap: var(--spacing-sm);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.newsletter-form input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+}
+
+/* FAQ Page */
+.faq-section {
+  padding: var(--spacing-section) 0;
+}
+
+.faq-list {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.faq-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+  overflow: hidden;
+}
+
+.faq-item summary {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: "+";
+  font-size: 1.25rem;
+  color: var(--color-muted);
+}
+
+.faq-item[open] summary::after {
+  content: "−";
+}
+
+.faq-item p {
+  padding: 0 var(--spacing-lg) var(--spacing-md);
+  color: var(--color-muted);
+}
+
+/* Team Page */
+.team-section {
+  padding: var(--spacing-section) 0;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.team-card {
+  background: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.team-avatar {
+  width: 96px;
+  height: 96px;
+  background: var(--color-surface-hover);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--spacing-md);
+  font-size: 2rem;
+  color: var(--color-muted);
+}
+
+.team-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.team-card p {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+/* Portfolio Page */
+.portfolio-section {
+  padding: var(--spacing-section) 0;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.portfolio-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.portfolio-card:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-4px);
+}
+
+.portfolio-image {
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.portfolio-image .placeholder-image {
+  width: 100%;
+  height: 100%;
+  background: var(--color-surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+}
+
+.portfolio-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--color-primary-rgb), 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-default);
+}
+
+.portfolio-card:hover .portfolio-overlay {
+  opacity: 1;
+}
+
+.portfolio-info {
+  padding: var(--spacing-md);
+}
+
+.portfolio-info h3 {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.portfolio-info p {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+/* Testimonials Page */
+.testimonials-section {
+  padding: var(--spacing-section) 0;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.testimonial-card {
+  background: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.testimonial-card .stars {
+  color: #fbbf24;
+  margin-bottom: var(--spacing-md);
+  letter-spacing: 2px;
+}
+
+.testimonial-text {
+  color: var(--color-muted);
+  font-style: italic;
+  margin-bottom: var(--spacing-md);
+  line-height: 1.6;
+}
+
+.testimonial-author strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.testimonial-author span {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+/* Content Section */
+.content-section {
+  padding: var(--spacing-section) 0;
+}
+
+.content-wrapper {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.content-wrapper p {
+  color: var(--color-muted);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+/* CTA Variants */
+.cta-primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.cta-primary h2,
+.cta-primary p {
+  color: white;
+}
+
+.cta-primary p {
+  opacity: 0.9;
+}
+
+/* Responsive for new sections */
+@media (max-width: 1024px) {
+  .about-grid,
+  .contact-grid,
+  .highlight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .services-grid,
+  .blog-grid,
+  .portfolio-grid,
+  .testimonials-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .team-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .values-grid,
+  .features-grid.three-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .services-grid,
+  .blog-grid,
+  .portfolio-grid,
+  .testimonials-grid,
+  .team-grid,
+  .values-grid,
+  .features-grid,
+  .features-grid.three-col,
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+  }
 }`
 }
 

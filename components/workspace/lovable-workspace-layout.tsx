@@ -136,7 +136,7 @@ export function LovableWorkspaceLayout({
         try {
           const result = await saveGuestProject({
             name: project.name || 'My Project',
-            description: project.description,
+            description: project.description || undefined,
             platform: (project as any).platform || 'website',
             files: files.map(f => ({
               path: f.path,
@@ -183,7 +183,7 @@ export function LovableWorkspaceLayout({
     try {
       const result = await saveGuestProject({
         name: project.name || 'My Project',
-        description: project.description,
+        description: project.description || undefined,
         platform: (project as any).platform || 'website',
         files: files.map(f => ({
           path: f.path,
