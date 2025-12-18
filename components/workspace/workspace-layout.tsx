@@ -90,6 +90,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
   const [isEditorCollapsed, setIsEditorCollapsed] = useState(true)  // Default: show preview only
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true)  // Default: hide file tree
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(true)  // Default: hide chat panel
+  const [isGenerating, setIsGenerating] = useState(false)  // Track AI file generation
 
   const activeFile = files.find(f => f.id === activeFileId)
 
@@ -224,6 +225,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                     activeFileId={activeFileId}
                     onFileSelect={setActiveFileId}
                     onFilesChange={setFiles}
+                    isGenerating={isGenerating}
                   />
                 </div>
               </ResizablePanel>
@@ -445,6 +447,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                         messages={messages}
                         onMessagesChange={setMessages}
                         onFilesChange={setFiles}
+                        onGeneratingChange={setIsGenerating}
                       />
                     ) : rightView === 'git' ? (
                       <GitPanel

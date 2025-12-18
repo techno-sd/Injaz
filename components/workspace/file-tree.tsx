@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { createFile, deleteFile } from '@/app/actions/files'
-import { ChevronDown, ChevronRight, Plus, Trash, Copy, Edit2, Download } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Trash, Copy, Edit2, Download, Loader2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { File, FileNode } from '@/types'
 import { useToast } from '@/components/ui/use-toast'
@@ -24,17 +24,99 @@ interface FileTreeProps {
   activeFileId: string | null
   onFileSelect: (fileId: string) => void
   onFilesChange: (files: File[]) => void
+  /** Set to true when AI is generating files */
+  isGenerating?: boolean
 }
 
-export function FileTree({ files, projectId, activeFileId, onFileSelect, onFilesChange }: FileTreeProps) {
+export function FileTree({ files, projectId, activeFileId, onFileSelect, onFilesChange, isGenerating = false }: FileTreeProps) {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['/']))
   const [newFileName, setNewFileName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [fileToDelete, setFileToDelete] = useState<string | null>(null)
+  const [recentlyAddedFiles, setRecentlyAddedFiles] = useState<Set<string>>(new Set())
+  const [recentlyModifiedFiles, setRecentlyModifiedFiles] = useState<Set<string>>(new Set())
+  const previousFilesRef = useRef<Map<string, string>>(new Map())
   const { toast } = useToast()
 
   const fileTree = buildFileTree(files)
+
+  // Track newly added and modified files
+  useEffect(() => {
+    const currentFilePaths = new Map(files.map(f => [f.path, f.content]))
+    const previousFiles = previousFilesRef.current
+
+    const newFiles: string[] = []
+    const modifiedFiles: string[] = []
+
+    // Check for new and modified files
+    files.forEach(file => {
+      if (!previousFiles.has(file.path)) {
+        // New file
+        newFiles.push(file.path)
+      } else if (previousFiles.get(file.path) !== file.content) {
+        // Modified file
+        modifiedFiles.push(file.path)
+      }
+    })
+
+    // Update recent files with animation
+    if (newFiles.length > 0) {
+      setRecentlyAddedFiles(prev => {
+        const next = new Set(prev)
+        newFiles.forEach(path => next.add(path))
+        return next
+      })
+
+      // Auto-expand directories containing new files
+      const dirsToExpand = new Set<string>()
+      newFiles.forEach(filePath => {
+        const parts = filePath.split('/')
+        let currentPath = ''
+        parts.slice(0, -1).forEach(part => {
+          currentPath = currentPath ? `${currentPath}/${part}` : part
+          dirsToExpand.add(currentPath)
+        })
+      })
+
+      if (dirsToExpand.size > 0) {
+        setExpandedDirs(prev => {
+          const next = new Set(prev)
+          dirsToExpand.forEach(dir => next.add(dir))
+          return next
+        })
+      }
+
+      // Clear highlight after animation
+      setTimeout(() => {
+        setRecentlyAddedFiles(prev => {
+          const next = new Set(prev)
+          newFiles.forEach(path => next.delete(path))
+          return next
+        })
+      }, 2000)
+    }
+
+    if (modifiedFiles.length > 0) {
+      setRecentlyModifiedFiles(prev => {
+        const next = new Set(prev)
+        modifiedFiles.forEach(path => next.add(path))
+        return next
+      })
+
+      // Clear modified highlight after animation
+      setTimeout(() => {
+        setRecentlyModifiedFiles(prev => {
+          const next = new Set(prev)
+          modifiedFiles.forEach(path => next.delete(path))
+          return next
+        })
+      }, 1500)
+    }
+
+    // Update previous files reference
+    previousFilesRef.current = currentFilePaths
+  }, [files])
 
   async function handleCreateFile() {
     if (!newFileName.trim()) return
@@ -121,13 +203,18 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
     const file = files.find(f => f.path === node.path)
     if (!file) return null
 
+    const isNewFile = recentlyAddedFiles.has(node.path)
+    const isModifiedFile = recentlyModifiedFiles.has(node.path)
+
     return (
       <ContextMenu key={node.path}>
         <ContextMenuTrigger>
           <div
             className={cn(
-              "flex items-center justify-between gap-1.5 px-2 py-1 hover:bg-accent cursor-pointer rounded-sm group transition-colors",
-              activeFileId === file.id && "bg-accent"
+              "flex items-center justify-between gap-1.5 px-2 py-1 hover:bg-accent cursor-pointer rounded-sm group transition-all duration-300",
+              activeFileId === file.id && "bg-accent",
+              isNewFile && "animate-file-appear bg-emerald-500/20 border-l-2 border-emerald-500",
+              isModifiedFile && "animate-file-pulse bg-blue-500/10 border-l-2 border-blue-500"
             )}
             style={{ paddingLeft: `${level * 12 + 24}px` }}
           >
@@ -135,6 +222,9 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
               className="flex items-center gap-1.5 flex-1 min-w-0"
               onClick={() => onFileSelect(file.id)}
             >
+              {isNewFile && (
+                <Sparkles className="h-3 w-3 text-emerald-500 animate-pulse flex-shrink-0" />
+              )}
               {getFileIcon(file.path)}
               <span className="text-sm truncate">{node.name}</span>
             </div>
@@ -212,8 +302,17 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
       {/* Enhanced Header */}
       <div className="border-b glass-card backdrop-blur-sm p-3 flex items-center justify-between shadow-sm">
         <h3 className="font-bold text-sm flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse"></div>
+          {isGenerating ? (
+            <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+          ) : (
+            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse"></div>
+          )}
           Explorer
+          {isGenerating && (
+            <span className="text-xs font-normal text-emerald-500 animate-pulse">
+              Generating...
+            </span>
+          )}
         </h3>
         <Button
           variant="ghost"
@@ -222,6 +321,7 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
           onClick={() => setIsCreating(!isCreating)}
           data-action="new-file"
           title="New File"
+          disabled={isGenerating}
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -232,10 +332,17 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
         <FileSearch files={files} onFileSelect={onFileSelect} />
       </div>
 
-      {/* File Count Badge */}
+      {/* File Count Badge + Generation Status */}
       <div className="px-3 py-2 border-b bg-muted/20">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground font-medium">{files.length} files</span>
+          <span className="text-muted-foreground font-medium">
+            {files.length} files
+            {recentlyAddedFiles.size > 0 && (
+              <span className="ml-2 text-emerald-500 animate-pulse">
+                +{recentlyAddedFiles.size} new
+              </span>
+            )}
+          </span>
           {files.length > 0 && (
             <span className="text-muted-foreground">{expandedDirs.size - 1} folders</span>
           )}

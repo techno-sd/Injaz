@@ -17,9 +17,11 @@ interface ChatPanelProps {
   messages: Message[]
   onMessagesChange: (messages: Message[]) => void
   onFilesChange: (files: File[]) => void
+  /** Called when AI generation starts/stops */
+  onGeneratingChange?: (isGenerating: boolean) => void
 }
 
-export function ChatPanel({ projectId, files, messages, onMessagesChange, onFilesChange }: ChatPanelProps) {
+export function ChatPanel({ projectId, files, messages, onMessagesChange, onFilesChange, onGeneratingChange }: ChatPanelProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
@@ -42,6 +44,11 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Notify parent when generating state changes
+  useEffect(() => {
+    onGeneratingChange?.(isLoading)
+  }, [isLoading, onGeneratingChange])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
