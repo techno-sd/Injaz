@@ -6,8 +6,11 @@ import type {
   AIStreamChunk,
 } from '../types'
 
-// Fallback model for retry logic (configured via env or default)
-const HARD_FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'openai/gpt-4o-mini'
+// Fallback model for retry logic (required - no fallback, must be configured in .env.local)
+if (!process.env.FALLBACK_MODEL) {
+  throw new Error('FALLBACK_MODEL environment variable is required. Set it in .env.local')
+}
+const HARD_FALLBACK_MODEL: string = process.env.FALLBACK_MODEL
 
 // Determine which provider to use based on environment variables
 const useOpenRouter = !!process.env.OPENROUTER_API_KEY

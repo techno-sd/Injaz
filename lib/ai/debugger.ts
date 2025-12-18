@@ -3,8 +3,11 @@ import { OpenAIProvider } from './providers/openai'
 import { parseStackTrace, getErrorContext, type DetectedError } from './error-detector'
 import type { File } from '@/types'
 
-// Model from env (required)
-const DEFAULT_MODEL = process.env.DEFAULT_AI_MODEL || 'deepseek/deepseek-chat-v3-0324'
+// Model from env (required - no fallback, must be configured in .env.local)
+if (!process.env.DEFAULT_AI_MODEL) {
+  throw new Error('DEFAULT_AI_MODEL environment variable is required. Set it in .env.local')
+}
+const DEFAULT_MODEL: string = process.env.DEFAULT_AI_MODEL
 
 export interface DebugContext {
   error: RuntimeError | ConsoleError

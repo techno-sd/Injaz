@@ -10,17 +10,33 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Model from env (required)
-const CONTROLLER_MODEL = process.env.CONTROLLER_MODEL || 'deepseek/deepseek-chat-v3-0324'
+// Model from env (required - no fallback, must be configured in .env.local)
+if (!process.env.CONTROLLER_MODEL) {
+  throw new Error('CONTROLLER_MODEL environment variable is required. Set it in .env.local')
+}
+const CONTROLLER_MODEL: string = process.env.CONTROLLER_MODEL
 
-// Helper to repair truncated JSON by closing unclosed braces/brackets
+// Helper to repair truncated or malformed JSON
 function repairTruncatedJSON(content: string): string {
   let repaired = content.trim()
 
-  // Remove trailing commas before closing braces
+  // Fix common JSON syntax issues
+  // 1. Remove trailing commas before closing braces/brackets
   repaired = repaired.replace(/,(\s*[}\]])/g, '$1')
 
-  // Count open/close braces and brackets
+  // 2. Fix missing commas between properties (e.g., "key": "value" "key2")
+  repaired = repaired.replace(/(")\s*\n\s*(")/g, '$1,\n$2')
+  repaired = repaired.replace(/(})\s*\n\s*(")/g, '$1,\n$2')
+  repaired = repaired.replace(/(])\s*\n\s*(")/g, '$1,\n$2')
+  repaired = repaired.replace(/(")\s+(")/g, '$1, $2')
+
+  // 3. Fix unescaped newlines in strings (common with code content)
+  // This is tricky - we need to escape newlines that are inside strings
+
+  // 4. Remove any control characters except \n, \r, \t
+  repaired = repaired.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+
+  // Count open/close braces and brackets, tracking if we're in a string
   let braceCount = 0
   let bracketCount = 0
   let inString = false
@@ -54,7 +70,23 @@ function repairTruncatedJSON(content: string): string {
 
   // If we're in the middle of a string, close it
   if (inString) {
-    repaired += '"'
+    // Try to find the last complete property and truncate there
+    const lastCompleteProperty = repaired.lastIndexOf('",')
+    if (lastCompleteProperty > repaired.length * 0.8) {
+      // If we're near the end, truncate at the last complete property
+      repaired = repaired.substring(0, lastCompleteProperty + 2)
+      // Recount braces
+      braceCount = 0
+      bracketCount = 0
+      for (let i = 0; i < repaired.length; i++) {
+        if (repaired[i] === '{') braceCount++
+        else if (repaired[i] === '}') braceCount--
+        else if (repaired[i] === '[') bracketCount++
+        else if (repaired[i] === ']') bracketCount--
+      }
+    } else {
+      repaired += '"'
+    }
   }
 
   // Close unclosed brackets first, then braces
@@ -558,9 +590,15 @@ export class Controller {
     existingSchema?: Partial<UnifiedAppSchema>,
     conversationHistory: AIMessage[] = []
   ): AsyncGenerator<{ type: 'planning' | 'schema' | 'complete'; data: any }> {
+    // Emit detailed subtasks for Bolt-style activity log
     yield {
       type: 'planning',
-      data: { phase: 'analyzing', message: 'Analyzing your requirements...' },
+      data: {
+        phase: 'analyzing',
+        message: 'Analyzing requirements',
+        subtask: 'requirements',
+        status: 'running',
+      },
     }
 
     const messages: AIMessage[] = [
@@ -575,6 +613,28 @@ export class Controller {
       })
     }
 
+    // Mark requirements as complete, start platform analysis
+    yield {
+      type: 'planning',
+      data: {
+        phase: 'analyzing',
+        message: 'Setting up platform',
+        subtask: 'requirements',
+        status: 'complete',
+      },
+    }
+
+    yield {
+      type: 'planning',
+      data: {
+        phase: 'analyzing',
+        message: 'Configuring platform',
+        subtask: 'platform',
+        status: 'running',
+        detail: platform,
+      },
+    }
+
     messages.push({
       role: 'system',
       content: `TARGET PLATFORM: ${platform}`,
@@ -585,9 +645,25 @@ export class Controller {
       content: userPrompt,
     })
 
+    // Mark platform as complete, start designing
     yield {
       type: 'planning',
-      data: { phase: 'designing', message: 'Designing application structure...' },
+      data: {
+        phase: 'designing',
+        message: 'Planning architecture',
+        subtask: 'platform',
+        status: 'complete',
+      },
+    }
+
+    yield {
+      type: 'planning',
+      data: {
+        phase: 'designing',
+        message: 'Designing app structure',
+        subtask: 'structure',
+        status: 'running',
+      },
     }
 
     try {
@@ -603,12 +679,105 @@ export class Controller {
       })
 
       let fullContent = ''
+      let lastYieldTime = Date.now()
+      let hasEmittedDesign = false
+      let hasEmittedComponents = false
+      let hasEmittedFeatures = false
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content
         if (content) {
           fullContent += content
+
+          // Emit subtask updates based on content being generated
+          const now = Date.now()
+          if (now - lastYieldTime > 500) {
+            // Check what section is being generated and emit relevant subtasks
+            if (fullContent.includes('"design"') && !hasEmittedDesign) {
+              hasEmittedDesign = true
+              yield {
+                type: 'planning',
+                data: {
+                  phase: 'designing',
+                  message: 'Configuring design system',
+                  subtask: 'structure',
+                  status: 'complete',
+                },
+              }
+              yield {
+                type: 'planning',
+                data: {
+                  phase: 'designing',
+                  message: 'Setting up colors & typography',
+                  subtask: 'design',
+                  status: 'running',
+                },
+              }
+            } else if (fullContent.includes('"components"') && !hasEmittedComponents) {
+              hasEmittedComponents = true
+              yield {
+                type: 'planning',
+                data: {
+                  phase: 'designing',
+                  message: 'Planning components',
+                  subtask: 'design',
+                  status: 'complete',
+                },
+              }
+              yield {
+                type: 'planning',
+                data: {
+                  phase: 'designing',
+                  message: 'Defining UI components',
+                  subtask: 'components',
+                  status: 'running',
+                },
+              }
+            } else if (fullContent.includes('"features"') && !hasEmittedFeatures) {
+              hasEmittedFeatures = true
+              yield {
+                type: 'planning',
+                data: {
+                  phase: 'designing',
+                  message: 'Configuring features',
+                  subtask: 'components',
+                  status: 'complete',
+                },
+              }
+              yield {
+                type: 'planning',
+                data: {
+                  phase: 'designing',
+                  message: 'Setting up app features',
+                  subtask: 'features',
+                  status: 'running',
+                },
+              }
+            }
+            lastYieldTime = now
+          }
         }
+      }
+
+      // Mark all subtasks complete
+      yield {
+        type: 'planning',
+        data: {
+          phase: 'finalizing',
+          message: 'Finalizing schema',
+          subtask: hasEmittedFeatures ? 'features' : hasEmittedComponents ? 'components' : hasEmittedDesign ? 'design' : 'structure',
+          status: 'complete',
+        },
+      }
+
+      yield {
+        type: 'planning',
+        data: {
+          phase: 'finalizing',
+          message: 'Validating configuration',
+          subtask: 'validation',
+          status: 'running',
+        },
       }
 
       // Parse the complete response
@@ -623,6 +792,17 @@ export class Controller {
 
         if (parsed.schema?.meta) {
           parsed.schema.meta.platform = platform
+        }
+
+        // Mark validation complete
+        yield {
+          type: 'planning',
+          data: {
+            phase: 'finalizing',
+            message: 'Schema ready',
+            subtask: 'validation',
+            status: 'complete',
+          },
         }
 
         yield {

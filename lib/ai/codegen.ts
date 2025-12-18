@@ -10,15 +10,39 @@ import type {
 } from '@/types/app-schema'
 import type { AIMessage } from './types'
 
-// Model from env (required)
-const CODEGEN_MODEL = process.env.CODEGEN_MODEL || 'qwen/qwen3-coder:free'
+// Model from env (required - no fallback, must be configured in .env.local)
+if (!process.env.CODEGEN_MODEL) {
+  throw new Error('CODEGEN_MODEL environment variable is required. Set it in .env.local')
+}
+const CODEGEN_MODEL: string = process.env.CODEGEN_MODEL
 
-// Helper to repair truncated JSON by closing unclosed braces/brackets
+// Helper to repair truncated or malformed JSON
 function repairTruncatedJSON(content: string): string {
   let repaired = content.trim()
 
-  // Remove trailing commas before closing braces
+  // Fix common JSON syntax issues
+  // 1. Remove trailing commas before closing braces/brackets
   repaired = repaired.replace(/,(\s*[}\]])/g, '$1')
+
+  // 2. Fix missing commas between properties (e.g., "key": "value" "key2")
+  repaired = repaired.replace(/(")\s*\n\s*(")/g, '$1,\n$2')
+  repaired = repaired.replace(/(})\s*\n\s*(")/g, '$1,\n$2')
+  repaired = repaired.replace(/(])\s*\n\s*(")/g, '$1,\n$2')
+  repaired = repaired.replace(/(")\s+(")/g, '$1, $2')
+
+  // 3. Remove any control characters except \n, \r, \t
+  repaired = repaired.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+
+  // 4. Try to fix unescaped quotes within "content" strings
+  // This is common when AI generates code with quotes inside JSON
+  // Pattern: "content": "...unescaped " quote..."
+  repaired = repaired.replace(
+    /("content"\s*:\s*")([^"]*?)(?<!\\)"(?![\s,}\]])/g,
+    (match, prefix, content) => {
+      // Escape the unescaped quote
+      return prefix + content + '\\"'
+    }
+  )
 
   // Count open/close braces and brackets, tracking if we're in a string
   let braceCount = 0
@@ -54,8 +78,23 @@ function repairTruncatedJSON(content: string): string {
 
   // If we're in the middle of a string, close it
   if (inString) {
-    // Try to find where the string was truncated and add closing quote
-    repaired += '"'
+    // Try to find the last complete property and truncate there
+    const lastCompleteProperty = repaired.lastIndexOf('",')
+    if (lastCompleteProperty > repaired.length * 0.8) {
+      // If we're near the end, truncate at the last complete property
+      repaired = repaired.substring(0, lastCompleteProperty + 2)
+      // Recount braces
+      braceCount = 0
+      bracketCount = 0
+      for (let i = 0; i < repaired.length; i++) {
+        if (repaired[i] === '{') braceCount++
+        else if (repaired[i] === '}') braceCount--
+        else if (repaired[i] === '[') bracketCount++
+        else if (repaired[i] === ']') bracketCount--
+      }
+    } else {
+      repaired += '"'
+    }
   }
 
   // Close unclosed brackets first, then braces
@@ -93,7 +132,17 @@ function extractJSON(content: string): string {
     JSON.parse(cleaned)
     return cleaned
   } catch {
-    // Still not valid, try to find JSON object
+    // Still not valid, try repair immediately
+  }
+
+  // Try repair on cleaned content early
+  try {
+    const repairedCleaned = repairTruncatedJSON(cleaned)
+    JSON.parse(repairedCleaned)
+    console.warn('CodeGen response had syntax errors but was successfully repaired')
+    return repairedCleaned
+  } catch {
+    // Repair failed, continue with other strategies
   }
 
   // Try to find the first complete JSON object using bracket counting
@@ -120,7 +169,15 @@ function extractJSON(content: string): string {
       JSON.parse(extracted)
       return extracted
     } catch {
-      // Not valid JSON
+      // Try repair on extracted
+      try {
+        const repairedExtracted = repairTruncatedJSON(extracted)
+        JSON.parse(repairedExtracted)
+        console.warn('CodeGen response extracted and repaired successfully')
+        return repairedExtracted
+      } catch {
+        // Not valid JSON
+      }
     }
   }
 
@@ -131,11 +188,19 @@ function extractJSON(content: string): string {
       JSON.parse(jsonMatch[0])
       return jsonMatch[0]
     } catch {
-      // Not valid JSON object
+      // Try repair on regex match
+      try {
+        const repairedMatch = repairTruncatedJSON(jsonMatch[0])
+        JSON.parse(repairedMatch)
+        console.warn('CodeGen response regex-matched and repaired successfully')
+        return repairedMatch
+      } catch {
+        // Not valid JSON object
+      }
     }
   }
 
-  // Try to repair truncated JSON
+  // Try to repair truncated JSON (last resort)
   if (startIdx !== -1) {
     const partialJSON = content.slice(startIdx)
     const repaired = repairTruncatedJSON(partialJSON)
@@ -1592,7 +1657,7 @@ export class CodeGen {
     }
     this.config = {
       temperature: config.temperature ?? 0.2, // Low temperature for consistent code
-      maxTokens: config.maxTokens ?? 32768, // Very high token limit for large code generation
+      maxTokens: config.maxTokens ?? 65536, // 64K tokens for Qwen3-Coder large outputs
     }
   }
 
@@ -1649,9 +1714,16 @@ export class CodeGen {
   ): AsyncGenerator<{ type: 'generating' | 'file' | 'complete'; data: any }> {
     const { schema, platform, targetFiles } = input
 
+    // Emit detailed subtasks for Bolt-style activity log
     yield {
       type: 'generating',
-      data: { file: 'Initializing code generation...', progress: 0, total: 100 },
+      data: {
+        message: 'Initializing code generator',
+        subtask: 'init',
+        status: 'running',
+        progress: 0,
+        total: 100,
+      },
     }
 
     const systemPrompt = getCodeGenSystemPrompt(platform)
@@ -1670,7 +1742,22 @@ export class CodeGen {
 
     yield {
       type: 'generating',
-      data: { file: 'Generating application files...', progress: 10, total: 100 },
+      data: {
+        message: 'Preparing file structure',
+        subtask: 'init',
+        status: 'complete',
+      },
+    }
+
+    yield {
+      type: 'generating',
+      data: {
+        message: 'Generating application code',
+        subtask: 'codegen',
+        status: 'running',
+        progress: 10,
+        total: 100,
+      },
     }
 
     try {
@@ -1687,27 +1774,63 @@ export class CodeGen {
 
       let fullContent = ''
       let progress = 10
+      let lastYieldTime = Date.now()
+      let detectedFiles: string[] = []
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content
         if (content) {
           fullContent += content
-          progress = Math.min(90, progress + 0.5)
+          progress = Math.min(90, progress + 0.3)
 
-          // Try to detect file being generated from partial JSON
-          const fileMatch = fullContent.match(/"path":\s*"([^"]+)"[^}]*$/)
-          if (fileMatch) {
-            yield {
-              type: 'generating',
-              data: { file: fileMatch[1], progress: Math.floor(progress), total: 100 },
+          const now = Date.now()
+          // Throttle updates to every 300ms to avoid flooding
+          if (now - lastYieldTime > 300) {
+            // Try to detect file being generated from partial JSON
+            const fileMatches = fullContent.matchAll(/"path":\s*"([^"]+)"/g)
+            const files = [...fileMatches].map(m => m[1])
+
+            // If we found new files, emit updates
+            if (files.length > detectedFiles.length) {
+              const newFile = files[files.length - 1]
+              detectedFiles = files
+
+              yield {
+                type: 'generating',
+                data: {
+                  message: `Writing ${newFile.split('/').pop()}`,
+                  subtask: 'file',
+                  status: 'running',
+                  file: newFile,
+                  filesCount: files.length,
+                  progress: Math.floor(progress),
+                  total: 100,
+                },
+              }
             }
+            lastYieldTime = now
           }
         }
       }
 
       yield {
         type: 'generating',
-        data: { file: 'Finalizing...', progress: 95, total: 100 },
+        data: {
+          message: 'Processing generated code',
+          subtask: 'codegen',
+          status: 'complete',
+        },
+      }
+
+      yield {
+        type: 'generating',
+        data: {
+          message: 'Validating file structure',
+          subtask: 'validate',
+          status: 'running',
+          progress: 95,
+          total: 100,
+        },
       }
 
       // Parse the complete response
@@ -1718,6 +1841,27 @@ export class CodeGen {
         if (!parsed.files || !Array.isArray(parsed.files)) {
           console.error('Invalid CodeGen response structure:', parsed)
           throw new Error('CodeGen did not return files array')
+        }
+
+        // Mark validation complete
+        yield {
+          type: 'generating',
+          data: {
+            message: 'Files validated',
+            subtask: 'validate',
+            status: 'complete',
+          },
+        }
+
+        yield {
+          type: 'generating',
+          data: {
+            message: 'Writing files to project',
+            subtask: 'write',
+            status: 'running',
+            progress: 98,
+            total: 100,
+          },
         }
 
         // Yield each file
@@ -1733,6 +1877,15 @@ export class CodeGen {
               total: parsed.files.length,
             },
           }
+        }
+
+        yield {
+          type: 'generating',
+          data: {
+            message: 'All files created',
+            subtask: 'write',
+            status: 'complete',
+          },
         }
 
         yield {

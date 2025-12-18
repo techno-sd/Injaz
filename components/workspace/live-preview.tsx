@@ -11,7 +11,6 @@ import {
   ExternalLink,
   Zap,
   AlertCircle,
-  Terminal,
   X,
   Maximize2,
   Minimize2,
@@ -32,13 +31,6 @@ import type { File, PlatformType } from '@/types'
 import type { DebugResult, CodeFix } from '@/lib/ai/debugger'
 
 type DeviceMode = 'desktop' | 'tablet' | 'mobile'
-type ConsoleLogType = 'log' | 'warn' | 'error' | 'info'
-
-interface ConsoleEntry {
-  type: ConsoleLogType
-  message: string
-  timestamp: number
-}
 
 interface RuntimeError {
   message: string
@@ -94,8 +86,6 @@ export function LivePreview({
   const [isHotReloading, setIsHotReloading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [previewKey, setPreviewKey] = useState(0)
-  const [showConsole, setShowConsole] = useState(false)
-  const [consoleLogs, setConsoleLogs] = useState<ConsoleEntry[]>([])
   const [runtimeError, setRuntimeError] = useState<RuntimeError | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now())
@@ -320,13 +310,6 @@ export function LivePreview({
       if (!event.data || typeof event.data !== 'object') return
 
       switch (event.data.type) {
-        case 'live-preview-console':
-          setConsoleLogs(prev => [...prev.slice(-99), {
-            type: event.data.logType,
-            message: event.data.message,
-            timestamp: event.data.timestamp
-          }])
-          break
         case 'live-preview-error':
           setRuntimeError(event.data.error)
           onError?.(event.data.error)
@@ -389,7 +372,6 @@ export function LivePreview({
   const handleRefresh = () => {
     setIsLoading(true)
     setRuntimeError(null)
-    setConsoleLogs([])
     previousContentRef.current = ''
     updatePreview()
   }
@@ -403,9 +385,6 @@ export function LivePreview({
   const clearError = () => {
     setRuntimeError(null)
   }
-
-  const errorCount = consoleLogs.filter(l => l.type === 'error').length
-  const warnCount = consoleLogs.filter(l => l.type === 'warn').length
 
   return (
     <div className={cn("h-full flex flex-col bg-[#0d0d12]", className)}>
@@ -485,32 +464,6 @@ export function LivePreview({
 
         {/* Right - Actions */}
         <div className="flex items-center gap-1">
-          {/* Console Toggle */}
-          <button
-            onClick={() => setShowConsole(!showConsole)}
-            className={cn(
-              'relative p-1.5 rounded-md transition-all duration-200',
-              showConsole
-                ? 'bg-white/[0.1] text-white'
-                : 'text-white/40 hover:text-white/70'
-            )}
-            title="Toggle Console"
-          >
-            <Terminal className="h-3.5 w-3.5" />
-            {(errorCount > 0 || warnCount > 0) && (
-              <span className={cn(
-                'absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[9px] font-bold rounded-full flex items-center justify-center',
-                errorCount > 0
-                  ? 'bg-red-500 text-white'
-                  : 'bg-amber-500 text-black'
-              )}>
-                {errorCount || warnCount}
-              </span>
-            )}
-          </button>
-
-          <div className="h-4 w-px bg-white/[0.08] mx-1" />
-
           <Button
             variant="ghost"
             size="icon"
@@ -549,10 +502,7 @@ export function LivePreview({
 
       {/* Preview Content */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        <div className={cn(
-          "flex-1 overflow-hidden p-4",
-          showConsole && "pb-2"
-        )}>
+        <div className="flex-1 overflow-hidden p-4">
           <div className="h-full flex items-center justify-center">
             <div
               className={cn(
@@ -816,67 +766,6 @@ export function LivePreview({
           </div>
         </div>
 
-        {/* Console Panel */}
-        {showConsole && (
-          <div className="h-48 border-t border-white/[0.06] bg-[#0a0a0f] flex flex-col">
-            <div className="h-8 border-b border-white/[0.06] flex items-center justify-between px-3">
-              <div className="flex items-center gap-2">
-                <Terminal className="h-3.5 w-3.5 text-white/50" />
-                <span className="text-xs font-medium text-white/70">Console</span>
-                {consoleLogs.length > 0 && (
-                  <span className="text-xs text-white/40">
-                    ({consoleLogs.length} entries)
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {errorCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-red-400">
-                    <AlertCircle className="h-3 w-3" />
-                    {errorCount}
-                  </span>
-                )}
-                {warnCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-amber-400">
-                    <AlertTriangle className="h-3 w-3" />
-                    {warnCount}
-                  </span>
-                )}
-                <button
-                  onClick={() => setConsoleLogs([])}
-                  className="text-xs text-white/40 hover:text-white/70 transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1">
-              {consoleLogs.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-white/30">
-                  <p>No console output yet</p>
-                </div>
-              ) : (
-                consoleLogs.map((entry, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex items-start gap-2 px-2 py-1 rounded",
-                      entry.type === 'error' && "bg-red-500/10 text-red-400",
-                      entry.type === 'warn' && "bg-amber-500/10 text-amber-400",
-                      entry.type === 'info' && "bg-blue-500/10 text-blue-400",
-                      entry.type === 'log' && "text-white/70"
-                    )}
-                  >
-                    <span className="text-white/30 flex-shrink-0 w-16">
-                      {new Date(entry.timestamp).toLocaleTimeString()}
-                    </span>
-                    <span className="break-all whitespace-pre-wrap">{entry.message}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

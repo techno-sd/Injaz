@@ -23,7 +23,6 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Terminal,
   Github,
   RefreshCw,
   Loader2,
@@ -80,7 +79,7 @@ function getFileIcon(path: string) {
 }
 
 // View modes for the main content area
-type ViewMode = 'preview' | 'code' | 'split' | 'terminal'
+type ViewMode = 'preview' | 'code' | 'split'
 
 // Mobile view tabs
 type MobileView = 'chat' | 'code' | 'preview'
@@ -426,24 +425,6 @@ export function LovableWorkspaceLayout({
               <TooltipContent>Split View</TooltipContent>
             </Tooltip>
 
-            <div className="w-px h-5 bg-border mx-1" />
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setViewMode('terminal')}
-                  className={cn(
-                    'p-2 rounded-md transition-all',
-                    viewMode === 'terminal'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-                  )}
-                >
-                  <Terminal className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Terminal</TooltipContent>
-            </Tooltip>
           </div>
 
           {/* Right - Actions */}
@@ -768,19 +749,6 @@ export function LovableWorkspaceLayout({
                 </div>
               )}
 
-              {viewMode === 'terminal' && (
-                <div className="h-full flex flex-col bg-[#0d0d12]">
-                  <div className="h-10 border-b border-white/[0.06] flex items-center px-4 bg-white/[0.02]">
-                    <Terminal className="h-4 w-4 text-white/50 mr-2" />
-                    <span className="text-sm text-white/70">Terminal</span>
-                  </div>
-                  <div className="flex-1 p-4 font-mono text-sm text-white/70">
-                    <p className="text-green-400">$ npm run dev</p>
-                    <p className="text-white/50 mt-2">Starting development server...</p>
-                    <p className="text-cyan-400 mt-1">Ready on http://localhost:3000</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
