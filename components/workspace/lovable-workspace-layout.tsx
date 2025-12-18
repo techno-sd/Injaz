@@ -22,6 +22,7 @@ import {
   Eye,
   MessageSquare,
   ChevronLeft,
+  ChevronRight,
   Terminal,
   Github,
   RefreshCw,
@@ -30,6 +31,8 @@ import {
   Save,
   AlertTriangle,
   LogIn,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { saveGuestProject, checkAuth } from '@/app/actions/projects'
@@ -99,11 +102,12 @@ export function LovableWorkspaceLayout({
     initialFiles.length > 0 ? [initialFiles[0].id] : []
   )
   const [showFileDrawer, setShowFileDrawer] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('split')
+  const [viewMode, setViewMode] = useState<ViewMode>('preview')
   const [mobileView, setMobileView] = useState<MobileView>('chat')
   const [isMobile, setIsMobile] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [showChatPanel, setShowChatPanel] = useState(true)
 
   // Check if this is a temporary/unsaved project
   const isTemporaryProject = project.id.startsWith('new-') || project.id === 'demo' || project.id === 'new'
@@ -515,15 +519,72 @@ export function LovableWorkspaceLayout({
         <div className="flex-1 flex overflow-hidden pb-16 md:pb-0">
           {/* Desktop Layout */}
           <div className="hidden md:flex flex-1">
-            {/* AI Chat Panel - Bolt Style */}
-            <div className="w-[420px] border-r border-white/[0.06] flex flex-col bg-[#0a0a0f]">
-              <AIChatbot
-                projectId={project.id}
-                files={files}
-                onFilesChange={handleFilesChange}
-                platform={(project as any).platform || 'webapp'}
-              />
-            </div>
+            {/* AI Chat Panel - Collapsible */}
+            {showChatPanel ? (
+              <div className="w-[420px] border-r border-white/[0.06] flex flex-col bg-[#0a0a0f] relative">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7 z-10 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                      onClick={() => setShowChatPanel(false)}
+                    >
+                      <PanelLeftClose className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Hide Chat</TooltipContent>
+                </Tooltip>
+                <AIChatbot
+                  projectId={project.id}
+                  files={files}
+                  onFilesChange={handleFilesChange}
+                  platform={(project as any).platform || 'webapp'}
+                />
+              </div>
+            ) : (
+              <div className="w-12 border-r border-white/[0.06] flex flex-col items-center py-3 gap-2 bg-[#0a0a0f]">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-white/50 hover:text-purple-400 hover:bg-purple-500/10"
+                      onClick={() => setShowChatPanel(true)}
+                    >
+                      <PanelLeftOpen className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Show Chat</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-white/50 hover:text-purple-400 hover:bg-purple-500/10"
+                      onClick={() => setShowChatPanel(true)}
+                    >
+                      <MessageSquare className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">AI Chat</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-white/50 hover:text-purple-400 hover:bg-purple-500/10"
+                      onClick={() => setShowChatPanel(true)}
+                    >
+                      <Sparkles className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Ask AI</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
 
             {/* Main Content Area - Code + Preview */}
             <div className="flex-1 flex flex-col">
@@ -532,141 +593,179 @@ export function LovableWorkspaceLayout({
               )}
 
               {viewMode === 'code' && (
-                <div className="h-full flex flex-col bg-[#0d0d12]">
-                  {/* File Tabs */}
-                  <div className="h-10 border-b border-white/[0.06] flex items-center gap-1 px-2 bg-white/[0.02]">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]"
-                      onClick={() => setShowFileDrawer(true)}
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                    </Button>
-                    <div className="h-4 w-px bg-white/[0.08] mx-1" />
-                    <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-                      {openTabs.map((tabId) => {
-                        const file = files.find(f => f.id === tabId)
-                        if (!file) return null
-                        return (
-                          <button
-                            key={tabId}
-                            onClick={() => setActiveFileId(tabId)}
-                            className={cn(
-                              'flex items-center gap-2 px-3 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
-                              activeFileId === tabId
-                                ? 'bg-white/[0.08] text-white'
-                                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                            )}
-                          >
-                            {getFileIcon(file.path)}
-                            <span>{file.path.split('/').pop()}</span>
-                            <X
-                              className="h-3 w-3 opacity-50 hover:opacity-100"
-                              onClick={(e) => handleCloseTab(tabId, e)}
-                            />
-                          </button>
-                        )
-                      })}
+                <div className="h-full flex bg-[#0d0d12]">
+                  {/* File Tree Sidebar */}
+                  <div className="w-56 border-r border-white/[0.06] flex flex-col bg-[#0a0a0f]">
+                    <div className="h-10 border-b border-white/[0.06] flex items-center px-3 bg-white/[0.02]">
+                      <FolderOpen className="h-4 w-4 text-purple-400 mr-2" />
+                      <span className="text-sm font-medium text-white/80">Files</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]">
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                      {files.map((file) => (
+                        <button
+                          key={file.id}
+                          onClick={() => handleFileSelect(file.id)}
+                          className={cn(
+                            'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                            activeFileId === file.id
+                              ? 'bg-purple-500/15 text-purple-300'
+                              : 'text-white/60 hover:bg-white/[0.04] hover:text-white/80'
+                          )}
+                        >
+                          {getFileIcon(file.path)}
+                          <span className="truncate">{file.path}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Editor */}
-                  <div className="flex-1 overflow-hidden">
-                    {activeFile ? (
-                      <CodeEditor
-                        file={activeFile}
-                        projectId={project.id}
-                        onFileUpdate={handleFileUpdate}
-                      />
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-white/40">
-                        <div className="text-center">
-                          <FileCode className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                          <p>Select a file to edit</p>
-                        </div>
+                  {/* Code Editor Area */}
+                  <div className="flex-1 flex flex-col">
+                    {/* File Tabs */}
+                    <div className="h-10 border-b border-white/[0.06] flex items-center gap-1 px-2 bg-white/[0.02]">
+                      <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                        {openTabs.map((tabId) => {
+                          const file = files.find(f => f.id === tabId)
+                          if (!file) return null
+                          return (
+                            <button
+                              key={tabId}
+                              onClick={() => setActiveFileId(tabId)}
+                              className={cn(
+                                'flex items-center gap-2 px-3 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
+                                activeFileId === tabId
+                                  ? 'bg-white/[0.08] text-white'
+                                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                              )}
+                            >
+                              {getFileIcon(file.path)}
+                              <span>{file.path.split('/').pop()}</span>
+                              <X
+                                className="h-3 w-3 opacity-50 hover:opacity-100"
+                                onClick={(e) => handleCloseTab(tabId, e)}
+                              />
+                            </button>
+                          )
+                        })}
                       </div>
-                    )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Editor */}
+                    <div className="flex-1 overflow-hidden">
+                      {activeFile ? (
+                        <CodeEditor
+                          file={activeFile}
+                          projectId={project.id}
+                          onFileUpdate={handleFileUpdate}
+                        />
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-white/40">
+                          <div className="text-center">
+                            <FileCode className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                            <p>Select a file to edit</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
 
               {viewMode === 'split' && (
-                <ResizablePanelGroup direction="horizontal" className="flex-1">
-                  {/* Code Panel */}
-                  <ResizablePanel defaultSize={50} minSize={30}>
-                    <div className="h-full flex flex-col bg-[#0d0d12]">
-                      {/* File Tabs */}
-                      <div className="h-10 border-b border-white/[0.06] flex items-center gap-1 px-2 bg-white/[0.02]">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]"
-                          onClick={() => setShowFileDrawer(true)}
-                        >
-                          <FolderOpen className="h-4 w-4" />
-                        </Button>
-                        <div className="h-4 w-px bg-white/[0.08] mx-1" />
-                        <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-                          {openTabs.map((tabId) => {
-                            const file = files.find(f => f.id === tabId)
-                            if (!file) return null
-                            return (
-                              <button
-                                key={tabId}
-                                onClick={() => setActiveFileId(tabId)}
-                                className={cn(
-                                  'flex items-center gap-2 px-3 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
-                                  activeFileId === tabId
-                                    ? 'bg-white/[0.08] text-white'
-                                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                                )}
-                              >
-                                {getFileIcon(file.path)}
-                                <span>{file.path.split('/').pop()}</span>
-                                <X
-                                  className="h-3 w-3 opacity-50 hover:opacity-100"
-                                  onClick={(e) => handleCloseTab(tabId, e)}
-                                />
-                              </button>
-                            )
-                          })}
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Editor */}
-                      <div className="flex-1 overflow-hidden">
-                        {activeFile ? (
-                          <CodeEditor
-                            file={activeFile}
-                            projectId={project.id}
-                            onFileUpdate={handleFileUpdate}
-                          />
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-white/40">
-                            <div className="text-center">
-                              <FileCode className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                              <p>Select a file to edit</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                <div className="h-full flex bg-[#0d0d12]">
+                  {/* File Tree Sidebar */}
+                  <div className="w-48 border-r border-white/[0.06] flex flex-col bg-[#0a0a0f]">
+                    <div className="h-10 border-b border-white/[0.06] flex items-center px-3 bg-white/[0.02]">
+                      <FolderOpen className="h-4 w-4 text-purple-400 mr-2" />
+                      <span className="text-sm font-medium text-white/80">Files</span>
                     </div>
-                  </ResizablePanel>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                      {files.map((file) => (
+                        <button
+                          key={file.id}
+                          onClick={() => handleFileSelect(file.id)}
+                          className={cn(
+                            'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                            activeFileId === file.id
+                              ? 'bg-purple-500/15 text-purple-300'
+                              : 'text-white/60 hover:bg-white/[0.04] hover:text-white/80'
+                          )}
+                        >
+                          {getFileIcon(file.path)}
+                          <span className="truncate">{file.path}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                  <ResizableHandle className="w-px bg-white/[0.06] hover:bg-purple-500/50 transition-colors" />
+                  {/* Code + Preview Resizable */}
+                  <ResizablePanelGroup direction="horizontal" className="flex-1">
+                    {/* Code Panel */}
+                    <ResizablePanel defaultSize={50} minSize={25}>
+                      <div className="h-full flex flex-col">
+                        {/* File Tabs */}
+                        <div className="h-10 border-b border-white/[0.06] flex items-center gap-1 px-2 bg-white/[0.02]">
+                          <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                            {openTabs.map((tabId) => {
+                              const file = files.find(f => f.id === tabId)
+                              if (!file) return null
+                              return (
+                                <button
+                                  key={tabId}
+                                  onClick={() => setActiveFileId(tabId)}
+                                  className={cn(
+                                    'flex items-center gap-2 px-3 h-7 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
+                                    activeFileId === tabId
+                                      ? 'bg-white/[0.08] text-white'
+                                      : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                                  )}
+                                >
+                                  {getFileIcon(file.path)}
+                                  <span>{file.path.split('/').pop()}</span>
+                                  <X
+                                    className="h-3 w-3 opacity-50 hover:opacity-100"
+                                    onClick={(e) => handleCloseTab(tabId, e)}
+                                  />
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06]">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
 
-                  {/* Preview Panel */}
-                  <ResizablePanel defaultSize={50} minSize={30}>
-                    <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+                        {/* Editor */}
+                        <div className="flex-1 overflow-hidden">
+                          {activeFile ? (
+                            <CodeEditor
+                              file={activeFile}
+                              projectId={project.id}
+                              onFileUpdate={handleFileUpdate}
+                            />
+                          ) : (
+                            <div className="h-full flex items-center justify-center text-white/40">
+                              <div className="text-center">
+                                <FileCode className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                                <p>Select a file to edit</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </ResizablePanel>
+
+                    <ResizableHandle className="w-px bg-white/[0.06] hover:bg-purple-500/50 transition-colors" />
+
+                    {/* Preview Panel */}
+                    <ResizablePanel defaultSize={50} minSize={25}>
+                      <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                </div>
               )}
 
               {viewMode === 'terminal' && (

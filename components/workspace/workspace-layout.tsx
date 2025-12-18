@@ -17,6 +17,8 @@ import {
   Code2,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   ChevronUp,
   ChevronDown,
 } from 'lucide-react'
@@ -85,8 +87,9 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
   const [rightView, setRightView] = useState<'chat' | 'git' | 'deploy'>('chat')
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [fileSearchOpen, setFileSearchOpen] = useState(false)
-  const [isEditorCollapsed, setIsEditorCollapsed] = useState(false)
-  const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false)
+  const [isEditorCollapsed, setIsEditorCollapsed] = useState(true)  // Default: show preview only
+  const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true)  // Default: hide file tree
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(true)  // Default: hide chat panel
 
   const activeFile = files.find(f => f.id === activeFileId)
 
@@ -133,11 +136,16 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
         e.preventDefault()
         setIsFileTreeCollapsed(!isFileTreeCollapsed)
       }
+      // Toggle right panel (chat) - Ctrl/Cmd+J
+      if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+        e.preventDefault()
+        setIsRightPanelCollapsed(!isRightPanelCollapsed)
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [bottomView, isEditorCollapsed, isFileTreeCollapsed])
+  }, [bottomView, isEditorCollapsed, isFileTreeCollapsed, isRightPanelCollapsed])
 
   const handleCommandAction = (action: string) => {
     switch (action) {
@@ -161,6 +169,9 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
         break
       case 'toggle-sidebar':
         setIsFileTreeCollapsed(!isFileTreeCollapsed)
+        break
+      case 'toggle-chat':
+        setIsRightPanelCollapsed(!isRightPanelCollapsed)
         break
       case 'settings':
         window.location.href = '/settings'
@@ -363,80 +374,165 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
             </ResizablePanelGroup>
           </ResizablePanel>
 
-          <ResizableHandle className="w-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
-
           {/* Right Sidebar - AI Chat / Git Panel / Deploy */}
-          <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
-            <div className="h-full flex flex-col bg-white">
-              {/* Tabs */}
-              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 border-b border-gray-100">
-                <Button
-                  variant={rightView === 'chat' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setRightView('chat')}
-                  className={rightView === 'chat'
-                    ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
-                    : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
-                  }
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  AI Chat
-                </Button>
-                <Button
-                  variant={rightView === 'git' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setRightView('git')}
-                  className={rightView === 'git'
-                    ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
-                    : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
-                  }
-                >
-                  <GitBranch className="h-4 w-4 mr-2" />
-                  Git
-                </Button>
-                <Button
-                  variant={rightView === 'deploy' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setRightView('deploy')}
-                  className={rightView === 'deploy'
-                    ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
-                    : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
-                  }
-                >
-                  <Rocket className="h-4 w-4 mr-2" />
-                  Deploy
-                </Button>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-hidden">
-                {rightView === 'chat' ? (
-                  <ChatPanel
-                    projectId={project.id}
-                    files={files}
-                    messages={messages}
-                    onMessagesChange={setMessages}
-                    onFilesChange={setFiles}
-                  />
-                ) : rightView === 'git' ? (
-                  <GitPanel
-                    project={project}
-                    files={files}
-                    onRefresh={() => {
-                      window.location.reload()
-                    }}
-                  />
-                ) : (
-                  <div className="h-full overflow-auto p-4">
-                    <DeploymentPanel
-                      project={project}
-                      isVercelConnected={isVercelConnected}
-                    />
+          {!isRightPanelCollapsed && (
+            <>
+              <ResizableHandle className="w-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
+              <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
+                <div className="h-full flex flex-col bg-white">
+                  {/* Tabs */}
+                  <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 border-b border-gray-100">
+                    <Button
+                      variant={rightView === 'chat' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setRightView('chat')}
+                      className={rightView === 'chat'
+                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                      }
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      AI Chat
+                    </Button>
+                    <Button
+                      variant={rightView === 'git' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setRightView('git')}
+                      className={rightView === 'git'
+                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                      }
+                    >
+                      <GitBranch className="h-4 w-4 mr-2" />
+                      Git
+                    </Button>
+                    <Button
+                      variant={rightView === 'deploy' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setRightView('deploy')}
+                      className={rightView === 'deploy'
+                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
+                      }
+                    >
+                      <Rocket className="h-4 w-4 mr-2" />
+                      Deploy
+                    </Button>
+                    <div className="flex-1"></div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                          onClick={() => setIsRightPanelCollapsed(true)}
+                        >
+                          <PanelRightClose className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">
+                        <p>Hide panel (Ctrl+J)</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
-                )}
-              </div>
+
+                  {/* Content */}
+                  <div className="flex-1 overflow-hidden">
+                    {rightView === 'chat' ? (
+                      <ChatPanel
+                        projectId={project.id}
+                        files={files}
+                        messages={messages}
+                        onMessagesChange={setMessages}
+                        onFilesChange={setFiles}
+                      />
+                    ) : rightView === 'git' ? (
+                      <GitPanel
+                        project={project}
+                        files={files}
+                        onRefresh={() => {
+                          window.location.reload()
+                        }}
+                      />
+                    ) : (
+                      <div className="h-full overflow-auto p-4">
+                        <DeploymentPanel
+                          project={project}
+                          isVercelConnected={isVercelConnected}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ResizablePanel>
+            </>
+          )}
+
+          {/* Collapsed Right Panel Toggle */}
+          {isRightPanelCollapsed && (
+            <div className="w-12 bg-white border-l border-gray-200 flex flex-col items-center py-3 gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    onClick={() => setIsRightPanelCollapsed(false)}
+                  >
+                    <PanelRightOpen className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Show panel (Ctrl+J)</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    onClick={() => { setIsRightPanelCollapsed(false); setRightView('chat'); }}
+                  >
+                    <MessageSquare className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>AI Chat</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    onClick={() => { setIsRightPanelCollapsed(false); setRightView('git'); }}
+                  >
+                    <GitBranch className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Git</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    onClick={() => { setIsRightPanelCollapsed(false); setRightView('deploy'); }}
+                  >
+                    <Rocket className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Deploy</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
-          </ResizablePanel>
+          )}
         </ResizablePanelGroup>
       </div>
     </TooltipProvider>
