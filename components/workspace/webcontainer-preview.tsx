@@ -984,11 +984,31 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
         )}
 
         {!previewUrl && !showTerminal && (
-          <div className="flex flex-col items-center justify-center text-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center">
-              <Monitor className="h-6 w-6 text-muted-foreground/40" />
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+            {/* Subtle animated background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-violet-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
             </div>
-            <p className="text-sm text-muted-foreground/60">Your preview will appear here</p>
+
+            {/* Content */}
+            <div className="relative z-10 text-center px-6">
+              <div className="relative inline-flex items-center justify-center mb-5">
+                <div className="absolute w-16 h-16 rounded-2xl bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
+                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.08] flex items-center justify-center backdrop-blur-sm">
+                  <Monitor className="h-5 w-5 text-muted-foreground/40" />
+                </div>
+              </div>
+
+              <h3 className="text-base font-medium text-muted-foreground/70 mb-1.5">Your preview will appear here</h3>
+              <p className="text-xs text-muted-foreground/40 max-w-[200px] mx-auto">Start a conversation with AI to build your application</p>
+
+              <div className="flex items-center justify-center gap-1 mt-4">
+                <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
+                <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
+              </div>
+            </div>
           </div>
         )}
       </div>
