@@ -77,7 +77,6 @@ const CATEGORY_ICONS: Record<string, typeof Briefcase> = {
 const PLATFORM_ICONS: Record<PlatformType, typeof Globe> = {
   website: Globe,
   webapp: AppWindow,
-  mobile: Smartphone,
 }
 
 export function CreateProjectDialog({ variant, size, className }: CreateProjectDialogProps) {

@@ -49,7 +49,6 @@ interface SimplePreviewProps {
 const PLATFORM_COLORS: Record<PlatformType, string> = {
   website: 'text-emerald-400',
   webapp: 'text-violet-400',
-  mobile: 'text-cyan-400',
 }
 
 export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps) {
@@ -105,20 +104,8 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
     setScale(Math.round(newScale * 100) / 100)
   }, [width, height, setScale])
 
-  // Set initial mode based on platform
-  useEffect(() => {
-    if (platform === 'mobile') {
-      setMode('mobile')
-    }
-  }, [platform, setMode])
-
   // Build the HTML content from files
   const htmlContent = useMemo(() => {
-    // For mobile apps, show a placeholder with Expo instructions
-    if (platform === 'mobile') {
-      return generateMobilePreview(files)
-    }
-
     // Find index.html
     const indexHtml = files.find(f => f.path === 'index.html' || f.path.endsWith('/index.html'))
     if (!indexHtml) {
@@ -187,7 +174,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
     window.open(previewUrl, '_blank')
   }
 
-  const PlatformIcon = platform === 'website' ? Globe : platform === 'mobile' ? Smartphone : AppWindow
+  const PlatformIcon = platform === 'website' ? Globe : AppWindow
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -206,11 +193,10 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
                 className={cn(
                   'h-5 text-[10px] border',
                   platform === 'website' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                  platform === 'webapp' && 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-                  platform === 'mobile' && 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                  platform === 'webapp' && 'bg-violet-500/10 text-violet-400 border-violet-500/20'
                 )}
               >
-                {platform === 'website' ? 'Static' : platform === 'webapp' ? 'Next.js' : 'Expo'}
+                {platform === 'website' ? 'Static' : 'Vite + React'}
               </Badge>
             </div>
 
@@ -312,22 +298,6 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
               )}
             </Button>
 
-            {/* QR Code Button (for mobile) */}
-            {platform === 'mobile' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  'h-7 w-7 hover:bg-white/[0.06]',
-                  showQRCode ? 'text-cyan-400' : 'text-white/60 hover:text-white'
-                )}
-                onClick={() => setShowQRCode(!showQRCode)}
-                title="Show QR Code"
-              >
-                <QrCode className="h-3.5 w-3.5" />
-              </Button>
-            )}
-
             <Button
               variant="ghost"
               size="icon"
@@ -400,30 +370,6 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
             <div className="relative w-full h-full">
               {/* Grid Overlay */}
               <GridOverlay show={showGrid} showRulers={showRulers} />
-
-              {/* QR Code Overlay */}
-              {showQRCode && platform === 'mobile' && (
-                <div className="absolute inset-0 bg-white flex flex-col items-center justify-center z-30 p-6">
-                  <div className="h-48 w-48 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                    <div className="text-center p-4">
-                      <QrCode className="h-24 w-24 text-gray-400 mx-auto mb-2" />
-                      <p className="text-xs text-gray-500">QR code will appear when running Expo</p>
-                    </div>
-                  </div>
-                  <p className="text-sm font-medium text-gray-800 mb-1">Scan with Expo Go</p>
-                  <p className="text-xs text-gray-500 text-center max-w-[200px]">
-                    Install Expo Go on your device and scan this code to preview your app
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => setShowQRCode(false)}
-                  >
-                    Close
-                  </Button>
-                </div>
-              )}
 
               {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
@@ -785,7 +731,7 @@ function generateEmptyPreview(platform: PlatformType): string {
     </head>
     <body>
       <div class="container">
-        <div class="icon">${platform === 'website' ? '🌐' : platform === 'mobile' ? '📱' : '⚡'}</div>
+        <div class="icon">${platform === 'website' ? '🌐' : '⚡'}</div>
         <h2>No preview available</h2>
         <p>Start building your ${platform} and the preview will appear here automatically.</p>
       </div>

@@ -12,39 +12,48 @@ export const controllerEnhancements = {
   // Platform-specific guidance
   platforms: {
     website: `
-WEBSITE BEST PRACTICES (2024-2025):
-- Use semantic HTML5 elements (header, nav, main, section, article, footer)
-- Implement smooth scroll animations with Intersection Observer
-- Include skip-to-content link for accessibility
-- Use picture element with WebP + fallback for images
-- Implement lazy loading for below-fold content
-- Add Open Graph meta tags for social sharing
-- Include structured data (JSON-LD) for SEO
-- Use CSS custom properties for theming
-- Implement dark mode with prefers-color-scheme
-- Add print styles for content pages
+VITE + REACT MARKETING WEBSITE BEST PRACTICES (2024-2025):
+- Use Vite + React 18 with TypeScript for all pages
+- React Router v6 for client-side navigation
+- React Helmet or document.title for SEO meta tags
+- Lazy loading with React.lazy() and Suspense
+- Tailwind CSS for styling (no custom CSS)
+- shadcn/ui components for UI elements
+
+TECHNICAL ARCHITECTURE:
+- src/main.tsx: Entry point with BrowserRouter
+- src/App.tsx: Routes configuration
+- src/pages/Index.tsx: Home page with all sections
+- src/index.css: Tailwind directives + custom utilities
+- src/components/sections/: Hero, Features, Testimonials, CTA, Footer
+- src/components/ui/: Button, Card, Badge (shadcn/ui pattern)
+- src/lib/utils.ts: cn() helper for class merging
+
+SEO & PERFORMANCE:
+- React Helmet for meta tags
+- Semantic HTML: header, main, section, article, footer
+- Skip-to-content link for accessibility
+- Proper heading hierarchy (single h1 per page)
+- Image optimization with lazy loading
 
 MODERN DESIGN PATTERNS:
 - Hero sections with gradient backgrounds or split layouts
 - Bento grid layouts for features
 - Glassmorphism cards with backdrop-blur
-- Floating navigation bars
-- Scroll-triggered animations
+- Floating navigation bars with scroll effects
+- Scroll-triggered animations (Framer Motion or CSS)
 - Magnetic buttons and hover effects
 - 3D transforms for depth
+- Dark mode support with Tailwind dark: variants
 `,
     webapp: `
-NEXT.JS 14+ BEST PRACTICES:
-- Use App Router with Server Components by default
-- Mark interactive components with 'use client'
-- Implement Server Actions for form handling
-- Use next/image for automatic optimization
-- Implement streaming with loading.tsx and Suspense
-- Use generateMetadata for dynamic SEO
-- Implement middleware for auth redirects
-- Use Route Handlers for API endpoints
-- Implement parallel and intercepting routes where appropriate
-- Use next/font for optimal font loading
+VITE + REACT 18 BEST PRACTICES (2024-2025):
+- Use Vite as build tool for fast HMR and builds
+- React 18 with TypeScript strict mode
+- React Router v6 for all navigation
+- TanStack Query (React Query) for data fetching
+- Zustand or React Context for state management
+- Tailwind CSS + shadcn/ui for styling
 
 MODERN WEB APP PATTERNS:
 - Command menu (Cmd+K) for power users
@@ -64,35 +73,6 @@ SHADCN/UI COMPONENTS TO USE:
 - Table, Tabs, Accordion, Command
 - Avatar, Badge, Toast, Skeleton
 - NavigationMenu, Breadcrumb, Pagination
-`,
-    mobile: `
-EXPO/REACT NATIVE BEST PRACTICES:
-- Use Expo Router for file-based navigation
-- Implement proper TypeScript types
-- Use expo-image for optimized image loading
-- Implement haptic feedback with expo-haptics
-- Use SafeAreaView for notch handling
-- Implement KeyboardAvoidingView for forms
-- Use FlatList instead of ScrollView for lists
-- Implement pull-to-refresh
-- Use React.memo for performance
-- Store sensitive data with expo-secure-store
-
-MODERN MOBILE PATTERNS:
-- Bottom sheet for actions (using @gorhom/bottom-sheet)
-- Swipeable list items
-- Tab bar with floating action button
-- Skeleton loading screens
-- Pull-to-refresh with custom animations
-- Gesture-based navigation
-- Biometric authentication
-- Deep linking configuration
-- Push notifications setup
-- App icon and splash screen
-
-PLATFORM-SPECIFIC:
-- iOS: Use SF Symbols, respect safe areas, implement haptics
-- Android: Material You design, edge-to-edge layout, proper elevation
 `,
   },
 
@@ -292,51 +272,6 @@ REAL-TIME FEATURES:
 - Online status
 - Push notifications
 `,
-
-    // Mobile Industries
-    fitness: `
-FITNESS APP DESIGN GUIDANCE:
-- Quick access to start workout
-- Progress visualization (charts, rings)
-- Calendar for tracking
-- Achievement/streak system
-- Timer/stopwatch integration
-- Health data sync
-
-KEY SCREENS:
-- Home: Today's goal, quick start, stats
-- Workouts: Library, custom, history
-- Progress: Charts, calendar, achievements
-- Profile: Settings, goals, connected apps
-
-ENGAGEMENT FEATURES:
-- Daily reminders
-- Streak tracking
-- Social challenges
-- Achievement badges
-- Progress photos
-`,
-    utility: `
-UTILITY APP DESIGN GUIDANCE:
-- Fast, focused functionality
-- Minimal UI, maximum usability
-- Offline support
-- Widget support
-- Quick actions
-- Settings for customization
-
-KEY PATTERNS:
-- Home: Primary function front and center
-- Lists: Swipeable actions, drag to reorder
-- Settings: Grouped preferences
-- Search: Quick access to content
-
-PERFORMANCE PRIORITIES:
-- Instant launch
-- Offline-first
-- Efficient battery usage
-- Small app size
-`,
   },
 }
 
@@ -346,37 +281,36 @@ PERFORMANCE PRIORITIES:
 
 export const codegenEnhancements = {
   webapp: `
-NEXT.JS CODE STANDARDS:
+VITE + REACT CODE STANDARDS:
 1. File naming: kebab-case for files, PascalCase for components
 2. Always use TypeScript with strict mode
-3. Import order: React, Next, third-party, local, styles
-4. Use path aliases (@/components, @/lib, etc.)
+3. Import order: React, third-party, local, styles
+4. Use path aliases (@/components, @/lib, etc.) via vite.config.ts
 5. Colocate related files (component + styles + tests)
 
 COMPONENT PATTERNS:
 \`\`\`tsx
-// Good: Server Component (default)
-export default async function Page() {
-  const data = await fetchData()
+// Good: Functional Component
+export default function Page() {
+  const { data, isLoading } = useQuery({ queryKey: ['data'], queryFn: fetchData })
+  if (isLoading) return <Skeleton />
   return <div>{data}</div>
 }
 
-// Good: Client Component
-'use client'
+// Good: Interactive Component with state
 export function InteractiveComponent() {
   const [state, setState] = useState()
   return <button onClick={() => setState(...)}>Click</button>
 }
 
-// Good: Loading state
-export default function Loading() {
+// Good: Loading state component
+export function Loading() {
   return <Skeleton className="h-[200px] w-full" />
 }
 
 // Good: Error boundary
-'use client'
-export default function Error({ error, reset }) {
-  return <div><button onClick={reset}>Try again</button></div>
+export function ErrorFallback({ error, resetErrorBoundary }) {
+  return <div><button onClick={resetErrorBoundary}>Try again</button></div>
 }
 \`\`\`
 
@@ -388,110 +322,98 @@ STYLING WITH TAILWIND:
 - Use @apply sparingly, prefer utilities
 
 DATA FETCHING:
-- Server Components: Direct async/await
-- Client: React Query or SWR
-- Forms: Server Actions with useFormState
+- TanStack Query (React Query) for server state
+- Zustand or React Context for client state
+- React Hook Form + Zod for forms
 - Real-time: Supabase subscriptions
 `,
 
-  mobile: `
-EXPO/REACT NATIVE CODE STANDARDS:
-1. Use functional components with hooks
-2. TypeScript for all files
-3. StyleSheet.create() for styles
-4. Platform-specific code with Platform.select()
-5. Use expo-router for navigation
-
-COMPONENT PATTERNS:
-\`\`\`tsx
-// Screen component
-export default function HomeScreen() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Content */}
-      </ScrollView>
-    </SafeAreaView>
-  )
-}
-
-// List screen
-export default function ListScreen() {
-  return (
-    <FlatList
-      data={items}
-      renderItem={({ item }) => <ListItem item={item} />}
-      keyExtractor={(item) => item.id}
-      ItemSeparatorComponent={Separator}
-    />
-  )
-}
-
-// Form with keyboard handling
-export default function FormScreen() {
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView keyboardShouldPersistTaps="handled">
-        {/* Form fields */}
-      </ScrollView>
-    </KeyboardAvoidingView>
-  )
-}
-\`\`\`
-
-STYLING PATTERNS:
-- Use StyleSheet.create() always
-- Platform shadows: shadowProps (iOS) + elevation (Android)
-- Use theme colors from context
-- Consistent spacing (4, 8, 12, 16, 24, 32)
-- Safe area padding for notches
-`,
-
   website: `
-STATIC WEBSITE CODE STANDARDS:
-1. Semantic HTML5 structure
-2. BEM naming for CSS classes
-3. CSS custom properties for theming
-4. Vanilla JS with modern syntax
-5. Accessible by default
+VITE + REACT MARKETING WEBSITE CODE STANDARDS:
+1. File naming: kebab-case for files, PascalCase for components
+2. TypeScript for all files with strict mode
+3. All components are client-side (Vite SPA)
+4. Import order: React, third-party, local, styles
+5. Use path aliases (@/components, @/lib, etc.) via vite.config.ts
 
-HTML STRUCTURE:
-\`\`\`html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="">
-  <title></title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <a href="#main" class="skip-link">Skip to content</a>
-  <header class="header">
-    <nav class="nav" aria-label="Main navigation">
-      <!-- Navigation -->
-    </nav>
-  </header>
-  <main id="main" class="main">
-    <!-- Content -->
-  </main>
-  <footer class="footer">
-    <!-- Footer -->
-  </footer>
-</body>
-</html>
+PAGE COMPONENT PATTERN:
+\`\`\`tsx
+// src/pages/Index.tsx
+import { Hero } from '../components/sections/hero'
+import { Features } from '../components/sections/features'
+import { Testimonials } from '../components/sections/testimonials'
+import { CTA } from '../components/sections/cta'
+import { Footer } from '../components/sections/footer'
+
+export default function HomePage() {
+  return (
+    <main>
+      <Hero />
+      <Features />
+      <Testimonials />
+      <CTA />
+      <Footer />
+    </main>
+  )
+}
 \`\`\`
 
-CSS PATTERNS:
-- Mobile-first media queries
-- CSS Grid for layouts
-- Flexbox for components
-- Custom properties for colors
+SECTION COMPONENT PATTERN:
+\`\`\`tsx
+// src/components/sections/hero.tsx
+import { Link } from 'react-router-dom'
+import { Button } from '../ui/button'
+
+export function Hero() {
+  return (
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-secondary/20" />
+      <div className="container relative z-10 mx-auto px-4 text-center">
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
+          Your Headline Here
+        </h1>
+        <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+          Your subheadline describing the value proposition
+        </p>
+        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+          <Button size="lg" asChild>
+            <Link to="/signup">Get Started</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link to="/demo">Watch Demo</Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
+}
+\`\`\`
+
+ANIMATED COMPONENT PATTERN:
+\`\`\`tsx
+import { motion } from 'framer-motion'
+
+export function AnimatedSection({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      viewport={{ once: true }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+\`\`\`
+
+STYLING WITH TAILWIND:
+- Use cn() helper for conditional classes
+- Mobile-first responsive (sm:, md:, lg:, xl:)
+- Dark mode with dark: prefix
+- Gradients: bg-gradient-to-r from-primary to-secondary
+- Glass effects: backdrop-blur-md bg-white/10 border border-white/20
+- Animations: animate-fade-in, animate-slide-up (custom keyframes)
 - Smooth transitions (0.3s ease)
 - Reduced motion support
 `,
@@ -576,15 +498,6 @@ export function getComponentPatterns(platform: PlatformType): string[] {
       'stats-cards', 'chart-card', 'command-menu',
       'settings-form', 'user-dropdown', 'notification-list',
       'modal-form', 'sheet-panel', 'toast-notifications',
-    ]
-  }
-
-  if (platform === 'mobile') {
-    return [
-      'tab-navigation', 'stack-navigation', 'bottom-sheet',
-      'list-item', 'card-swipeable', 'profile-header',
-      'stats-grid', 'progress-ring', 'skeleton-loader',
-      'pull-refresh', 'empty-state', 'error-boundary',
     ]
   }
 

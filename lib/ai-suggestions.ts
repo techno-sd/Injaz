@@ -22,7 +22,6 @@ export interface AISuggestion {
 export const PLATFORM_SUGGESTIONS: Record<PlatformType, AISuggestion[]> = {
   website: [],
   webapp: [],
-  mobile: [],
 }
 
 // =============================================================================
@@ -72,18 +71,6 @@ export const SUB_PLATFORM_SUGGESTIONS: Partial<Record<SubPlatformType, AISuggest
     { id: 'so1', text: 'Create a professional networking platform', emoji: '🔗', tags: [], complexity: 'complex' },
     { id: 'so2', text: 'Build a community forum with threads', emoji: '💭', tags: [], complexity: 'complex' },
     { id: 'so3', text: 'Design a photo sharing platform', emoji: '📷', tags: [], complexity: 'complex' },
-  ],
-
-  // Mobile Sub-platforms
-  fitness: [
-    { id: 'mf1', text: 'Create a running tracker with maps', emoji: '🏃', tags: [], complexity: 'medium' },
-    { id: 'mf2', text: 'Build a yoga app with video tutorials', emoji: '🧘', tags: [], complexity: 'medium' },
-    { id: 'mf3', text: 'Design a nutrition tracking app', emoji: '🥗', tags: [], complexity: 'medium' },
-  ],
-  utility: [
-    { id: 'mu1', text: 'Create a password manager app', emoji: '🔐', tags: [], complexity: 'medium' },
-    { id: 'mu2', text: 'Build a weather app with forecasts', emoji: '🌤️', tags: [], complexity: 'simple' },
-    { id: 'mu3', text: 'Design a file manager app', emoji: '📁', tags: [], complexity: 'medium' },
   ],
 }
 
@@ -160,13 +147,11 @@ export function searchSuggestions(query: string, platform?: PlatformType): AISug
 export const WELCOME_MESSAGES: Record<PlatformType, string> = {
   website: 'What kind of website would you like to build?',
   webapp: 'What would you like to build?',
-  mobile: 'What kind of mobile app would you like to create?',
 }
 
 export const WELCOME_SUBTITLES: Record<PlatformType, string> = {
   website: 'Describe your idea and I\'ll generate a complete responsive website for you',
   webapp: 'Describe your idea and I\'ll design, plan, and generate the complete web app for you',
-  mobile: 'Describe your idea and I\'ll create a cross-platform mobile app for you',
 }
 
 // =============================================================================
@@ -190,10 +175,5 @@ export const QUICK_ACTIONS: Record<PlatformType, QuickAction[]> = {
     { id: 'qa4', label: 'Add Authentication', prompt: 'Add user authentication with login, signup, and password reset', icon: 'Lock' },
     { id: 'qa5', label: 'Add Dashboard', prompt: 'Add a dashboard page with stats cards and charts', icon: 'LayoutDashboard' },
     { id: 'qa6', label: 'Add Data Table', prompt: 'Add a data table with sorting, filtering, and pagination', icon: 'Table' },
-  ],
-  mobile: [
-    { id: 'qa7', label: 'Add Tab Navigation', prompt: 'Add bottom tab navigation with home, search, and profile tabs', icon: 'Navigation' },
-    { id: 'qa8', label: 'Add User Profile', prompt: 'Add a user profile screen with avatar, name, and settings', icon: 'User' },
-    { id: 'qa9', label: 'Add List View', prompt: 'Add a scrollable list view with cards and pull-to-refresh', icon: 'List' },
   ],
 }

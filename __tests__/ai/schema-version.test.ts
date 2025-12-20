@@ -170,9 +170,9 @@ describe('Schema Versioning', () => {
     it('should include all required fields', () => {
       const manager = getSchemaVersionManager()
 
-      const versioned = manager.createVersionedSchema({}, 'mobile')
+      const versioned = manager.createVersionedSchema({}, 'webapp')
 
-      expect(versioned.meta.platform).toBe('mobile')
+      expect(versioned.meta.platform).toBe('webapp')
       expect(versioned.design).toBeDefined()
       expect(versioned.structure).toBeDefined()
       expect(versioned.components).toEqual([])

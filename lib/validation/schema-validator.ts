@@ -7,14 +7,12 @@ import { z } from 'zod'
 // PLATFORM TYPES
 // =============================================================================
 
-export const PlatformTypeSchema = z.enum(['website', 'webapp', 'mobile'])
+export const PlatformTypeSchema = z.enum(['website', 'webapp'])
 export const WebsiteSubTypeSchema = z.enum(['portfolio', 'blog', 'landing', 'business'])
 export const WebappSubTypeSchema = z.enum(['dashboard', 'ecommerce', 'saas', 'social'])
-export const MobileSubTypeSchema = z.enum(['social', 'ecommerce', 'fitness', 'utility'])
 export const SubPlatformTypeSchema = z.union([
   WebsiteSubTypeSchema,
   WebappSubTypeSchema,
-  MobileSubTypeSchema,
 ])
 
 export const ThemeModeSchema = z.enum(['light', 'dark', 'system'])

@@ -66,8 +66,8 @@ function validateMeta(schema: Partial<UnifiedAppSchema>): ValidationError[] {
     errors.push({ field: 'meta.description', message: 'App description is required', severity: 'warning' })
   }
 
-  if (!meta.platform || !['website', 'webapp', 'mobile'].includes(meta.platform)) {
-    errors.push({ field: 'meta.platform', message: 'Valid platform (website/webapp/mobile) is required', severity: 'error' })
+  if (!meta.platform || !['website', 'webapp'].includes(meta.platform)) {
+    errors.push({ field: 'meta.platform', message: 'Valid platform (website/webapp) is required', severity: 'error' })
   }
 
   if (!meta.version) {
@@ -329,12 +329,6 @@ function generateSuggestions(schema: Partial<UnifiedAppSchema>): string[] {
     }
     if (!schema.features?.database) {
       suggestions.push('Consider adding a database for data persistence')
-    }
-  }
-
-  if (platform === 'mobile') {
-    if (!schema.structure?.navigation || schema.structure.navigation.type !== 'tabs') {
-      suggestions.push('Tab navigation is recommended for mobile apps')
     }
   }
 

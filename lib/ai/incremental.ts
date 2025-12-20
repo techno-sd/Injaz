@@ -322,13 +322,8 @@ export async function generateIncremental(options: IncrementalOptions): Promise<
 }
 
 // Simple component stub generator for incremental updates
-function generateComponentStub(comp: ComponentSchema, platform: PlatformType): string {
-  const isWeb = platform !== 'mobile'
-
-  if (isWeb) {
-    return `'use client'
-
-import React from 'react'
+function generateComponentStub(comp: ComponentSchema, _platform: PlatformType): string {
+  return `import React from 'react'
 
 interface ${comp.name}Props {
 ${comp.props.map(p => `  ${p.name}${p.required ? '' : '?'}: ${p.type}`).join('\n')}
@@ -343,29 +338,6 @@ export function ${comp.name}({ ${comp.props.map(p => p.name).join(', ')} }: ${co
   )
 }
 `
-  } else {
-    return `import React from 'react'
-import { View, Text, StyleSheet } from 'react-native'
-
-interface ${comp.name}Props {
-${comp.props.map(p => `  ${p.name}${p.required ? '' : '?'}: ${p.type}`).join('\n')}
-}
-
-export function ${comp.name}({ ${comp.props.map(p => p.name).join(', ')} }: ${comp.name}Props) {
-  return (
-    <View style={styles.container}>
-      <Text>${comp.name}</Text>
-    </View>
-  )
-}
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-})
-`
-  }
 }
 
 // ============================================================================

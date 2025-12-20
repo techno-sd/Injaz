@@ -9,6 +9,90 @@ export const runtime = 'edge'
 // Model from env (required)
 const DEFAULT_MODEL = process.env.DEFAULT_AI_MODEL || 'deepseek/deepseek-chat-v3-0324'
 
+// Retry configuration
+const MAX_RETRIES = 3
+const RETRY_DELAYS = [1000, 2000, 4000] // Exponential backoff
+
+/**
+ * Retry wrapper for async operations with exponential backoff
+ * Handles transient errors like 502, 503, 429 (rate limit)
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number
+    delays?: number[]
+    onRetry?: (attempt: number, error: any) => void
+  } = {}
+): Promise<T> {
+  const { maxRetries = MAX_RETRIES, delays = RETRY_DELAYS, onRetry } = options
+  let lastError: any
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      lastError = error
+      const status = error.status || error.statusCode || (error.message?.includes('502') ? 502 : 0)
+
+      // Only retry on transient errors
+      const isRetryable = [502, 503, 504, 429].includes(status) ||
+        error.message?.includes('Network') ||
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('timeout')
+
+      if (!isRetryable || attempt >= maxRetries) {
+        throw error
+      }
+
+      const delay = delays[Math.min(attempt, delays.length - 1)]
+      console.log(`[Retry] Attempt ${attempt + 1}/${maxRetries} failed with ${status}, retrying in ${delay}ms...`)
+      onRetry?.(attempt + 1, error)
+
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+
+  throw lastError
+}
+
+/**
+ * Async generator wrapper with retry for streaming operations
+ */
+async function* withStreamRetry<T>(
+  createStream: () => AsyncGenerator<T>,
+  maxRetries = MAX_RETRIES
+): AsyncGenerator<T> {
+  let attempt = 0
+  let hasYieldedContent = false
+
+  while (attempt <= maxRetries) {
+    try {
+      const stream = createStream()
+      for await (const chunk of stream) {
+        hasYieldedContent = true
+        yield chunk
+      }
+      return // Successfully completed
+    } catch (error: any) {
+      const status = error.status || error.statusCode || (error.message?.includes('502') ? 502 : 0)
+      const isRetryable = [502, 503, 504, 429].includes(status) ||
+        error.message?.includes('Network') ||
+        error.message?.includes('ECONNRESET')
+
+      // Don't retry if we've already yielded content (partial response)
+      if (hasYieldedContent || !isRetryable || attempt >= maxRetries) {
+        throw error
+      }
+
+      const delay = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)]
+      console.log(`[StreamRetry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${delay}ms...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+      attempt++
+    }
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const {
@@ -296,9 +380,22 @@ async function handleDualModeChat({
         controller.close()
       } catch (error: any) {
         console.error('Error in dual-mode stream:', error)
+
+        // Determine if this was a network/provider error
+        const status = error.status || error.statusCode || 0
+        const isProviderError = [502, 503, 504, 429].includes(status) ||
+          error.message?.includes('Network') ||
+          error.message?.includes('502')
+
+        let errorMessage = error.message || 'An error occurred during generation'
+        if (isProviderError) {
+          errorMessage = `AI provider temporarily unavailable (${status || 'network error'}). Please try again.`
+        }
+
         const errorData = JSON.stringify({
           type: 'error',
-          error: error.message || 'An error occurred during generation'
+          error: errorMessage,
+          retryable: isProviderError,
         })
         controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
         controller.close()
@@ -400,12 +497,12 @@ async function handleLegacyChat({
         })
         controller.enqueue(encoder.encode(`data: ${contextInfo}\n\n`))
 
-        // Stream from the provider
-        const streamGenerator = provider.streamChat({
+        // Stream from the provider with retry support
+        const streamGenerator = withStreamRetry(() => provider.streamChat({
           model,
           messages: aiMessages,
           temperature,
-        })
+        }))
 
         for await (const chunk of streamGenerator) {
           if (chunk.type === 'content' && chunk.content) {
@@ -503,9 +600,22 @@ async function handleLegacyChat({
         controller.close()
       } catch (error: any) {
         console.error('Error in stream:', error)
+
+        // Determine if this was a network/provider error
+        const status = error.status || error.statusCode || 0
+        const isProviderError = [502, 503, 504, 429].includes(status) ||
+          error.message?.includes('Network') ||
+          error.message?.includes('502')
+
+        let errorMessage = error.message || 'An error occurred while processing your request'
+        if (isProviderError) {
+          errorMessage = `AI provider temporarily unavailable (${status || 'network error'}). Please try again.`
+        }
+
         const errorData = JSON.stringify({
           type: 'error',
-          error: error.message || 'An error occurred while processing your request'
+          error: errorMessage,
+          retryable: isProviderError,
         })
         controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
         controller.close()

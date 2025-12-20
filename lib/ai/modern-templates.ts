@@ -650,22 +650,6 @@ export const industryTemplates: Record<SubPlatformType, {
     features: ['auth', 'realtime', 'uploads', 'notifications'],
     components: ['feed', 'post-card', 'profile-header', 'message-thread', 'notification-list'],
   },
-
-  // Mobile Types
-  fitness: {
-    name: 'Fitness',
-    description: 'Health and fitness app',
-    pages: ['/', '/workouts', '/progress', '/profile'],
-    features: ['auth', 'charts', 'notifications', 'healthkit'],
-    components: ['workout-card', 'progress-ring', 'stats-grid', 'calendar'],
-  },
-  utility: {
-    name: 'Utility',
-    description: 'Productivity or utility app',
-    pages: ['/', '/tasks', '/calendar', '/settings'],
-    features: ['local-storage', 'notifications', 'widgets'],
-    components: ['task-list', 'calendar-view', 'quick-actions', 'settings-list'],
-  },
 }
 
 // ============================================================================

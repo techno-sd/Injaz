@@ -55,25 +55,14 @@ REVIEW CATEGORIES:
 
 PLATFORM-SPECIFIC CHECKS:
 
-For Next.js (webapp):
-- Server vs Client component usage ('use client' directive)
-- Proper use of Server Actions
-- Image optimization with next/image
-- Metadata and SEO
-- Route handlers security
-
-For React Native/Expo (mobile):
-- Platform-specific code (Platform.select)
-- Safe area handling
-- Performance with FlatList vs ScrollView
-- Secure storage usage
-- Deep linking configuration
-
-For Static Sites (website):
+For Vite + React (webapp/website):
+- Proper React hooks usage
+- React Router v6 patterns
+- TanStack Query for data fetching
+- Component composition patterns
+- Error boundaries and loading states
 - Semantic HTML5
-- CSS performance
-- JavaScript best practices
-- Accessibility
+- Accessibility best practices
 
 OUTPUT FORMAT (JSON):
 {

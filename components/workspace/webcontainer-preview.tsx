@@ -2,11 +2,33 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useWebContainer } from '@/lib/webcontainer-context'
-import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink, Zap } from 'lucide-react'
+import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink, Zap, CheckCircle2, Circle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { File, PlatformType } from '@/types'
+
+// Boot step component for showing progress
+function BootStep({ label, status }: { label: string; status: 'pending' | 'active' | 'done' }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {status === 'done' ? (
+        <CheckCircle2 className="h-4 w-4 text-green-500" />
+      ) : status === 'active' ? (
+        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+      ) : (
+        <Circle className="h-4 w-4 text-muted-foreground/40" />
+      )}
+      <span className={cn(
+        status === 'done' && 'text-green-500',
+        status === 'active' && 'text-primary font-medium',
+        status === 'pending' && 'text-muted-foreground/60'
+      )}>
+        {label}
+      </span>
+    </div>
+  )
+}
 
 type DeviceMode = 'desktop' | 'tablet' | 'mobile'
 
@@ -14,6 +36,7 @@ interface WebContainerPreviewProps {
   projectId: string
   files: File[]
   platform?: PlatformType
+  onFallbackToSandpack?: () => void
 }
 
 const deviceModes = {
@@ -23,12 +46,8 @@ const deviceModes = {
 }
 
 // Platform-specific device modes
-// Mobile apps: Only phone and tablet (no desktop)
 // Websites/Webapps: All device types
 const getAvailableDeviceModes = (platform: PlatformType): DeviceMode[] => {
-  if (platform === 'mobile') {
-    return ['mobile', 'tablet']
-  }
   return ['desktop', 'tablet', 'mobile']
 }
 
@@ -41,20 +60,64 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   }
 }
 
-export function WebContainerPreview({ projectId, files, platform = 'webapp' }: WebContainerPreviewProps) {
-  const { webcontainer, isBooting, error: bootError, restart } = useWebContainer()
+export function WebContainerPreview({ projectId, files, platform = 'webapp', onFallbackToSandpack }: WebContainerPreviewProps) {
+  const { webcontainer, isBooting, error: bootError, bootStage, restart } = useWebContainer()
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [isInstalling, setIsInstalling] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
   const [showTerminal, setShowTerminal] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>(platform === 'mobile' ? 'mobile' : 'desktop')
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
   const [isHotReloading, setIsHotReloading] = useState(false)
+  const [showDownloadHelp, setShowDownloadHelp] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const hasStarted = useRef(false)
   const previousFilesRef = useRef<Map<string, string>>(new Map())
-  const isMobileApp = platform === 'mobile'
+  const downloadTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Show download help after 15 seconds of being stuck on download stage
+  useEffect(() => {
+    if (bootStage.includes('Downloading')) {
+      downloadTimerRef.current = setTimeout(() => {
+        setShowDownloadHelp(true)
+      }, 15000)
+    } else {
+      setShowDownloadHelp(false)
+      if (downloadTimerRef.current) {
+        clearTimeout(downloadTimerRef.current)
+        downloadTimerRef.current = null
+      }
+    }
+
+    return () => {
+      if (downloadTimerRef.current) {
+        clearTimeout(downloadTimerRef.current)
+      }
+    }
+  }, [bootStage])
+
+  // Network diagnostic function
+  const runNetworkDiagnostic = async () => {
+    const diagnosticResults: string[] = []
+
+    // Check cross-origin isolation
+    diagnosticResults.push(`Cross-origin isolated: ${window.crossOriginIsolated ? '✓ Yes' : '✗ No'}`)
+    diagnosticResults.push(`SharedArrayBuffer: ${typeof SharedArrayBuffer !== 'undefined' ? '✓ Available' : '✗ Not available'}`)
+
+    // Try to fetch from WebContainer CDN
+    try {
+      const response = await fetch('https://cdn.jsdelivr.net/npm/@webcontainer/api/dist/index.js', {
+        method: 'HEAD',
+        mode: 'cors'
+      })
+      diagnosticResults.push(`CDN access: ${response.ok ? '✓ OK' : '✗ Blocked'}`)
+    } catch (e) {
+      diagnosticResults.push('CDN access: ✗ Blocked (check ad blocker/network)')
+    }
+
+    alert(`WebContainer Diagnostics:\n\n${diagnosticResults.join('\n')}\n\nIf CDN is blocked, try:\n• Disable browser extensions\n• Use incognito mode\n• Check firewall/network settings`)
+  }
 
   // Ensure device mode is valid for the platform
   useEffect(() => {
@@ -320,29 +383,128 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   }
 
   if (isBooting) {
+    // Determine progress based on boot stage
+    const getProgress = () => {
+      if (bootStage.includes('Checking')) return 20
+      if (bootStage.includes('Verifying')) return 40
+      if (bootStage.includes('Connecting')) return 60
+      if (bootStage.includes('Downloading')) return 80
+      if (bootStage.includes('ready')) return 100
+      return 10
+    }
+    const progress = getProgress()
+
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background p-6 text-center">
         <div className="relative">
-          <div className="h-16 w-16 rounded-full border-4 border-muted animate-pulse" />
+          <div className="h-20 w-20 rounded-full border-4 border-muted" />
+          {/* Progress ring */}
+          <svg className="absolute inset-0 h-20 w-20 -rotate-90">
+            <circle
+              cx="40"
+              cy="40"
+              r="36"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="4"
+              className="text-primary/30"
+            />
+            <circle
+              cx="40"
+              cy="40"
+              r="36"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="4"
+              strokeDasharray={`${progress * 2.26} 226`}
+              className="text-primary transition-all duration-500"
+            />
+          </svg>
           <Loader2 className="h-8 w-8 animate-spin text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
         </div>
-        <p className="text-sm font-medium mt-4">Booting WebContainer...</p>
-        <p className="text-xs text-muted-foreground mt-2 max-w-xs">
-          First boot may take 30-60 seconds to download required assets
+
+        <p className="text-sm font-medium mt-6">Booting WebContainer...</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {progress}% complete
         </p>
-        <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
-          <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-          <span>Initializing secure environment</span>
+
+        {/* Progress steps */}
+        <div className="mt-6 space-y-2 text-left">
+          <BootStep
+            label="Checking browser compatibility"
+            status={bootStage.includes('Checking') ? 'active' : progress > 20 ? 'done' : 'pending'}
+          />
+          <BootStep
+            label="Verifying cross-origin isolation"
+            status={bootStage.includes('Verifying') ? 'active' : progress > 40 ? 'done' : 'pending'}
+          />
+          <BootStep
+            label="Downloading WebContainer runtime"
+            status={bootStage.includes('Downloading') ? 'active' : progress > 80 ? 'done' : 'pending'}
+          />
+          <BootStep
+            label="Initializing environment"
+            status={bootStage.includes('ready') ? 'done' : 'pending'}
+          />
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-6 text-xs"
-          onClick={() => window.location.reload()}
-        >
-          <RefreshCw className="h-3 w-3 mr-1.5" />
-          Taking too long? Refresh page
-        </Button>
+
+        {showDownloadHelp ? (
+          <div className="mt-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 max-w-sm">
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mb-2">
+              Download taking too long?
+            </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Try: Disable ad blockers, use Chrome/Edge, or check your network connection.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs flex-1"
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw className="h-3 w-3 mr-1.5" />
+                Retry
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs flex-1"
+                onClick={runNetworkDiagnostic}
+              >
+                <AlertCircle className="h-3 w-3 mr-1.5" />
+                Diagnose
+              </Button>
+            </div>
+            {onFallbackToSandpack && (
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full mt-3 text-xs bg-blue-600 hover:bg-blue-700"
+                onClick={onFallbackToSandpack}
+              >
+                <Zap className="h-3 w-3 mr-1.5" />
+                Use Sandpack Preview (No Download)
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground mt-6 max-w-xs">
+            First boot downloads ~20MB of runtime assets. This is cached for future use.
+          </p>
+        )}
+
+        {!showDownloadHelp && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-4 text-xs"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw className="h-3 w-3 mr-1.5" />
+            Taking too long? Refresh page
+          </Button>
+        )}
       </div>
     )
   }
@@ -370,18 +532,168 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   }
 
   if (isInstalling || isStarting) {
+    // Parse logs to extract package info
+    const getPackageProgress = () => {
+      const lastLogs = logs.slice(-20)
+      let packagesAdded = 0
+      let currentPackage = ''
+
+      for (const log of lastLogs) {
+        if (log.includes('added') && log.includes('packages')) {
+          const match = log.match(/added (\d+) packages/)
+          if (match) packagesAdded = parseInt(match[1])
+        }
+        if (log.includes('npm') && log.includes('install')) {
+          currentPackage = 'Resolving dependencies...'
+        }
+        if (log.includes('reify:')) {
+          const match = log.match(/reify:([^\s]+)/)
+          if (match) currentPackage = match[1].split('/').pop() || ''
+        }
+      }
+      return { packagesAdded, currentPackage }
+    }
+
+    const { packagesAdded, currentPackage } = getPackageProgress()
+    const estimatedTotal = 15 // Approximate number of packages
+    const progress = isInstalling
+      ? Math.min(90, (packagesAdded / estimatedTotal) * 100)
+      : 95
+
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-background p-6">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-sm font-medium mb-2">
-          {isInstalling ? 'Installing dependencies...' : 'Starting dev server...'}
-        </p>
-        <div className="w-full max-w-2xl bg-muted rounded-lg p-4 font-mono text-xs max-h-64 overflow-y-auto">
-          {logs.slice(-10).map((log, i) => (
-            <div key={i} className="text-muted-foreground">
-              {log}
+      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-6">
+        {/* Animated Background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center">
+          {/* Circular Progress */}
+          <div className="relative mb-8">
+            <svg className="h-32 w-32 -rotate-90" viewBox="0 0 100 100">
+              {/* Background circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                className="text-white/10"
+              />
+              {/* Progress circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="url(#progressGradient)"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${progress * 2.83} 283`}
+                className="transition-all duration-500 ease-out"
+              />
+              <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#a855f7" />
+                  <stop offset="100%" stopColor="#3b82f6" />
+                </linearGradient>
+              </defs>
+            </svg>
+            {/* Center icon */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative">
+                {isInstalling ? (
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
+                    <svg className="h-6 w-6 text-white animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25">
+                    <Zap className="h-6 w-6 text-white" />
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
+          </div>
+
+          {/* Title */}
+          <h3 className="text-xl font-bold text-white mb-2">
+            {isInstalling ? 'Installing Dependencies' : 'Starting Dev Server'}
+          </h3>
+
+          {/* Progress percentage */}
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+              {Math.round(progress)}%
+            </span>
+            <span className="text-white/40 text-sm">complete</span>
+          </div>
+
+          {/* Current action */}
+          {currentPackage && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full mb-6">
+              <Loader2 className="h-3 w-3 animate-spin text-purple-400" />
+              <span className="text-xs text-white/60 font-mono truncate max-w-[200px]">
+                {currentPackage}
+              </span>
+            </div>
+          )}
+
+          {/* Steps */}
+          <div className="space-y-3 mb-6">
+            <BootStep
+              label="Mounting project files"
+              status="done"
+            />
+            <BootStep
+              label="Installing npm packages"
+              status={isInstalling ? 'active' : 'done'}
+            />
+            <BootStep
+              label="Starting Vite dev server"
+              status={isStarting ? 'active' : isInstalling ? 'pending' : 'done'}
+            />
+            <BootStep
+              label="Ready to preview"
+              status="pending"
+            />
+          </div>
+
+          {/* Packages count */}
+          {packagesAdded > 0 && (
+            <div className="flex items-center gap-2 text-white/40 text-xs">
+              <CheckCircle2 className="h-3 w-3 text-green-400" />
+              <span>{packagesAdded} packages installed</span>
+            </div>
+          )}
+
+          {/* Terminal toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-6 text-xs text-white/40 hover:text-white/60"
+            onClick={() => setShowTerminal(!showTerminal)}
+          >
+            <TerminalIcon className="h-3 w-3 mr-1.5" />
+            {showTerminal ? 'Hide' : 'Show'} Terminal Output
+          </Button>
+
+          {/* Terminal logs */}
+          {showTerminal && (
+            <div className="w-full max-w-lg mt-4 bg-black/50 backdrop-blur rounded-lg border border-white/10 p-4 font-mono text-xs max-h-48 overflow-y-auto">
+              {logs.slice(-15).map((log, i) => (
+                <div key={i} className="text-green-400/80 leading-relaxed">
+                  <span className="text-white/20 mr-2">$</span>
+                  {log}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -398,20 +710,8 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
       {/* Enhanced Header */}
       <div className="glass-card border-b px-4 py-2.5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          {isMobileApp ? (
-            <Smartphone className="h-4 w-4 text-cyan-400" />
-          ) : (
-            <Globe className="h-4 w-4 text-primary" />
-          )}
-          <span className="text-sm font-semibold">
-            {isMobileApp ? 'Mobile Preview' : 'Live Preview'}
-          </span>
-          {isMobileApp && (
-            <Badge variant="secondary" className="gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <Smartphone className="h-3 w-3" />
-              Expo
-            </Badge>
-          )}
+          <Globe className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">Live Preview</span>
           {isHotReloading ? (
             <Badge variant="secondary" className="gap-1 text-xs bg-yellow-500/20 text-yellow-600">
               <Zap className="h-3 w-3 animate-pulse" />
@@ -427,10 +727,7 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
 
         <div className="flex items-center gap-2">
           {/* Device Mode Switcher */}
-          <div className={cn(
-            'flex items-center gap-1 p-1 rounded-lg',
-            isMobileApp ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-muted/50'
-          )}>
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50">
             {getAvailableDeviceModes(platform).map((mode) => {
               const DeviceIcon = deviceModes[mode].icon
               return (
@@ -441,7 +738,7 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
                   onClick={() => setDeviceMode(mode)}
                   className={cn(
                     'h-8 w-8 p-0',
-                    deviceMode === mode && (isMobileApp ? 'bg-cyan-500/20 text-cyan-400' : 'gradient-primary shadow-md')
+                    deviceMode === mode && 'gradient-primary shadow-md'
                   )}
                   title={deviceModes[mode].label}
                 >

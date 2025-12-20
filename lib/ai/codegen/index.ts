@@ -3,12 +3,10 @@
 
 export { generateStaticTemplate, type StaticFile } from './static-template'
 export { generateWebAppTemplate, type WebAppFile } from './web-template'
-export { generateMobileTemplate, type MobileFile } from './mobile-template'
 
 import type { UnifiedAppSchema, PlatformType } from '@/types/app-schema'
 import { generateStaticTemplate } from './static-template'
 import { generateWebAppTemplate } from './web-template'
-import { generateMobileTemplate } from './mobile-template'
 
 export interface GeneratedFile {
   path: string
@@ -18,6 +16,7 @@ export interface GeneratedFile {
 
 /**
  * Generate files for a given platform from a Unified App Schema
+ * Note: Both website and webapp use Vite + React + React Router (same stack as Lovable)
  */
 export function generateFilesFromSchema(
   schema: UnifiedAppSchema,
@@ -27,11 +26,10 @@ export function generateFilesFromSchema(
 
   switch (targetPlatform) {
     case 'website':
-      return generateStaticTemplate(schema)
+      // Websites use Vite + React (same stack as Lovable)
+      return generateWebAppTemplate(schema)
     case 'webapp':
       return generateWebAppTemplate(schema)
-    case 'mobile':
-      return generateMobileTemplate(schema)
     default:
       throw new Error(`Unknown platform: ${targetPlatform}`)
   }

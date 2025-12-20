@@ -7,6 +7,7 @@ interface WebContainerContextType {
   webcontainer: WebContainer | null
   isBooting: boolean
   error: string | null
+  bootStage: string
   restart: () => Promise<void>
 }
 
@@ -14,6 +15,7 @@ const WebContainerContext = createContext<WebContainerContextType>({
   webcontainer: null,
   isBooting: true,
   error: null,
+  bootStage: 'Initializing...',
   restart: async () => {},
 })
 
@@ -31,13 +33,23 @@ let globalWebContainer: WebContainer | null = null
 let bootPromise: Promise<WebContainer> | null = null
 
 // Boot timeout in milliseconds
-const BOOT_TIMEOUT = 30000
+const BOOT_TIMEOUT = 60000 // Increased to 60 seconds for first boot
+
+// Status messages for user feedback
+const BOOT_STAGES = {
+  checking: 'Checking browser compatibility...',
+  headers: 'Verifying cross-origin isolation...',
+  existing: 'Connecting to existing session...',
+  booting: 'Downloading WebContainer runtime...',
+  ready: 'WebContainer ready!',
+}
 
 export function WebContainerProvider({ children }: WebContainerProviderProps) {
   // Always start with null on initial render to avoid SSR hydration mismatch
   const [webcontainer, setWebcontainer] = useState<WebContainer | null>(null)
   const [isBooting, setIsBooting] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [bootStage, setBootStage] = useState<string>(BOOT_STAGES.checking)
   const mountedRef = useRef(true)
   const hasInitialized = useRef(false)
 
@@ -48,14 +60,16 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
         return
       }
 
+      setBootStage(BOOT_STAGES.checking)
       console.log('[WebContainer] Starting boot process...')
 
       // Check for cross-origin isolation (required for SharedArrayBuffer)
+      setBootStage(BOOT_STAGES.headers)
       const isCrossOriginIsolated = window.crossOriginIsolated
       console.log('[WebContainer] Cross-origin isolated:', isCrossOriginIsolated)
 
       if (!isCrossOriginIsolated) {
-        throw new Error('Cross-origin isolation is not enabled. The server must send COOP and COEP headers. Please restart the dev server.')
+        throw new Error('Cross-origin isolation is not enabled. Please close all other tabs of this app and refresh, or restart the dev server.')
       }
 
       // Check for SharedArrayBuffer support
@@ -65,11 +79,26 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
 
       console.log('[WebContainer] SharedArrayBuffer available:', typeof SharedArrayBuffer !== 'undefined')
 
+      // Check for pre-booted instance from preloader
+      const prebootedInstance = (window as any).__webcontainer_instance
+      if (prebootedInstance) {
+        console.log('[WebContainer] Using pre-booted instance!')
+        globalWebContainer = prebootedInstance
+        if (mountedRef.current) {
+          setWebcontainer(prebootedInstance)
+          setBootStage(BOOT_STAGES.ready)
+          setIsBooting(false)
+        }
+        return
+      }
+
       // Return existing instance if available
       if (globalWebContainer) {
+        setBootStage(BOOT_STAGES.existing)
         console.log('[WebContainer] Using existing instance')
         if (mountedRef.current) {
           setWebcontainer(globalWebContainer)
+          setBootStage(BOOT_STAGES.ready)
           setIsBooting(false)
         }
         return
@@ -77,10 +106,12 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
 
       // Wait for existing boot if in progress
       if (bootPromise) {
+        setBootStage(BOOT_STAGES.existing)
         console.log('[WebContainer] Waiting for existing boot...')
         const instance = await bootPromise
         if (mountedRef.current) {
           setWebcontainer(instance)
+          setBootStage(BOOT_STAGES.ready)
           setIsBooting(false)
         }
         return
@@ -89,6 +120,7 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
       // Boot new instance with timeout
       setIsBooting(true)
       setError(null)
+      setBootStage(BOOT_STAGES.booting)
 
       console.log('[WebContainer] Booting new instance...')
 
@@ -108,6 +140,7 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
 
       if (mountedRef.current) {
         setWebcontainer(instance)
+        setBootStage(BOOT_STAGES.ready)
         setIsBooting(false)
       }
     } catch (err) {
@@ -157,6 +190,7 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
     // If we already have a global instance, use it immediately
     if (globalWebContainer) {
       setWebcontainer(globalWebContainer)
+      setBootStage(BOOT_STAGES.ready)
       setIsBooting(false)
     } else {
       bootWebContainer()
@@ -169,7 +203,7 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
   }, [])
 
   return (
-    <WebContainerContext.Provider value={{ webcontainer, isBooting, error, restart }}>
+    <WebContainerContext.Provider value={{ webcontainer, isBooting, error, bootStage, restart }}>
       {children}
     </WebContainerContext.Provider>
   )

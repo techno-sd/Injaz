@@ -1,6 +1,5 @@
-// HTML templates for guest/demo users (no authentication required)
-// These work with the WebContainer static file server
-// Updated to use pure CSS instead of Tailwind CDN for blob URL compatibility
+// Vite + React templates for guest/demo users (no authentication required)
+// Updated to use Vite + React Router + Tailwind CSS (same stack as Lovable)
 
 export interface GuestTemplate {
   id: string
@@ -10,346 +9,348 @@ export interface GuestTemplate {
   files: { path: string; content: string }[]
 }
 
+// =============================================================================
+// BASE VITE + REACT FILES (shared across all templates)
+// =============================================================================
+
+const BASE_PACKAGE_JSON = JSON.stringify({
+  name: 'my-app',
+  version: '0.1.0',
+  private: true,
+  type: 'module',
+  scripts: {
+    dev: 'vite',
+    build: 'tsc && vite build',
+    preview: 'vite preview'
+  },
+  dependencies: {
+    'react': '^18.3.1',
+    'react-dom': '^18.3.1',
+    'react-router-dom': '^6.26.0',
+    '@tanstack/react-query': '^5.51.1',
+    'class-variance-authority': '^0.7.0',
+    'clsx': '^2.1.1',
+    'tailwind-merge': '^2.3.0',
+    'lucide-react': '^0.396.0',
+    'sonner': '^1.5.0',
+    'framer-motion': '^11.0.0'
+  },
+  devDependencies: {
+    'typescript': '^5.4.5',
+    '@types/react': '^18.3.3',
+    '@types/react-dom': '^18.3.0',
+    'vite': '^5.3.4',
+    '@vitejs/plugin-react': '^4.3.1',
+    'tailwindcss': '^3.4.4',
+    'postcss': '^8.4.38',
+    'autoprefixer': '^10.4.19'
+  }
+}, null, 2)
+
+const BASE_INDEX_HTML = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>`
+
+const BASE_MAIN_TSX = `import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'sonner'
+import App from './App'
+import './index.css'
+
+const queryClient = new QueryClient()
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+        <Toaster position="top-right" richColors />
+      </BrowserRouter>
+    </QueryClientProvider>
+  </React.StrictMode>
+)`
+
+const BASE_APP_TSX = `import { Routes, Route } from 'react-router-dom'
+import Index from './pages/Index'
+import NotFound from './pages/NotFound'
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  )
+}
+
+export default App`
+
+const BASE_NOT_FOUND = `import { Link } from 'react-router-dom'
+
+export default function NotFound() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
+      <h1 className="text-6xl font-bold mb-4">404</h1>
+      <p className="text-xl text-muted-foreground mb-8">Page not found</p>
+      <Link
+        to="/"
+        className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+      >
+        Go Home
+      </Link>
+    </div>
+  )
+}`
+
+const BASE_INDEX_CSS = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r;
+  }
+}`
+
+const BASE_UTILS_TS = `import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}`
+
+const BASE_VITE_CONFIG = `import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+})`
+
+const BASE_TAILWIND_CONFIG = `import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  darkMode: ['class'],
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
+  theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
+    extend: {
+      colors: {
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 0.5s ease-out',
+        'fade-up': 'fade-up 0.5s ease-out',
+      },
+    },
+  },
+  plugins: [],
+}
+
+export default config`
+
+const BASE_TSCONFIG = JSON.stringify({
+  compilerOptions: {
+    target: 'ES2020',
+    useDefineForClassFields: true,
+    lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+    module: 'ESNext',
+    skipLibCheck: true,
+    moduleResolution: 'bundler',
+    allowImportingTsExtensions: true,
+    resolveJsonModule: true,
+    isolatedModules: true,
+    noEmit: true,
+    jsx: 'react-jsx',
+    strict: true,
+    noUnusedLocals: true,
+    noUnusedParameters: true,
+    noFallthroughCasesInSwitch: true,
+    baseUrl: '.',
+    paths: {
+      '@/*': ['./src/*']
+    }
+  },
+  include: ['src'],
+  references: [{ path: './tsconfig.node.json' }]
+}, null, 2)
+
+const BASE_TSCONFIG_NODE = JSON.stringify({
+  compilerOptions: {
+    composite: true,
+    skipLibCheck: true,
+    module: 'ESNext',
+    moduleResolution: 'bundler',
+    allowSyntheticDefaultImports: true
+  },
+  include: ['vite.config.ts']
+}, null, 2)
+
+const BASE_POSTCSS_CONFIG = `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`
+
+// Helper function to create base files for a template
+function createGuestBaseFiles(pageContent: string, additionalFiles: { path: string; content: string }[] = []): { path: string; content: string }[] {
+  return [
+    { path: 'package.json', content: BASE_PACKAGE_JSON },
+    { path: 'index.html', content: BASE_INDEX_HTML },
+    { path: 'src/main.tsx', content: BASE_MAIN_TSX },
+    { path: 'src/App.tsx', content: BASE_APP_TSX },
+    { path: 'src/pages/Index.tsx', content: pageContent },
+    { path: 'src/pages/NotFound.tsx', content: BASE_NOT_FOUND },
+    { path: 'src/index.css', content: BASE_INDEX_CSS },
+    { path: 'src/lib/utils.ts', content: BASE_UTILS_TS },
+    { path: 'vite.config.ts', content: BASE_VITE_CONFIG },
+    { path: 'tailwind.config.ts', content: BASE_TAILWIND_CONFIG },
+    { path: 'tsconfig.json', content: BASE_TSCONFIG },
+    { path: 'tsconfig.node.json', content: BASE_TSCONFIG_NODE },
+    { path: 'postcss.config.js', content: BASE_POSTCSS_CONFIG },
+    ...additionalFiles,
+  ]
+}
+
 export const GUEST_TEMPLATES: Record<string, GuestTemplate> = {
   blank: {
     id: 'blank',
     name: 'Blank Project',
     icon: '📄',
-    description: 'Start from scratch',
-    files: [
-      {
-        path: 'index.html',
-        content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My App</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <!-- Animated Background -->
-  <div class="bg-container">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
-  </div>
-
-  <!-- Grid Pattern Overlay -->
-  <div class="grid-pattern"></div>
-
-  <div class="content-wrapper">
-    <div class="container">
-      <div class="text-center fade-in-up">
-        <!-- Logo/Icon -->
-        <div class="logo-icon">
-          <span>✨</span>
-        </div>
-
-        <h1 class="hero-title">
-          Welcome to Injaz.ai!
+    description: 'Start from scratch with Vite + React',
+    files: createGuestBaseFiles(`export default function Index() {
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="text-center space-y-6">
+        <div className="text-6xl animate-bounce">✨</div>
+        <h1 className="text-4xl md:text-6xl font-bold text-white">
+          Welcome to Your App
         </h1>
-        <p class="hero-subtitle">
-          Start building your app by chatting with AI. Transform your ideas into reality.
+        <p className="text-xl text-gray-300 max-w-md mx-auto">
+          Start chatting with AI to build your application
         </p>
-        <div class="button-group">
-          <button class="btn btn-primary">Get Started</button>
-          <button class="btn btn-secondary">Learn More</button>
+        <div className="flex gap-4 justify-center flex-wrap">
+          <button className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
+            Get Started
+          </button>
+          <button className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20">
+            Learn More
+          </button>
         </div>
-
-        <!-- Stats/Features Pills -->
-        <div class="feature-pills">
-          <div class="pill">⚡ Lightning Fast</div>
-          <div class="pill">🎨 Beautiful Design</div>
-          <div class="pill">🤖 AI Powered</div>
+        <div className="flex gap-3 justify-center flex-wrap pt-4">
+          <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-gray-300">Lightning Fast</span>
+          <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-gray-300">Beautiful Design</span>
+          <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-gray-300">AI Powered</span>
         </div>
       </div>
-    </div>
-  </div>
-  <script src="app.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: 'styles.css',
-        content: `/* Reset and base styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: #020617;
-  color: white;
-  overflow-x: hidden;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
-}
-
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(20px, -30px) scale(1.1); }
-  50% { transform: translate(-20px, 20px) scale(0.9); }
-  75% { transform: translate(30px, 10px) scale(1.05); }
-}
-
-/* Background */
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  animation: blob 7s infinite;
-}
-
-.blob-1 {
-  top: 25%;
-  left: -8rem;
-  width: 24rem;
-  height: 24rem;
-  background: rgba(139, 92, 246, 0.3);
-}
-
-.blob-2 {
-  top: 50%;
-  right: -8rem;
-  width: 24rem;
-  height: 24rem;
-  background: rgba(6, 182, 212, 0.2);
-  animation-delay: 2s;
-}
-
-.blob-3 {
-  bottom: 25%;
-  left: 50%;
-  width: 20rem;
-  height: 20rem;
-  background: rgba(217, 70, 239, 0.2);
-  animation-delay: 4s;
-}
-
-.grid-pattern {
-  position: fixed;
-  inset: 0;
-  opacity: 0.02;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px);
-  background-size: 50px 50px;
-  z-index: 1;
-}
-
-/* Layout */
-.content-wrapper {
-  position: relative;
-  z-index: 10;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 4rem 1.5rem;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.fade-in-up {
-  animation: fadeInUp 0.8s ease-out forwards;
-}
-
-/* Logo */
-.logo-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 5rem;
-  height: 5rem;
-  margin-bottom: 2rem;
-  border-radius: 1rem;
-  background: linear-gradient(to bottom right, #8b5cf6, #d946ef);
-  box-shadow: 0 25px 50px -12px rgba(139, 92, 246, 0.25);
-  animation: float 6s ease-in-out infinite;
-}
-
-.logo-icon span {
-  font-size: 2rem;
-}
-
-/* Typography */
-.hero-title {
-  font-size: clamp(3rem, 8vw, 4.5rem);
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  background: linear-gradient(to right, #ffffff, #c4b5fd, #a5f3fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1.1;
-}
-
-.hero-subtitle {
-  font-size: clamp(1.125rem, 3vw, 1.5rem);
-  color: #94a3b8;
-  margin-bottom: 3rem;
-  max-width: 48rem;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
-}
-
-/* Buttons */
-.button-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 4rem;
-  align-items: center;
-}
-
-@media (min-width: 640px) {
-  .button-group {
-    flex-direction: row;
-    justify-content: center;
-  }
-}
-
-.btn {
-  padding: 1rem 2rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  font-size: 1.125rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary {
-  background: linear-gradient(to right, #8b5cf6, #d946ef);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: linear-gradient(to right, #7c3aed, #c026d3);
-  transform: scale(1.05);
-  box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.5), 0 0 30px rgba(217, 70, 239, 0.3);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-}
-
-.btn-secondary:hover {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.5);
-  color: #c4b5fd;
-  transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-}
-
-/* Feature Pills */
-.feature-pills {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.pill {
-  padding: 0.5rem 1.25rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  font-size: 0.875rem;
-  color: #cbd5e1;
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.pill:hover {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.4);
-  color: #c4b5fd;
-  transform: translateY(-2px);
-}
-
-html {
-  scroll-behavior: smooth;
-}`,
-      },
-      {
-        path: 'app.js',
-        content: `// Modern JavaScript with enhanced interactions
-console.log('🚀 Welcome to Injaz.ai!');
-
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('✨ App loaded successfully!');
-
-  // Add staggered animation to elements
-  const animatedElements = document.querySelectorAll('.fade-in-up');
-  animatedElements.forEach((el, index) => {
-    el.style.animationDelay = \`\${index * 0.1}s\`;
-  });
-
-  // Add hover parallax effect to buttons
-  document.querySelectorAll('button').forEach(button => {
-    button.addEventListener('mousemove', (e) => {
-      const rect = button.getBoundingClientRect();
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-      button.style.transform = \`perspective(1000px) rotateX(\${-y / 20}deg) rotateY(\${x / 20}deg) scale(1.05)\`;
-    });
-
-    button.addEventListener('mouseleave', () => {
-      button.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
-    });
-  });
-});`,
-      },
-    ],
+    </main>
+  )
+}`),
   },
 
   'landing-page': {
@@ -357,858 +358,241 @@ document.addEventListener('DOMContentLoaded', () => {
     name: 'Landing Page',
     icon: '🚀',
     description: 'Modern landing page with hero and features',
-    files: [
-      {
-        path: 'index.html',
-        content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Landing Page</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <!-- Animated Background -->
-  <div class="bg-container">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
-  </div>
+    files: createGuestBaseFiles(`import { motion } from 'framer-motion'
 
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="container nav-content">
-      <div class="nav-brand">
-        <div class="brand-icon">🚀</div>
-        <span class="brand-name">YourApp</span>
-      </div>
-      <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#testimonials">Testimonials</a>
-        <a href="#pricing">Pricing</a>
-        <button class="btn-nav-signin">Sign In</button>
-        <button class="btn-nav-primary">Get Started</button>
-      </div>
-    </div>
-  </nav>
+const features = [
+  { icon: '⚡', title: 'Lightning Fast', description: 'Optimized for speed with edge computing and smart caching.' },
+  { icon: '🔒', title: 'Enterprise Security', description: 'Bank-level encryption and SOC2 compliance built-in.' },
+  { icon: '🎨', title: 'Beautiful Design', description: 'Stunning templates designed by world-class designers.' },
+  { icon: '🔧', title: 'Developer Tools', description: 'Powerful CLI, APIs, and SDKs for every major language.' },
+  { icon: '📊', title: 'Analytics', description: 'Real-time insights and comprehensive dashboards.' },
+  { icon: '🌍', title: 'Global Scale', description: 'Deploy to 30+ regions worldwide with auto-scaling.' },
+]
 
-  <!-- Hero Section -->
-  <section class="hero-section">
-    <div class="container">
-      <div class="badge">
-        <span class="badge-dot"></span>
-        <span>Now in Public Beta</span>
-      </div>
-      <h1 class="hero-title">
-        <span class="title-line-1">Build Something</span>
-        <br />
-        <span class="title-line-2">Extraordinary</span>
-      </h1>
-      <p class="hero-description">
-        The modern platform for building fast, secure, and beautiful applications. Ship faster with our powerful tools.
-      </p>
-      <div class="hero-buttons">
-        <button class="btn btn-large btn-primary">
-          Start Building Free
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
-          </svg>
-        </button>
-        <button class="btn btn-large btn-secondary">Watch Demo</button>
+const testimonials = [
+  { name: 'Sarah Chen', role: 'CTO at TechCorp', quote: 'Absolutely incredible platform. Shipped our product 3x faster.', avatar: 'S' },
+  { name: 'Mike Johnson', role: 'Lead Dev at StartupXYZ', quote: 'Best developer experience I\\'ve ever had.', avatar: 'M' },
+  { name: 'Alex Rivera', role: 'Founder at CloudApp', quote: 'Migrated our entire infrastructure in a weekend.', avatar: 'A' },
+]
+
+export default function Index() {
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-40 w-[500px] h-[500px] bg-purple-500/30 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute top-1/3 -right-40 w-[600px] h-[600px] bg-cyan-500/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-fuchsia-500/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '4s' }} />
       </div>
 
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-value">10K+</div>
-          <div class="stat-label">Active Users</div>
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-white/10">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🚀</span>
+            <span className="font-bold text-xl">YourApp</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
+            <a href="#testimonials" className="text-gray-300 hover:text-white transition-colors">Testimonials</a>
+            <button className="text-gray-300 hover:text-white transition-colors">Sign In</button>
+            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors">
+              Get Started
+            </button>
+          </div>
         </div>
-        <div class="stat-item">
-          <div class="stat-value">99.9%</div>
-          <div class="stat-label">Uptime</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">50ms</div>
-          <div class="stat-label">Response Time</div>
-        </div>
-      </div>
-    </div>
-  </section>
+      </nav>
 
-  <!-- Features Section -->
-  <section id="features" class="features-section">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-label">Features</span>
-        <h2 class="section-title">Everything You Need</h2>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon icon-violet">⚡</div>
-          <h3 class="feature-title">Lightning Fast</h3>
-          <p class="feature-description">Optimized for speed with edge computing and smart caching. Load times under 100ms guaranteed.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon icon-cyan">🔒</div>
-          <h3 class="feature-title">Enterprise Security</h3>
-          <p class="feature-description">Bank-level encryption, SOC2 compliant, and regular security audits to keep your data safe.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon icon-fuchsia">🎨</div>
-          <h3 class="feature-title">Beautiful Design</h3>
-          <p class="feature-description">Stunning templates and components designed by world-class designers. Ready to use.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon icon-green">🔧</div>
-          <h3 class="feature-title">Developer Tools</h3>
-          <p class="feature-description">Powerful CLI, APIs, and SDKs for every major language. Build faster than ever.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon icon-orange">📊</div>
-          <h3 class="feature-title">Analytics</h3>
-          <p class="feature-description">Real-time insights and comprehensive dashboards to understand your users.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon icon-purple">🌍</div>
-          <h3 class="feature-title">Global Scale</h3>
-          <p class="feature-description">Deploy to 30+ regions worldwide. Automatic scaling handles any traffic.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 px-6">
+        <div className="container mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-sm text-purple-300 mb-8"
+          >
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            Now in Public Beta
+          </motion.div>
 
-  <!-- Testimonials -->
-  <section id="testimonials" class="testimonials-section">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-label">Testimonials</span>
-        <h2 class="section-title">Loved by Developers</h2>
-      </div>
-      <div class="testimonials-grid">
-        <div class="testimonial-card card-violet">
-          <div class="stars">★★★★★</div>
-          <p class="testimonial-quote">"Absolutely incredible platform. Shipped our product 3x faster than expected."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar bg-violet">S</div>
-            <div>
-              <div class="author-name">Sarah Chen</div>
-              <div class="author-role">CTO at TechCorp</div>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl font-bold mb-6"
+          >
+            Build Something
+            <br />
+            <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
+              Extraordinary
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl text-gray-400 max-w-2xl mx-auto mb-10"
+          >
+            The modern platform for building fast, secure, and beautiful applications. Ship faster with our powerful tools.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
+          >
+            <button className="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl font-medium text-lg transition-colors flex items-center justify-center gap-2">
+              Start Building Free
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </button>
+            <button className="px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl font-medium text-lg transition-colors">
+              Watch Demo
+            </button>
+          </motion.div>
+
+          {/* Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="grid grid-cols-3 gap-8 max-w-md mx-auto"
+          >
+            {[
+              { value: '10K+', label: 'Active Users' },
+              { value: '99.9%', label: 'Uptime' },
+              { value: '50ms', label: 'Response Time' },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-gray-500">{stat.label}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 px-6">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-purple-400 font-medium">Features</span>
+            <h2 className="text-4xl font-bold mt-2">Everything You Need</h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/50 transition-colors"
+              >
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-gray-400">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-20 px-6">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-purple-400 font-medium">Testimonials</span>
+            <h2 className="text-4xl font-bold mt-2">Loved by Developers</h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial, i) => (
+              <motion.div
+                key={testimonial.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="p-6 rounded-2xl bg-white/5 border border-white/10"
+              >
+                <div className="text-yellow-400 mb-4">★★★★★</div>
+                <p className="text-gray-300 mb-6">"{testimonial.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center font-bold">
+                    {testimonial.avatar}
+                  </div>
+                  <div>
+                    <div className="font-medium">{testimonial.name}</div>
+                    <div className="text-sm text-gray-500">{testimonial.role}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-6">
+        <div className="container mx-auto">
+          <div className="relative p-12 rounded-3xl bg-gradient-to-r from-purple-900/50 to-cyan-900/50 border border-white/10 text-center overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent" />
+            <div className="relative z-10">
+              <h2 className="text-4xl font-bold mb-4">Ready to Get Started?</h2>
+              <p className="text-gray-400 mb-8 max-w-lg mx-auto">
+                Join thousands of developers building the future. Free to start, no credit card required.
+              </p>
+              <button className="px-8 py-4 bg-white text-slate-900 hover:bg-gray-100 rounded-xl font-medium text-lg transition-colors">
+                Start Building Free →
+              </button>
             </div>
           </div>
         </div>
-        <div class="testimonial-card card-cyan">
-          <div class="stars">★★★★★</div>
-          <p class="testimonial-quote">"Best developer experience I've ever had. The docs are amazing."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar bg-cyan">M</div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-6 border-t border-white/10">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div>
-              <div class="author-name">Mike Johnson</div>
-              <div class="author-role">Lead Dev at StartupXYZ</div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">🚀</span>
+                <span className="font-bold text-xl">YourApp</span>
+              </div>
+              <p className="text-gray-500">Build the future with the most powerful platform for modern applications.</p>
             </div>
+            {[
+              { title: 'Product', links: ['Features', 'Pricing', 'Changelog'] },
+              { title: 'Company', links: ['About', 'Blog', 'Careers'] },
+              { title: 'Legal', links: ['Privacy', 'Terms', 'Security'] },
+            ].map((col) => (
+              <div key={col.title}>
+                <h4 className="font-semibold mb-4">{col.title}</h4>
+                <ul className="space-y-2">
+                  {col.links.map((link) => (
+                    <li key={link}>
+                      <a href="#" className="text-gray-500 hover:text-white transition-colors">{link}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="text-center text-gray-600">
+            © 2024 YourApp. All rights reserved.
           </div>
         </div>
-        <div class="testimonial-card card-fuchsia">
-          <div class="stars">★★★★★</div>
-          <p class="testimonial-quote">"Migrated our entire infrastructure in a weekend. Zero downtime."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar bg-fuchsia">A</div>
-            <div>
-              <div class="author-name">Alex Rivera</div>
-              <div class="author-role">Founder at CloudApp</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </footer>
     </div>
-  </section>
-
-  <!-- CTA Section -->
-  <section class="cta-section">
-    <div class="container">
-      <div class="cta-box">
-        <h2 class="cta-title">Ready to Get Started?</h2>
-        <p class="cta-description">Join thousands of developers building the future. Free to start, no credit card required.</p>
-        <button class="btn btn-cta">Start Building Free →</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-col">
-          <div class="footer-brand">
-            <div class="brand-icon">🚀</div>
-            <span class="brand-name">YourApp</span>
-          </div>
-          <p class="footer-description">Build the future with the most powerful platform for modern applications.</p>
-        </div>
-        <div class="footer-col">
-          <h4 class="footer-heading">Product</h4>
-          <ul class="footer-links">
-            <li><a href="#">Features</a></li>
-            <li><a href="#">Pricing</a></li>
-            <li><a href="#">Changelog</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h4 class="footer-heading">Company</h4>
-          <ul class="footer-links">
-            <li><a href="#">About</a></li>
-            <li><a href="#">Blog</a></li>
-            <li><a href="#">Careers</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h4 class="footer-heading">Legal</h4>
-          <ul class="footer-links">
-            <li><a href="#">Privacy</a></li>
-            <li><a href="#">Terms</a></li>
-            <li><a href="#">Security</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>© 2024 YourApp. All rights reserved.</p>
-      </div>
-    </div>
-  </footer>
-
-  <script src="app.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: 'styles.css',
-        content: `/* Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: #020617;
-  color: white;
-  overflow-x: hidden;
-}
-
-/* Animations */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
-}
-
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(20px, -30px) scale(1.1); }
-  50% { transform: translate(-20px, 20px) scale(0.9); }
-  75% { transform: translate(30px, 10px) scale(1.05); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* Background */
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  animation: blob 7s infinite;
-}
-
-.blob-1 {
-  top: 0;
-  left: -10rem;
-  width: 31.25rem;
-  height: 31.25rem;
-  background: rgba(139, 92, 246, 0.3);
-}
-
-.blob-2 {
-  top: 33%;
-  right: -10rem;
-  width: 37.5rem;
-  height: 37.5rem;
-  background: rgba(6, 182, 212, 0.2);
-  animation-delay: 2s;
-}
-
-.blob-3 {
-  bottom: 0;
-  left: 33%;
-  width: 25rem;
-  height: 25rem;
-  background: rgba(217, 70, 239, 0.2);
-  animation-delay: 4s;
-}
-
-/* Layout */
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-/* Navbar */
-.navbar {
-  position: relative;
-  z-index: 50;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(2, 6, 23, 0.5);
-  backdrop-filter: blur(20px);
-}
-
-.nav-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.brand-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to bottom right, #8b5cf6, #d946ef);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-}
-
-.brand-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.nav-links {
-  display: none;
-  align-items: center;
-  gap: 2rem;
-}
-
-@media (min-width: 768px) {
-  .nav-links {
-    display: flex;
-  }
-}
-
-.nav-links a {
-  color: #94a3b8;
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.nav-links a:hover {
-  color: #c4b5fd;
-}
-
-.btn-nav-signin {
-  padding: 0.5rem 1.25rem;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-nav-signin:hover {
-  background: rgba(139, 92, 246, 0.2);
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
-}
-
-.btn-nav-primary {
-  padding: 0.5rem 1.25rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, #8b5cf6, #d946ef);
-  border: none;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.btn-nav-primary:hover {
-  background: linear-gradient(to right, #7c3aed, #c026d3);
-  box-shadow: 0 5px 15px -3px rgba(139, 92, 246, 0.5);
-}
-
-/* Hero Section */
-.hero-section {
-  position: relative;
-  z-index: 10;
-  padding: 8rem 0;
-  text-align: center;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  margin-bottom: 2rem;
-  animation: fadeInUp 0.8s ease-out;
-}
-
-.badge-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: #8b5cf6;
-  animation: pulse 2s infinite;
-}
-
-.badge span {
-  font-size: 0.875rem;
-  color: #c4b5fd;
-}
-
-.hero-title {
-  font-size: clamp(3rem, 8vw, 4.5rem);
-  font-weight: 700;
-  margin-bottom: 2rem;
-  animation: fadeInUp 0.8s ease-out 0.1s both;
-  line-height: 1.1;
-}
-
-.title-line-1 {
-  background: linear-gradient(to right, #ffffff, #c4b5fd, #a5f3fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.title-line-2 {
-  background: linear-gradient(to right, #a78bfa, #d946ef);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-description {
-  font-size: clamp(1.125rem, 3vw, 1.5rem);
-  color: #94a3b8;
-  margin-bottom: 3rem;
-  max-width: 48rem;
-  margin-left: auto;
-  margin-right: auto;
-  animation: fadeInUp 0.8s ease-out 0.2s both;
-}
-
-.hero-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 5rem;
-  animation: fadeInUp 0.8s ease-out 0.3s both;
-}
-
-@media (min-width: 640px) {
-  .hero-buttons {
-    flex-direction: row;
-    justify-content: center;
-  }
-}
-
-.btn {
-  padding: 1rem 2rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-large {
-  font-size: 1.125rem;
-}
-
-.btn-primary {
-  background: linear-gradient(to right, #8b5cf6, #d946ef);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: linear-gradient(to right, #7c3aed, #c026d3);
-  transform: scale(1.05);
-  box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.5), 0 0 30px rgba(217, 70, 239, 0.3);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-}
-
-.btn-secondary:hover {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.5);
-  color: #c4b5fd;
-  transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-}
-
-/* Stats */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  max-width: 40rem;
-  margin: 0 auto;
-  padding-top: 2.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 2.25rem;
-  font-weight: 700;
-  background: linear-gradient(to right, #a78bfa, #d946ef);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.stat-label {
-  color: #64748b;
-  margin-top: 0.25rem;
-}
-
-/* Features Section */
-.features-section {
-  position: relative;
-  z-index: 10;
-  padding: 8rem 0;
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 4rem;
-}
-
-.section-label {
-  color: #a78bfa;
-  font-weight: 500;
-}
-
-.section-title {
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  font-weight: 700;
-  margin-top: 1rem;
-  background: linear-gradient(to right, #ffffff, #94a3b8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 768px) {
-  .features-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.feature-card {
-  padding: 2rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s;
-}
-
-.feature-card:hover {
-  background: rgba(139, 92, 246, 0.1);
-  border-color: rgba(139, 92, 246, 0.6);
-  transform: translateY(-0.5rem);
-  box-shadow: 0 20px 40px -10px rgba(139, 92, 246, 0.3);
-}
-
-.feature-icon {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
-  transition: transform 0.3s;
-}
-
-.feature-card:hover .feature-icon {
-  transform: scale(1.1);
-}
-
-.icon-violet { background: linear-gradient(to bottom right, #8b5cf6, #d946ef); }
-.icon-cyan { background: linear-gradient(to bottom right, #06b6d4, #3b82f6); }
-.icon-fuchsia { background: linear-gradient(to bottom right, #d946ef, #ec4899); }
-.icon-green { background: linear-gradient(to bottom right, #10b981, #059669); }
-.icon-orange { background: linear-gradient(to bottom right, #f97316, #fb923c); }
-.icon-purple { background: linear-gradient(to bottom right, #a855f7, #6366f1); }
-
-.feature-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-}
-
-.feature-description {
-  color: #94a3b8;
-}
-
-/* Testimonials */
-.testimonials-section {
-  position: relative;
-  z-index: 10;
-  padding: 8rem 0;
-}
-
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 768px) {
-  .testimonials-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.testimonial-card {
-  padding: 2rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s;
-}
-
-.testimonial-card:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  transform: translateY(-0.25rem);
-  box-shadow: 0 15px 30px -10px rgba(139, 92, 246, 0.2);
-}
-
-.card-violet { background: linear-gradient(to bottom right, rgba(139, 92, 246, 0.1), rgba(217, 70, 239, 0.1)); }
-.card-cyan { background: linear-gradient(to bottom right, rgba(6, 182, 212, 0.1), rgba(59, 130, 246, 0.1)); }
-.card-fuchsia { background: linear-gradient(to bottom right, rgba(217, 70, 239, 0.1), rgba(236, 72, 153, 0.1)); }
-
-.stars {
-  color: #fbbf24;
-  margin-bottom: 1rem;
-}
-
-.testimonial-quote {
-  color: #cbd5e1;
-  margin-bottom: 1.5rem;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.author-avatar {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.bg-violet { background: linear-gradient(to bottom right, #8b5cf6, #d946ef); }
-.bg-cyan { background: linear-gradient(to bottom right, #06b6d4, #3b82f6); }
-.bg-fuchsia { background: linear-gradient(to bottom right, #d946ef, #ec4899); }
-
-.author-name {
-  font-weight: 600;
-}
-
-.author-role {
-  font-size: 0.875rem;
-  color: #64748b;
-}
-
-/* CTA Section */
-.cta-section {
-  position: relative;
-  z-index: 10;
-  padding: 8rem 0;
-}
-
-.cta-box {
-  position: relative;
-  overflow: hidden;
-  border-radius: 1.5rem;
-  background: linear-gradient(to right, #8b5cf6, #d946ef);
-  padding: 4rem;
-  text-align: center;
-}
-
-.cta-title {
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-}
-
-.cta-description {
-  font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2.5rem;
-  max-width: 40rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.btn-cta {
-  padding: 1.25rem 2.5rem;
-  background: white;
-  color: #8b5cf6;
-  font-size: 1.125rem;
-  font-weight: 700;
-  border-radius: 0.75rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-
-.btn-cta:hover {
-  background: #f5f5f5;
-  transform: scale(1.05);
-}
-
-/* Footer */
-.footer {
-  position: relative;
-  z-index: 10;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 4rem 0;
-}
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 3rem;
-  margin-bottom: 3rem;
-}
-
-@media (min-width: 768px) {
-  .footer-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-.footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.footer-description {
-  color: #64748b;
-}
-
-.footer-heading {
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.footer-links {
-  list-style: none;
-}
-
-.footer-links li {
-  margin-bottom: 0.75rem;
-}
-
-.footer-links a {
-  color: #94a3b8;
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.footer-links a:hover {
-  color: #c4b5fd;
-}
-
-.footer-bottom {
-  padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  text-align: center;
-  color: #64748b;
-}
-
-html {
-  scroll-behavior: smooth;
-}`,
-      },
-      {
-        path: 'app.js',
-        content: `console.log('🚀 Landing page loaded!');
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Smooth scroll for navigation links
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-      e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth' });
-      }
-    });
-  });
-});`,
-      },
-    ],
+  )
+}`),
   },
 
   dashboard: {
@@ -1216,402 +600,137 @@ document.addEventListener('DOMContentLoaded', () => {
     name: 'Dashboard',
     icon: '📊',
     description: 'Analytics dashboard with stats and charts',
-    files: [
-      {
-        path: 'index.html',
-        content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="brand-icon">📊</div>
-      <span class="brand-name">Nexus</span>
+    files: createGuestBaseFiles(`import { useState } from 'react'
+
+const stats = [
+  { label: 'Total Revenue', value: '$45,231.89', change: '+20.1%', trend: 'up' },
+  { label: 'Subscriptions', value: '+2,350', change: '+180.1%', trend: 'up' },
+  { label: 'Sales', value: '+12,234', change: '+19%', trend: 'up' },
+  { label: 'Active Now', value: '+573', change: '+201', trend: 'up' },
+]
+
+const recentSales = [
+  { name: 'Olivia Martin', email: 'olivia@email.com', amount: '+$1,999.00' },
+  { name: 'Jackson Lee', email: 'jackson@email.com', amount: '+$39.00' },
+  { name: 'Isabella Nguyen', email: 'isabella@email.com', amount: '+$299.00' },
+  { name: 'William Kim', email: 'will@email.com', amount: '+$99.00' },
+  { name: 'Sofia Davis', email: 'sofia@email.com', amount: '+$39.00' },
+]
+
+export default function Index() {
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white flex">
+      {/* Sidebar */}
+      <aside className={\`\${sidebarOpen ? 'w-64' : 'w-16'} bg-slate-900 border-r border-white/10 transition-all duration-300 flex flex-col\`}>
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          {sidebarOpen && <span className="font-bold text-lg">Dashboard</span>}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            {sidebarOpen ? '←' : '→'}
+          </button>
+        </div>
+        <nav className="flex-1 p-4">
+          {[
+            { icon: '📊', label: 'Overview', active: true },
+            { icon: '👥', label: 'Customers' },
+            { icon: '📦', label: 'Products' },
+            { icon: '📈', label: 'Analytics' },
+            { icon: '⚙️', label: 'Settings' },
+          ].map((item) => (
+            <button
+              key={item.label}
+              className={\`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors \${
+                item.active ? 'bg-purple-600' : 'hover:bg-white/10'
+              }\`}
+            >
+              <span>{item.icon}</span>
+              {sidebarOpen && <span>{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="h-16 border-b border-white/10 flex items-center justify-between px-6">
+          <h1 className="text-xl font-semibold">Overview</h1>
+          <div className="flex items-center gap-4">
+            <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">🔔</button>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500" />
+          </div>
+        </header>
+
+        {/* Dashboard Content */}
+        <div className="p-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="p-6 rounded-xl bg-white/5 border border-white/10"
+              >
+                <div className="text-sm text-gray-400 mb-1">{stat.label}</div>
+                <div className="text-2xl font-bold mb-1">{stat.value}</div>
+                <div className={\`text-sm \${stat.trend === 'up' ? 'text-green-400' : 'text-red-400'}\`}>
+                  {stat.change} from last month
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Charts and Recent Sales */}
+          <div className="grid lg:grid-cols-7 gap-6">
+            {/* Chart */}
+            <div className="lg:col-span-4 p-6 rounded-xl bg-white/5 border border-white/10">
+              <h3 className="font-semibold mb-4">Overview</h3>
+              <div className="h-[300px] flex items-end gap-2">
+                {[40, 25, 55, 30, 45, 65, 50, 70, 45, 60, 75, 55].map((height, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 bg-gradient-to-t from-purple-600 to-purple-400 rounded-t-sm transition-all hover:opacity-80"
+                    style={{ height: \`\${height}%\` }}
+                  />
+                ))}
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gray-500">
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => (
+                  <span key={m}>{m}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Sales */}
+            <div className="lg:col-span-3 p-6 rounded-xl bg-white/5 border border-white/10">
+              <h3 className="font-semibold mb-4">Recent Sales</h3>
+              <p className="text-sm text-gray-400 mb-4">You made 265 sales this month.</p>
+              <div className="space-y-4">
+                {recentSales.map((sale) => (
+                  <div key={sale.email} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-sm font-bold">
+                        {sale.name[0]}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">{sale.name}</div>
+                        <div className="text-xs text-gray-500">{sale.email}</div>
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium">{sale.amount}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
-    <nav class="sidebar-nav">
-      <a href="#" class="nav-item active">Dashboard</a>
-      <a href="#" class="nav-item">Customers</a>
-      <a href="#" class="nav-item">Orders</a>
-      <a href="#" class="nav-item">Analytics</a>
-      <a href="#" class="nav-item">Settings</a>
-    </nav>
-  </aside>
-
-  <!-- Main Content -->
-  <div class="main-content">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <div>
-          <h1 class="header-title">Dashboard</h1>
-          <p class="header-subtitle">Welcome back, here's what's happening</p>
-        </div>
-        <div class="header-actions">
-          <div class="user-avatar">JD</div>
-        </div>
-      </div>
-    </header>
-
-    <main class="dashboard-main">
-      <!-- Stats Grid -->
-      <div class="stats-grid">
-        <div class="stat-card stat-emerald">
-          <div class="stat-header">
-            <div class="stat-icon icon-emerald">💰</div>
-            <div class="stat-change stat-up">↑ +20.1%</div>
-          </div>
-          <div class="stat-value">$45,231</div>
-          <div class="stat-label">Total Revenue</div>
-        </div>
-        <div class="stat-card stat-blue">
-          <div class="stat-header">
-            <div class="stat-icon icon-blue">👥</div>
-            <div class="stat-change stat-up">↑ +15.3%</div>
-          </div>
-          <div class="stat-value">2,345</div>
-          <div class="stat-label">Active Users</div>
-        </div>
-        <div class="stat-card stat-violet">
-          <div class="stat-header">
-            <div class="stat-icon icon-violet">📦</div>
-            <div class="stat-change stat-up">↑ +8.2%</div>
-          </div>
-          <div class="stat-value">1,234</div>
-          <div class="stat-label">Total Orders</div>
-        </div>
-        <div class="stat-card stat-amber">
-          <div class="stat-header">
-            <div class="stat-icon icon-amber">📈</div>
-            <div class="stat-change stat-down">↓ -2.5%</div>
-          </div>
-          <div class="stat-value">3.2%</div>
-          <div class="stat-label">Conversion</div>
-        </div>
-      </div>
-
-      <!-- Chart Section -->
-      <div class="chart-card">
-        <h2 class="chart-title">Revenue Analytics</h2>
-        <div class="chart-container">
-          <div class="chart-bar" style="height: 130px;">
-            <div class="bar-label">Mon</div>
-          </div>
-          <div class="chart-bar" style="height: 156px;">
-            <div class="bar-label">Tue</div>
-          </div>
-          <div class="chart-bar" style="height: 110px;">
-            <div class="bar-label">Wed</div>
-          </div>
-          <div class="chart-bar" style="height: 180px;">
-            <div class="bar-label">Thu</div>
-          </div>
-          <div class="chart-bar" style="height: 164px;">
-            <div class="bar-label">Fri</div>
-          </div>
-          <div class="chart-bar" style="height: 190px;">
-            <div class="bar-label">Sat</div>
-          </div>
-          <div class="chart-bar" style="height: 140px;">
-            <div class="bar-label">Sun</div>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: 'styles.css',
-        content: `* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: #020617;
-  color: white;
-  display: flex;
-}
-
-/* Sidebar */
-.sidebar {
-  width: 16rem;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 1.5rem;
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .sidebar {
-    display: block;
-  }
-}
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 2.5rem;
-}
-
-.brand-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to bottom right, #8b5cf6, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.nav-item {
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  text-decoration: none;
-  color: #94a3b8;
-  transition: all 0.3s;
-}
-
-.nav-item:hover {
-  color: #c4b5fd;
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.nav-item.active {
-  background: linear-gradient(to right, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.2));
-  color: white;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-}
-
-/* Header */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: rgba(2, 6, 23, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-}
-
-.header-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.header-subtitle {
-  font-size: 0.875rem;
-  color: #94a3b8;
-}
-
-.user-avatar {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background: linear-gradient(to bottom right, #8b5cf6, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-/* Dashboard Main */
-.dashboard-main {
-  padding: 1.5rem;
-}
-
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1280px) {
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-.stat-card {
-  padding: 1.5rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s;
-}
-
-.stat-card:hover {
-  border-color: rgba(139, 92, 246, 0.3);
-  transform: translateY(-0.25rem);
-  box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.2);
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-.stat-icon {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.icon-emerald { background: linear-gradient(to bottom right, #10b981, #059669); }
-.icon-blue { background: linear-gradient(to bottom right, #3b82f6, #6366f1); }
-.icon-violet { background: linear-gradient(to bottom right, #8b5cf6, #a855f7); }
-.icon-amber { background: linear-gradient(to bottom right, #f59e0b, #f97316); }
-
-.stat-change {
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.stat-up {
-  background: rgba(16, 185, 129, 0.1);
-  color: #34d399;
-}
-
-.stat-down {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-}
-
-.stat-value {
-  font-size: 1.875rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: #94a3b8;
-}
-
-/* Chart */
-.chart-card {
-  padding: 1.5rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.chart-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-}
-
-.chart-container {
-  height: 16rem;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem;
-}
-
-.chart-bar {
-  flex: 1;
-  background: linear-gradient(to top, #8b5cf6, #a855f7);
-  border-radius: 0.5rem 0.5rem 0 0;
-  position: relative;
-  transition: all 0.3s;
-}
-
-.chart-bar:hover {
-  background: linear-gradient(to top, #7c3aed, #c026d3);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
-  transform: scale(1.05);
-}
-
-.bar-label {
-  position: absolute;
-  bottom: -1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.75rem;
-  color: #64748b;
-}`,
-      },
-      {
-        path: 'app.js',
-        content: `console.log('📊 Dashboard loaded!');
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Add hover effects to stat cards
-  document.querySelectorAll('.stat-card').forEach((card, index) => {
-    card.style.animationDelay = \`\${index * 0.1}s\`;
-  });
-
-  // Animate chart bars
-  document.querySelectorAll('.chart-bar').forEach((bar, index) => {
-    const height = bar.style.height;
-    bar.style.height = '0';
-    setTimeout(() => {
-      bar.style.transition = 'height 0.8s ease-out';
-      bar.style.height = height;
-    }, 300 + (index * 100));
-  });
-});`,
-      },
-    ],
+  )
+}`),
   },
 
   portfolio: {
@@ -1619,519 +738,227 @@ document.addEventListener('DOMContentLoaded', () => {
     name: 'Portfolio',
     icon: '💼',
     description: 'Personal portfolio with projects',
-    files: [
-      {
-        path: 'index.html',
-        content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Portfolio</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="bg-container">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-  </div>
+    files: createGuestBaseFiles(`import { useState } from 'react'
+import { motion } from 'framer-motion'
 
-  <div class="container">
-    <!-- Header -->
-    <header class="hero">
-      <div class="avatar-container">
-        <div class="avatar">👨‍💻</div>
-      </div>
-      <div class="status-badge">
-        <span class="status-dot"></span>
-        Available for work
-      </div>
-      <h1 class="hero-title">John Doe</h1>
-      <p class="hero-subtitle">Full-Stack Developer crafting beautiful, performant web experiences with modern technologies.</p>
-      <div class="hero-buttons">
-        <button class="btn btn-primary">View Projects →</button>
-        <button class="btn btn-secondary">Contact Me</button>
-      </div>
-      <div class="skills">
-        <span class="skill skill-violet">React</span>
-        <span class="skill skill-blue">TypeScript</span>
-        <span class="skill skill-emerald">Node.js</span>
-        <span class="skill skill-amber">Python</span>
-        <span class="skill skill-gray">Next.js</span>
-        <span class="skill skill-cyan">Tailwind</span>
-      </div>
-    </header>
+const projects = [
+  {
+    title: 'E-Commerce Platform',
+    description: 'A modern e-commerce platform built with React and Node.js',
+    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=600&fit=crop',
+    tags: ['React', 'Node.js', 'MongoDB'],
+    link: '#',
+  },
+  {
+    title: 'Task Management App',
+    description: 'Collaborative task management with real-time updates',
+    image: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=800&h=600&fit=crop',
+    tags: ['TypeScript', 'Next.js', 'Prisma'],
+    link: '#',
+  },
+  {
+    title: 'AI Chat Interface',
+    description: 'Conversational AI interface with natural language processing',
+    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop',
+    tags: ['Python', 'FastAPI', 'OpenAI'],
+    link: '#',
+  },
+  {
+    title: 'Analytics Dashboard',
+    description: 'Real-time analytics dashboard with interactive visualizations',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop',
+    tags: ['React', 'D3.js', 'PostgreSQL'],
+    link: '#',
+  },
+]
 
-    <!-- Projects -->
-    <section class="projects">
-      <h2 class="section-title">Featured Projects</h2>
-      <p class="section-subtitle">A selection of my recent work</p>
+const skills = ['React', 'TypeScript', 'Node.js', 'Python', 'PostgreSQL', 'AWS', 'Docker', 'GraphQL']
 
-      <div class="projects-grid">
-        <div class="project-card">
-          <div class="project-header project-violet">📊</div>
-          <h3 class="project-title">AI Dashboard</h3>
-          <p class="project-description">Real-time analytics platform with ML predictions</p>
-          <div class="project-tags">
-            <span class="tag">React</span>
-            <span class="tag">Python</span>
-            <span class="tag">ML</span>
+export default function Index() {
+  const [filter, setFilter] = useState('All')
+  const allTags = ['All', ...new Set(projects.flatMap(p => p.tags))]
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-white/10">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <span className="font-bold text-xl">JD</span>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#about" className="text-gray-300 hover:text-white transition-colors">About</a>
+            <a href="#projects" className="text-gray-300 hover:text-white transition-colors">Projects</a>
+            <a href="#contact" className="text-gray-300 hover:text-white transition-colors">Contact</a>
           </div>
         </div>
+      </nav>
 
-        <div class="project-card">
-          <div class="project-header project-emerald">🛒</div>
-          <h3 class="project-title">E-Commerce App</h3>
-          <p class="project-description">Full-stack shopping platform with payments</p>
-          <div class="project-tags">
-            <span class="tag">Next.js</span>
-            <span class="tag">Stripe</span>
+      {/* Hero Section */}
+      <section className="min-h-screen flex items-center justify-center px-6 pt-16">
+        <div className="text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-4xl font-bold"
+          >
+            JD
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-5xl md:text-7xl font-bold mb-4"
+          >
+            John Doe
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-xl text-gray-400 mb-8"
+          >
+            Full-Stack Developer & UI Designer
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-wrap justify-center gap-2"
+          >
+            {skills.map((skill) => (
+              <span key={skill} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm">
+                {skill}
+              </span>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section id="about" className="py-20 px-6">
+        <div className="container mx-auto max-w-4xl">
+          <h2 className="text-3xl font-bold mb-8 text-center">About Me</h2>
+          <p className="text-gray-400 text-lg text-center leading-relaxed">
+            I'm a passionate full-stack developer with 5+ years of experience building web applications.
+            I love creating beautiful, performant, and accessible user experiences. When I'm not coding,
+            you can find me exploring new technologies, contributing to open source, or enjoying a good cup of coffee.
+          </p>
+        </div>
+      </section>
+
+      {/* Projects Section */}
+      <section id="projects" className="py-20 px-6">
+        <div className="container mx-auto">
+          <h2 className="text-3xl font-bold mb-8 text-center">Projects</h2>
+
+          {/* Filter */}
+          <div className="flex flex-wrap justify-center gap-2 mb-12">
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setFilter(tag)}
+                className={\`px-4 py-2 rounded-full text-sm transition-colors \${
+                  filter === tag
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }\`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          {/* Projects Grid */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {projects
+              .filter(p => filter === 'All' || p.tags.includes(filter))
+              .map((project, i) => (
+                <motion.a
+                  key={project.title}
+                  href={project.link}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  viewport={{ once: true }}
+                  className="group relative overflow-hidden rounded-2xl bg-white/5 border border-white/10"
+                >
+                  <div className="aspect-video bg-slate-800 overflow-hidden">
+                    <img
+                      src={project.image}
+                      alt={project.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
+                    <p className="text-gray-400 mb-4">{project.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {project.tags.map((tag) => (
+                        <span key={tag} className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </motion.a>
+              ))}
           </div>
         </div>
+      </section>
 
-        <div class="project-card">
-          <div class="project-header project-rose">💬</div>
-          <h3 class="project-title">Social Network</h3>
-          <p class="project-description">Real-time chat and social features</p>
-          <div class="project-tags">
-            <span class="tag">React</span>
-            <span class="tag">Firebase</span>
+      {/* Contact Section */}
+      <section id="contact" className="py-20 px-6">
+        <div className="container mx-auto max-w-xl">
+          <h2 className="text-3xl font-bold mb-8 text-center">Get In Touch</h2>
+          <div className="p-8 rounded-2xl bg-white/5 border border-white/10">
+            <form className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Name</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-purple-500"
+                  placeholder="Your name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-purple-500"
+                  placeholder="your@email.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Message</label>
+                <textarea
+                  rows={4}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
+                  placeholder="Your message..."
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+              >
+                Send Message
+              </button>
+            </form>
           </div>
         </div>
+      </section>
 
-        <div class="project-card">
-          <div class="project-header project-amber">🚀</div>
-          <h3 class="project-title">SaaS Platform</h3>
-          <p class="project-description">Multi-tenant application with billing</p>
-          <div class="project-tags">
-            <span class="tag">Node.js</span>
-            <span class="tag">PostgreSQL</span>
+      {/* Footer */}
+      <footer className="py-8 px-6 border-t border-white/10">
+        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-gray-500">© 2024 John Doe. All rights reserved.</p>
+          <div className="flex gap-4">
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">GitHub</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">LinkedIn</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">Twitter</a>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="cta">
-      <div class="cta-box">
-        <h2 class="cta-title">Let's Work Together</h2>
-        <p class="cta-description">Have a project in mind? I'd love to hear about it.</p>
-        <button class="btn btn-cta">Get In Touch →</button>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <p>© 2024 John Doe. All rights reserved.</p>
-    </footer>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: 'styles.css',
-        content: `* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: #020617;
-  color: white;
-}
-
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-}
-
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  animation: blob 7s infinite;
-}
-
-.blob-1 {
-  top: 0;
-  left: 25%;
-  width: 24rem;
-  height: 24rem;
-  background: rgba(139, 92, 246, 0.2);
-}
-
-.blob-2 {
-  bottom: 0;
-  right: 25%;
-  width: 24rem;
-  height: 24rem;
-  background: rgba(6, 182, 212, 0.2);
-  animation-delay: 3s;
-}
-
-.container {
-  position: relative;
-  z-index: 10;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-/* Hero */
-.hero {
-  padding: 6rem 0;
-  text-align: center;
-}
-
-.avatar-container {
-  position: relative;
-  display: inline-block;
-  margin-bottom: 2rem;
-}
-
-.avatar-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to right, #8b5cf6, #06b6d4);
-  border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.5;
-}
-
-.avatar {
-  position: relative;
-  width: 8rem;
-  height: 8rem;
-  border-radius: 50%;
-  background: linear-gradient(to bottom right, #8b5cf6, #06b6d4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  animation: float 3s ease-in-out infinite;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 1.5rem;
-  font-size: 0.875rem;
-  color: #cbd5e1;
-}
-
-.status-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: #34d399;
-  animation: pulse 2s infinite;
-}
-
-.hero-title {
-  font-size: clamp(3rem, 6vw, 4rem);
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.hero-subtitle {
-  font-size: 1.25rem;
-  color: #94a3b8;
-  margin-bottom: 2rem;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.hero-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 3rem;
-  align-items: center;
-}
-
-@media (min-width: 640px) {
-  .hero-buttons {
-    flex-direction: row;
-    justify-content: center;
-  }
-}
-
-.btn {
-  padding: 1rem 2rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  font-size: 1.125rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-primary {
-  background: linear-gradient(to right, #8b5cf6, #06b6d4);
-  color: white;
-}
-
-.btn-primary:hover {
-  transform: scale(1.05);
-  box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.25);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.5);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-}
-
-.skills {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
-}
-
-.skill {
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: white;
-}
-
-.skill {
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.skill:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.4);
-}
-
-.skill-violet { background: linear-gradient(to right, #8b5cf6, #a855f7); }
-.skill-blue { background: linear-gradient(to right, #3b82f6, #6366f1); }
-.skill-emerald { background: linear-gradient(to right, #10b981, #059669); }
-.skill-amber { background: linear-gradient(to right, #f59e0b, #f97316); }
-.skill-gray { background: linear-gradient(to right, #4b5563, #111827); }
-.skill-cyan { background: linear-gradient(to right, #06b6d4, #3b82f6); }
-
-/* Projects */
-.projects {
-  padding: 6rem 0;
-}
-
-.section-title {
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.section-subtitle {
-  font-size: 1.25rem;
-  color: #94a3b8;
-  text-align: center;
-  margin-bottom: 4rem;
-  max-width: 40rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.projects-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .projects-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.project-card {
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  transition: all 0.3s;
-}
-
-.project-card:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  transform: translateY(-0.5rem);
-  box-shadow: 0 20px 40px -10px rgba(139, 92, 246, 0.3);
-}
-
-.project-header {
-  height: 12rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 4rem;
-  position: relative;
-  transition: transform 0.3s;
-}
-
-.project-card:hover .project-header {
-  transform: scale(1.1);
-}
-
-.project-header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.project-violet { background: linear-gradient(to right, #8b5cf6, #a855f7); }
-.project-emerald { background: linear-gradient(to right, #10b981, #059669); }
-.project-rose { background: linear-gradient(to right, #f43f5e, #ec4899); }
-.project-amber { background: linear-gradient(to right, #f59e0b, #f97316); }
-
-.project-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  padding: 1.5rem 1.5rem 0.75rem;
-}
-
-.project-description {
-  color: #94a3b8;
-  padding: 0 1.5rem 1rem;
-}
-
-.project-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0 1.5rem 1.5rem;
-}
-
-.tag {
-  padding: 0.25rem 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.tag:hover {
-  background: rgba(139, 92, 246, 0.2);
-  color: #c4b5fd;
-  transform: translateY(-2px);
-}
-
-/* CTA */
-.cta {
-  padding: 6rem 0;
-}
-
-.cta-box {
-  position: relative;
-  overflow: hidden;
-  border-radius: 1.5rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7, #06b6d4);
-  padding: 5rem 3rem;
-  text-align: center;
-}
-
-.cta-title {
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-}
-
-.cta-description {
-  font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2.5rem;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.btn-cta {
-  padding: 1.25rem 2.5rem;
-  background: white;
-  color: #8b5cf6;
-  font-size: 1.125rem;
-  font-weight: 700;
-  border-radius: 0.75rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-cta:hover {
-  background: #ffffff;
-  transform: scale(1.05);
-  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.4);
-}
-
-/* Footer */
-.footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 3rem 0;
-  text-align: center;
-  color: #64748b;
-}`,
-      },
-      {
-        path: 'app.js',
-        content: `console.log('💼 Portfolio loaded!');
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Smooth scroll
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-      e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth' });
-      }
-    });
-  });
-});`,
-      },
-    ],
+      </footer>
+    </div>
+  )
+}`),
   },
 
   blog: {
@@ -2139,1655 +966,563 @@ document.addEventListener('DOMContentLoaded', () => {
     name: 'Blog',
     icon: '📝',
     description: 'Simple blog layout',
-    files: [
-      {
-        path: 'index.html',
-        content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Blog</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="bg-container">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-  </div>
+    files: createGuestBaseFiles(`import { useState } from 'react'
 
-  <!-- Header -->
-  <header class="header">
-    <nav class="navbar">
-      <div class="container nav-content">
-        <div class="nav-brand">
-          <div class="brand-icon">✨</div>
-          <span class="brand-name">DevBlog</span>
+const posts = [
+  {
+    id: 1,
+    title: 'Getting Started with React 18',
+    excerpt: 'Learn about the new features in React 18 including automatic batching, transitions, and Suspense.',
+    author: 'Sarah Johnson',
+    date: 'Dec 15, 2024',
+    readTime: '5 min read',
+    category: 'React',
+    image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=400&fit=crop',
+  },
+  {
+    id: 2,
+    title: 'Building Modern APIs with Node.js',
+    excerpt: 'A comprehensive guide to building RESTful APIs with Express and best practices for production.',
+    author: 'Mike Chen',
+    date: 'Dec 12, 2024',
+    readTime: '8 min read',
+    category: 'Backend',
+    image: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&h=400&fit=crop',
+  },
+  {
+    id: 3,
+    title: 'Mastering TypeScript Generics',
+    excerpt: 'Deep dive into TypeScript generics and how to use them to write more reusable code.',
+    author: 'Emily Davis',
+    date: 'Dec 10, 2024',
+    readTime: '6 min read',
+    category: 'TypeScript',
+    image: 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=800&h=400&fit=crop',
+  },
+  {
+    id: 4,
+    title: 'CSS Grid Layout Complete Guide',
+    excerpt: 'Everything you need to know about CSS Grid to create complex layouts with ease.',
+    author: 'Alex Rivera',
+    date: 'Dec 8, 2024',
+    readTime: '7 min read',
+    category: 'CSS',
+    image: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=800&h=400&fit=crop',
+  },
+]
+
+const categories = ['All', 'React', 'Backend', 'TypeScript', 'CSS']
+
+export default function Index() {
+  const [activeCategory, setActiveCategory] = useState('All')
+  const filteredPosts = activeCategory === 'All'
+    ? posts
+    : posts.filter(p => p.category === activeCategory)
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-white/10">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <span className="font-bold text-xl">TechBlog</span>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#" className="text-gray-300 hover:text-white transition-colors">Articles</a>
+            <a href="#" className="text-gray-300 hover:text-white transition-colors">About</a>
+            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors">
+              Subscribe
+            </button>
+          </div>
         </div>
-        <div class="nav-links">
-          <a href="#">Home</a>
-          <a href="#">Articles</a>
-          <a href="#">About</a>
-          <button class="btn-subscribe">Subscribe</button>
+      </nav>
+
+      {/* Hero */}
+      <section className="pt-32 pb-16 px-6">
+        <div className="container mx-auto text-center">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">
+            Welcome to <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">TechBlog</span>
+          </h1>
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            Discover the latest insights in web development, programming, and technology.
+          </p>
         </div>
-      </div>
-    </nav>
-  </header>
+      </section>
 
-  <div class="container">
-    <!-- Featured Post -->
-    <section class="featured">
-      <div class="featured-card">
-        <span class="featured-badge">Featured</span>
-        <h1 class="featured-title">The Future of Web Development: AI-Powered Design</h1>
-        <p class="featured-excerpt">Explore how artificial intelligence is revolutionizing web development and what it means for the future of digital design.</p>
-        <div class="featured-meta">
-          <div class="author">
-            <div class="author-avatar">SC</div>
-            <div>
-              <div class="author-name">Sarah Chen</div>
-              <div class="author-date">Jan 20, 2024 · 12 min</div>
-            </div>
+      {/* Categories */}
+      <section className="px-6 mb-12">
+        <div className="container mx-auto">
+          <div className="flex flex-wrap justify-center gap-2">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={\`px-4 py-2 rounded-full text-sm transition-colors \${
+                  activeCategory === cat
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }\`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
-          <button class="btn-read">Read Article →</button>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Blog Posts -->
-    <section class="posts">
-      <div class="posts-grid">
-        <article class="post-card">
-          <div class="post-header header-cyan">⚛️</div>
-          <span class="post-category">React</span>
-          <h2 class="post-title">Mastering React Server Components</h2>
-          <p class="post-excerpt">Deep dive into RSC and build blazing-fast apps.</p>
-          <div class="post-footer">
-            <div class="post-author">
-              <div class="post-avatar">AK</div>
-              <span>Alex Kim</span>
-            </div>
-            <span class="post-time">8 min</span>
+      {/* Posts Grid */}
+      <section className="px-6 pb-20">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-2 gap-8">
+            {filteredPosts.map((post) => (
+              <article
+                key={post.id}
+                className="group rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:border-purple-500/50 transition-colors"
+              >
+                <div className="aspect-[2/1] overflow-hidden">
+                  <img
+                    src={post.image}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">
+                      {post.category}
+                    </span>
+                    <span className="text-sm text-gray-500">{post.readTime}</span>
+                  </div>
+                  <h2 className="text-xl font-semibold mb-2 group-hover:text-purple-400 transition-colors">
+                    {post.title}
+                  </h2>
+                  <p className="text-gray-400 mb-4">{post.excerpt}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-sm font-bold">
+                      {post.author[0]}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{post.author}</div>
+                      <div className="text-xs text-gray-500">{post.date}</div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
-        </article>
+        </div>
+      </section>
 
-        <article class="post-card">
-          <div class="post-header header-blue">📘</div>
-          <span class="post-category">TypeScript</span>
-          <h2 class="post-title">TypeScript 5.0: Game-Changing Features</h2>
-          <p class="post-excerpt">Discover powerful new features in TypeScript 5.0.</p>
-          <div class="post-footer">
-            <div class="post-author">
-              <div class="post-avatar">ED</div>
-              <span>Emma Davis</span>
-            </div>
-            <span class="post-time">6 min</span>
+      {/* Newsletter */}
+      <section className="px-6 pb-20">
+        <div className="container mx-auto max-w-2xl">
+          <div className="p-8 rounded-2xl bg-gradient-to-r from-purple-900/50 to-cyan-900/50 border border-white/10 text-center">
+            <h2 className="text-2xl font-bold mb-4">Subscribe to our newsletter</h2>
+            <p className="text-gray-400 mb-6">Get the latest articles delivered to your inbox.</p>
+            <form className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                placeholder="your@email.com"
+                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-purple-500"
+              />
+              <button
+                type="submit"
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+              >
+                Subscribe
+              </button>
+            </form>
           </div>
-        </article>
-
-        <article class="post-card">
-          <div class="post-header header-teal">🎨</div>
-          <span class="post-category">CSS</span>
-          <h2 class="post-title">Building Beautiful UIs with Tailwind</h2>
-          <p class="post-excerpt">Learn advanced Tailwind techniques for stunning interfaces.</p>
-          <div class="post-footer">
-            <div class="post-author">
-              <div class="post-avatar">MJ</div>
-              <span>Marcus Johnson</span>
-            </div>
-            <span class="post-time">10 min</span>
-          </div>
-        </article>
-
-        <article class="post-card">
-          <div class="post-header header-gray">▲</div>
-          <span class="post-category">Next.js</span>
-          <h2 class="post-title">Next.js 14 App Router Deep Dive</h2>
-          <p class="post-excerpt">Everything about the new App Router and migration.</p>
-          <div class="post-footer">
-            <div class="post-author">
-              <div class="post-avatar">LW</div>
-              <span>Lisa Wang</span>
-            </div>
-            <span class="post-time">15 min</span>
-          </div>
-        </article>
-
-        <article class="post-card">
-          <div class="post-header header-orange">🏗️</div>
-          <span class="post-category">Architecture</span>
-          <h2 class="post-title">State Management in 2024</h2>
-          <p class="post-excerpt">Comparing Zustand, Jotai, and Redux Toolkit.</p>
-          <div class="post-footer">
-            <div class="post-author">
-              <div class="post-avatar">DP</div>
-              <span>David Park</span>
-            </div>
-            <span class="post-time">9 min</span>
-          </div>
-        </article>
-
-        <article class="post-card">
-          <div class="post-header header-amber">⚡</div>
-          <span class="post-category">Performance</span>
-          <h2 class="post-title">Performance Optimization Secrets</h2>
-          <p class="post-excerpt">Advanced techniques for faster web applications.</p>
-          <div class="post-footer">
-            <div class="post-author">
-              <div class="post-avatar">NP</div>
-              <span>Nina Patel</span>
-            </div>
-            <span class="post-time">11 min</span>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- Newsletter -->
-    <section class="newsletter">
-      <div class="newsletter-box">
-        <h2 class="newsletter-title">Stay ahead of the curve</h2>
-        <p class="newsletter-description">Get weekly insights on web development delivered to your inbox.</p>
-        <form class="newsletter-form">
-          <input type="email" placeholder="Enter your email" class="newsletter-input">
-          <button type="submit" class="newsletter-button">Subscribe</button>
-        </form>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <p>© 2024 DevBlog. All rights reserved.</p>
-    </footer>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: 'styles.css',
-        content: `* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: #020617;
-  color: white;
-}
-
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-}
-
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(150px);
-  animation: blob 7s infinite;
-}
-
-.blob-1 {
-  top: 25%;
-  left: -25%;
-  width: 37.5rem;
-  height: 37.5rem;
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.blob-2 {
-  bottom: 25%;
-  right: -25%;
-  width: 37.5rem;
-  height: 37.5rem;
-  background: rgba(59, 130, 246, 0.1);
-  animation-delay: 3s;
-}
-
-.container {
-  position: relative;
-  z-index: 10;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-/* Header */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(2, 6, 23, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.nav-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.brand-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to bottom right, #8b5cf6, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.nav-links {
-  display: none;
-  align-items: center;
-  gap: 2rem;
-}
-
-@media (min-width: 768px) {
-  .nav-links {
-    display: flex;
-  }
-}
-
-.nav-links a {
-  color: #94a3b8;
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.nav-links a:hover {
-  color: white;
-}
-
-.btn-subscribe {
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7);
-  border: none;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.btn-subscribe:hover {
-  background: linear-gradient(to right, #7c3aed, #9333ea);
-  box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.5);
-}
-
-/* Featured */
-.featured {
-  padding: 4rem 0;
-}
-
-.featured-card {
-  position: relative;
-  padding: 3rem;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.featured-badge {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 1.5rem;
-}
-
-.featured-title {
-  font-size: clamp(1.875rem, 4vw, 2.25rem);
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.featured-excerpt {
-  font-size: 1.125rem;
-  color: #94a3b8;
-  margin-bottom: 2rem;
-  max-width: 48rem;
-}
-
-.featured-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.author {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.author-avatar {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background: linear-gradient(to bottom right, #8b5cf6, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.875rem;
-}
-
-.author-name {
-  font-weight: 500;
-}
-
-.author-date {
-  font-size: 0.875rem;
-  color: #64748b;
-}
-
-.btn-read {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7);
-  border: none;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-read:hover {
-  background: linear-gradient(to right, #7c3aed, #9333ea);
-  box-shadow: 0 10px 20px -3px rgba(139, 92, 246, 0.5);
-  transform: scale(1.02);
-}
-
-/* Posts */
-.posts {
-  padding: 5rem 0;
-}
-
-.posts-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .posts-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .posts-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.post-card {
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  transition: all 0.3s;
-}
-
-.post-card:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  transform: translateY(-0.5rem);
-  box-shadow: 0 15px 35px -10px rgba(139, 92, 246, 0.3);
-}
-
-.post-header {
-  height: 8rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  position: relative;
-  transition: transform 0.3s;
-}
-
-.post-card:hover .post-header {
-  transform: scale(1.1);
-}
-
-.post-header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.header-cyan { background: linear-gradient(to right, #06b6d4, #3b82f6); }
-.header-blue { background: linear-gradient(to right, #3b82f6, #6366f1); }
-.header-teal { background: linear-gradient(to right, #14b8a6, #10b981); }
-.header-gray { background: linear-gradient(to right, #4b5563, #111827); }
-.header-orange { background: linear-gradient(to right, #f97316, #ef4444); }
-.header-amber { background: linear-gradient(to right, #f59e0b, #f97316); }
-
-.post-category {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.1);
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin: 1.5rem 1.5rem 1rem;
-  transition: all 0.3s;
-}
-
-.post-card:hover .post-category {
-  background: rgba(139, 92, 246, 0.2);
-  color: #c4b5fd;
-}
-
-.post-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  padding: 0 1.5rem 0.75rem;
-  transition: color 0.3s;
-}
-
-.post-card:hover .post-title {
-  color: #c4b5fd;
-}
-
-.post-excerpt {
-  color: #94a3b8;
-  padding: 0 1.5rem 1rem;
-  font-size: 0.875rem;
-}
-
-.post-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.post-author {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.post-avatar {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: linear-gradient(to bottom right, rgba(139, 92, 246, 0.5), rgba(168, 85, 247, 0.5));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.post-author span {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.post-time {
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-/* Newsletter */
-.newsletter {
-  padding: 5rem 0;
-}
-
-.newsletter-box {
-  position: relative;
-  overflow: hidden;
-  border-radius: 1.5rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7, #6366f1);
-  padding: 3rem;
-  text-align: center;
-}
-
-.newsletter-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.newsletter-description {
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2rem;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.newsletter-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-width: 28rem;
-  margin: 0 auto;
-}
-
-@media (min-width: 640px) {
-  .newsletter-form {
-    flex-direction: row;
-  }
-}
-
-.newsletter-input {
-  flex: 1;
-  padding: 1rem 1.5rem;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 1rem;
-}
-
-.newsletter-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.newsletter-button {
-  padding: 1rem 2rem;
-  background: white;
-  color: #8b5cf6;
-  font-weight: 600;
-  border-radius: 0.75rem;
-  border: none;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.newsletter-button:hover {
-  background: #ffffff;
-  transform: scale(1.02);
-}
-
-/* Footer */
-.footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 3rem 0;
-  text-align: center;
-  color: #64748b;
-}`,
-      },
-      {
-        path: 'app.js',
-        content: `console.log('📝 Blog loaded!');
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Newsletter form
-  const form = document.querySelector('.newsletter-form');
-  if (form) {
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      alert('Thanks for subscribing!');
-    });
-  }
-});`,
-      },
-    ],
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 px-6 border-t border-white/10">
+        <div className="container mx-auto text-center text-gray-500">
+          © 2024 TechBlog. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  )
+}`),
   },
 
   ecommerce: {
     id: 'ecommerce',
     name: 'E-Commerce',
-    icon: '🛍️',
-    description: 'Product listing page',
-    files: [
-      {
-        path: 'index.html',
-        content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shop</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="bg-container">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-  </div>
+    icon: '🛒',
+    description: 'Product catalog with shopping cart',
+    files: createGuestBaseFiles(`import { useState } from 'react'
 
-  <!-- Header -->
-  <header class="header">
-    <nav class="navbar">
-      <div class="container nav-content">
-        <div class="nav-brand">
-          <div class="brand-icon">🛍️</div>
-          <span class="brand-name">Luxe Store</span>
-        </div>
-        <div class="nav-links">
-          <a href="#">Home</a>
-          <a href="#">Shop</a>
-          <a href="#">About</a>
-          <button class="btn-cart">🛒 Cart <span class="cart-badge">3</span></button>
-        </div>
-      </div>
-    </nav>
-  </header>
+const products = [
+  {
+    id: 1,
+    name: 'Premium Wireless Headphones',
+    price: 299.99,
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop',
+    category: 'Electronics',
+    rating: 4.8,
+  },
+  {
+    id: 2,
+    name: 'Minimalist Watch',
+    price: 199.99,
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
+    category: 'Accessories',
+    rating: 4.6,
+  },
+  {
+    id: 3,
+    name: 'Leather Backpack',
+    price: 149.99,
+    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop',
+    category: 'Bags',
+    rating: 4.9,
+  },
+  {
+    id: 4,
+    name: 'Smart Fitness Tracker',
+    price: 129.99,
+    image: 'https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=400&h=400&fit=crop',
+    category: 'Electronics',
+    rating: 4.7,
+  },
+  {
+    id: 5,
+    name: 'Designer Sunglasses',
+    price: 179.99,
+    image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop',
+    category: 'Accessories',
+    rating: 4.5,
+  },
+  {
+    id: 6,
+    name: 'Portable Speaker',
+    price: 89.99,
+    image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400&h=400&fit=crop',
+    category: 'Electronics',
+    rating: 4.4,
+  },
+]
 
-  <div class="container">
-    <!-- Hero Banner -->
-    <section class="banner">
-      <div class="banner-content">
-        <span class="banner-badge">🔥 Limited Time Offer</span>
-        <h1 class="banner-title">Summer Collection 2024</h1>
-        <p class="banner-description">Up to 50% off on selected items. Free shipping on orders over $100.</p>
-        <button class="btn-shop">Shop Now →</button>
-      </div>
-    </section>
-
-    <!-- Products -->
-    <section class="products">
-      <div class="products-grid">
-        <div class="product-card">
-          <div class="product-image image-rose">
-            <span class="product-icon">👟</span>
-            <span class="sale-badge">SALE</span>
-          </div>
-          <div class="product-info">
-            <span class="product-category">Footwear</span>
-            <h3 class="product-name">Premium Sneakers</h3>
-            <div class="product-rating">★ 4.8 (234)</div>
-            <div class="product-price">
-              <span class="price-current">$129.99</span>
-              <span class="price-old">$179.99</span>
-            </div>
-            <button class="btn-add-cart">Add to Cart</button>
-          </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image image-blue">
-            <span class="product-icon">⌚</span>
-          </div>
-          <div class="product-info">
-            <span class="product-category">Electronics</span>
-            <h3 class="product-name">Smart Watch Pro</h3>
-            <div class="product-rating">★ 4.9 (567)</div>
-            <div class="product-price">
-              <span class="price-current">$299.99</span>
-            </div>
-            <button class="btn-add-cart">Add to Cart</button>
-          </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image image-violet">
-            <span class="product-icon">🎧</span>
-            <span class="sale-badge">SALE</span>
-          </div>
-          <div class="product-info">
-            <span class="product-category">Audio</span>
-            <h3 class="product-name">Wireless Headphones</h3>
-            <div class="product-rating">★ 4.7 (432)</div>
-            <div class="product-price">
-              <span class="price-current">$199.99</span>
-              <span class="price-old">$249.99</span>
-            </div>
-            <button class="btn-add-cart">Add to Cart</button>
-          </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image image-amber">
-            <span class="product-icon">🎒</span>
-          </div>
-          <div class="product-info">
-            <span class="product-category">Accessories</span>
-            <h3 class="product-name">Designer Backpack</h3>
-            <div class="product-rating">★ 4.6 (189)</div>
-            <div class="product-price">
-              <span class="price-current">$89.99</span>
-            </div>
-            <button class="btn-add-cart">Add to Cart</button>
-          </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image image-emerald">
-            <span class="product-icon">💪</span>
-            <span class="sale-badge">SALE</span>
-          </div>
-          <div class="product-info">
-            <span class="product-category">Fitness</span>
-            <h3 class="product-name">Fitness Tracker</h3>
-            <div class="product-rating">★ 4.5 (321)</div>
-            <div class="product-price">
-              <span class="price-current">$79.99</span>
-              <span class="price-old">$99.99</span>
-            </div>
-            <button class="btn-add-cart">Add to Cart</button>
-          </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image image-indigo">
-            <span class="product-icon">🔊</span>
-          </div>
-          <div class="product-info">
-            <span class="product-category">Audio</span>
-            <h3 class="product-name">Portable Speaker</h3>
-            <div class="product-rating">★ 4.8 (278)</div>
-            <div class="product-price">
-              <span class="price-current">$149.99</span>
-            </div>
-            <button class="btn-add-cart">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <p>© 2024 Luxe Store. All rights reserved.</p>
-    </footer>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: 'styles.css',
-        content: `* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+interface CartItem {
+  id: number
+  name: string
+  price: number
+  image: string
+  quantity: number
 }
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: #020617;
-  color: white;
-}
+export default function Index() {
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [cartOpen, setCartOpen] = useState(false)
 
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-}
-
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(150px);
-  animation: blob 7s infinite;
-}
-
-.blob-1 {
-  top: 25%;
-  left: -25%;
-  width: 37.5rem;
-  height: 37.5rem;
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.blob-2 {
-  bottom: 25%;
-  right: -25%;
-  width: 37.5rem;
-  height: 37.5rem;
-  background: rgba(6, 182, 212, 0.1);
-  animation-delay: 3s;
-}
-
-.container {
-  position: relative;
-  z-index: 10;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-/* Header */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(2, 6, 23, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.nav-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.brand-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to bottom right, #8b5cf6, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-}
-
-.brand-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.nav-links {
-  display: none;
-  align-items: center;
-  gap: 2rem;
-}
-
-@media (min-width: 768px) {
-  .nav-links {
-    display: flex;
+  const addToCart = (product: typeof products[0]) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id)
+      if (existing) {
+        return prev.map(item =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        )
+      }
+      return [...prev, { ...product, quantity: 1 }]
+    })
   }
-}
 
-.nav-links a {
-  color: #94a3b8;
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.nav-links a:hover {
-  color: white;
-}
-
-.btn-cart {
-  position: relative;
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7);
-  border: none;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-cart:hover {
-  background: linear-gradient(to right, #7c3aed, #9333ea);
-  box-shadow: 0 10px 20px -3px rgba(139, 92, 246, 0.5);
-  transform: translateY(-2px);
-}
-
-.cart-badge {
-  position: absolute;
-  top: -0.25rem;
-  right: -0.25rem;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  background: #f43f5e;
-  font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Banner */
-.banner {
-  padding: 4rem 0;
-}
-
-.banner-content {
-  position: relative;
-  overflow: hidden;
-  border-radius: 1.5rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7, #6366f1);
-  padding: 3rem;
-  text-align: center;
-}
-
-.banner-badge {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.2);
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 1.5rem;
-}
-
-.banner-title {
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.banner-description {
-  font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2rem;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.btn-shop {
-  padding: 1rem 2rem;
-  background: white;
-  color: #8b5cf6;
-  font-size: 1.125rem;
-  font-weight: 700;
-  border-radius: 0.75rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-shop:hover {
-  background: #ffffff;
-  transform: scale(1.05);
-  box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-}
-
-/* Products */
-.products {
-  padding: 5rem 0;
-}
-
-.products-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .products-grid {
-    grid-template-columns: repeat(2, 1fr);
+  const removeFromCart = (id: number) => {
+    setCart(prev => prev.filter(item => item.id !== id))
   }
-}
 
-@media (min-width: 1024px) {
-  .products-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
+  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
-@media (min-width: 1280px) {
-  .products-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-white/10">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <span className="font-bold text-xl">ShopModern</span>
+          <div className="flex items-center gap-6">
+            <a href="#" className="text-gray-300 hover:text-white transition-colors hidden md:block">Products</a>
+            <a href="#" className="text-gray-300 hover:text-white transition-colors hidden md:block">Categories</a>
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              🛒
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 rounded-full text-xs flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
 
-.product-card {
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  transition: all 0.3s;
-}
+      {/* Hero */}
+      <section className="pt-32 pb-16 px-6">
+        <div className="container mx-auto text-center">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">
+            Shop the <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">Latest</span>
+          </h1>
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            Discover premium products curated just for you.
+          </p>
+        </div>
+      </section>
 
-.product-card:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  transform: translateY(-0.5rem);
-  box-shadow: 0 20px 40px -10px rgba(139, 92, 246, 0.3);
-}
+      {/* Products Grid */}
+      <section className="px-6 pb-20">
+        <div className="container mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="group rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:border-purple-500/50 transition-colors"
+              >
+                <div className="aspect-square overflow-hidden bg-slate-800">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500">{product.category}</span>
+                    <span className="text-xs text-yellow-400">★ {product.rating}</span>
+                  </div>
+                  <h3 className="font-semibold mb-2">{product.name}</h3>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl font-bold">\${product.price}</span>
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-.product-image {
-  height: 12rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: transform 0.3s;
-}
+      {/* Cart Drawer */}
+      {cartOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setCartOpen(false)} />
+          <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 p-6 overflow-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">Shopping Cart</h2>
+              <button onClick={() => setCartOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">✕</button>
+            </div>
+            {cart.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+            ) : (
+              <>
+                <div className="space-y-4 mb-6">
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex gap-4 p-4 bg-white/5 rounded-xl">
+                      <img src={item.image} alt={item.name} className="w-16 h-16 rounded-lg object-cover" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.name}</h4>
+                        <p className="text-sm text-gray-400">Qty: {item.quantity}</p>
+                        <p className="font-bold">\${(item.price * item.quantity).toFixed(2)}</p>
+                      </div>
+                      <button onClick={() => removeFromCart(item.id)} className="text-red-400 hover:text-red-300">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-white/10 pt-4">
+                  <div className="flex justify-between mb-4">
+                    <span className="text-gray-400">Total</span>
+                    <span className="text-xl font-bold">\${cartTotal.toFixed(2)}</span>
+                  </div>
+                  <button className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors">
+                    Checkout
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-.product-card:hover .product-image {
-  transform: scale(1.05);
-}
-
-.product-icon {
-  font-size: 4rem;
-  position: relative;
-  z-index: 1;
-}
-
-.sale-badge {
-  position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  background: #f43f5e;
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 0.5rem;
-  z-index: 2;
-}
-
-.image-rose { background: linear-gradient(to bottom right, #fda4af, #fecdd3); }
-.image-blue { background: linear-gradient(to bottom right, #93c5fd, #bfdbfe); }
-.image-violet { background: linear-gradient(to bottom right, #c4b5fd, #ddd6fe); }
-.image-amber { background: linear-gradient(to bottom right, #fde68a, #fef3c7); }
-.image-emerald { background: linear-gradient(to bottom right, #6ee7b7, #a7f3d0); }
-.image-indigo { background: linear-gradient(to bottom right, #a5b4fc, #c7d2fe); }
-
-.product-info {
-  padding: 1.25rem;
-}
-
-.product-category {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  transition: color 0.3s;
-}
-
-.product-card:hover .product-category {
-  color: #c4b5fd;
-}
-
-.product-name {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0.25rem 0;
-}
-
-.product-rating {
-  color: #fbbf24;
-  font-size: 0.875rem;
-  margin: 0.5rem 0;
-}
-
-.product-price {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0;
-}
-
-.price-current {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #a78bfa;
-}
-
-.price-old {
-  font-size: 0.875rem;
-  color: #64748b;
-  text-decoration: line-through;
-}
-
-.btn-add-cart {
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7);
-  border: none;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-add-cart:hover {
-  background: linear-gradient(to right, #7c3aed, #9333ea);
-  box-shadow: 0 10px 20px -3px rgba(139, 92, 246, 0.5);
-  transform: translateY(-2px);
-}
-
-/* Footer */
-.footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 3rem 0;
-  text-align: center;
-  color: #64748b;
-}`,
-      },
-      {
-        path: 'app.js',
-        content: `console.log('🛍️ E-Commerce loaded!');
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Add to cart functionality
-  document.querySelectorAll('.btn-add-cart').forEach(btn => {
-    btn.addEventListener('click', () => {
-      alert('Product added to cart!');
-    });
-  });
-});`,
-      },
-    ],
+      {/* Footer */}
+      <footer className="py-8 px-6 border-t border-white/10">
+        <div className="container mx-auto text-center text-gray-500">
+          © 2024 ShopModern. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  )
+}`),
   },
 
   'task-manager': {
     id: 'task-manager',
     name: 'Task Manager',
     icon: '✅',
-    description: 'Simple task list manager',
-    files: [
-      {
-        path: 'index.html',
-        content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Task Manager</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="bg-container">
-    <div class="blob blob-1"></div>
-  </div>
+    description: 'Kanban-style task management',
+    files: createGuestBaseFiles(`import { useState } from 'react'
 
-  <div class="container">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-brand">
-        <div class="brand-icon">✅</div>
-        <h1 class="brand-name">TaskFlow</h1>
-      </div>
-      <button class="btn-add">+ New Task</button>
-    </header>
+interface Task {
+  id: string
+  title: string
+  status: 'todo' | 'in-progress' | 'done'
+  priority: 'low' | 'medium' | 'high'
+}
 
-    <!-- Stats -->
-    <div class="stats">
-      <div class="stat-item">
-        <span class="stat-icon">📋</span>
-        <div>
-          <div class="stat-value">24</div>
-          <div class="stat-label">Total Tasks</div>
+const initialTasks: Task[] = [
+  { id: '1', title: 'Design new landing page', status: 'todo', priority: 'high' },
+  { id: '2', title: 'Setup CI/CD pipeline', status: 'todo', priority: 'medium' },
+  { id: '3', title: 'Write API documentation', status: 'in-progress', priority: 'medium' },
+  { id: '4', title: 'Code review PR #42', status: 'in-progress', priority: 'high' },
+  { id: '5', title: 'Fix login bug', status: 'done', priority: 'high' },
+  { id: '6', title: 'Update dependencies', status: 'done', priority: 'low' },
+]
+
+const columns = [
+  { id: 'todo', title: 'To Do', color: 'bg-slate-500' },
+  { id: 'in-progress', title: 'In Progress', color: 'bg-blue-500' },
+  { id: 'done', title: 'Done', color: 'bg-green-500' },
+]
+
+const priorityColors = {
+  low: 'bg-gray-500',
+  medium: 'bg-yellow-500',
+  high: 'bg-red-500',
+}
+
+export default function Index() {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [newTask, setNewTask] = useState('')
+  const [draggedTask, setDraggedTask] = useState<string | null>(null)
+
+  const addTask = () => {
+    if (!newTask.trim()) return
+    const task: Task = {
+      id: Date.now().toString(),
+      title: newTask,
+      status: 'todo',
+      priority: 'medium',
+    }
+    setTasks([...tasks, task])
+    setNewTask('')
+  }
+
+  const moveTask = (taskId: string, newStatus: Task['status']) => {
+    setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t))
+  }
+
+  const deleteTask = (taskId: string) => {
+    setTasks(tasks.filter(t => t.id !== taskId))
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Header */}
+      <header className="border-b border-white/10 py-4 px-6">
+        <div className="container mx-auto flex items-center justify-between">
+          <h1 className="text-xl font-bold">✅ TaskFlow</h1>
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500" />
+          </div>
+        </div>
+      </header>
+
+      {/* Add Task */}
+      <div className="container mx-auto px-6 py-6">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addTask()}
+            placeholder="Add a new task..."
+            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-purple-500"
+          />
+          <button
+            onClick={addTask}
+            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+          >
+            Add Task
+          </button>
         </div>
       </div>
-      <div class="stat-item">
-        <span class="stat-icon">🔄</span>
-        <div>
-          <div class="stat-value">8</div>
-          <div class="stat-label">In Progress</div>
+
+      {/* Kanban Board */}
+      <div className="container mx-auto px-6 pb-12">
+        <div className="grid md:grid-cols-3 gap-6">
+          {columns.map((column) => (
+            <div
+              key={column.id}
+              className="bg-white/5 rounded-xl p-4"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => draggedTask && moveTask(draggedTask, column.id as Task['status'])}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className={\`w-3 h-3 rounded-full \${column.color}\`} />
+                <h2 className="font-semibold">{column.title}</h2>
+                <span className="ml-auto text-sm text-gray-500">
+                  {tasks.filter(t => t.status === column.id).length}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {tasks
+                  .filter(t => t.status === column.id)
+                  .map((task) => (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={() => setDraggedTask(task.id)}
+                      onDragEnd={() => setDraggedTask(null)}
+                      className={\`p-4 bg-slate-800 rounded-lg border border-white/10 cursor-grab active:cursor-grabbing hover:border-purple-500/50 transition-colors \${
+                        draggedTask === task.id ? 'opacity-50' : ''
+                      }\`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="font-medium">{task.title}</span>
+                        <button
+                          onClick={() => deleteTask(task.id)}
+                          className="text-gray-500 hover:text-red-400 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={\`px-2 py-0.5 rounded text-xs \${priorityColors[task.priority]}\`}>
+                          {task.priority}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-      <div class="stat-item">
-        <span class="stat-icon">✅</span>
-        <div>
-          <div class="stat-value">12</div>
-          <div class="stat-label">Completed</div>
+
+      {/* Footer */}
+      <footer className="py-6 px-6 border-t border-white/10 mt-auto">
+        <div className="container mx-auto text-center text-gray-500 text-sm">
+          Drag and drop tasks to move them between columns
         </div>
-      </div>
-      <div class="stat-item">
-        <span class="stat-icon">⚡</span>
-        <div>
-          <div class="stat-value">3</div>
-          <div class="stat-label">Due Today</div>
-        </div>
-      </div>
+      </footer>
     </div>
-
-    <!-- Task Columns -->
-    <div class="task-columns">
-      <div class="task-column">
-        <div class="column-header color-amber">
-          <div class="column-title">
-            <span class="column-dot"></span>
-            <h2>To Do</h2>
-            <span class="column-count">3</span>
-          </div>
-        </div>
-        <div class="tasks">
-          <div class="task-card">
-            <div class="task-header">
-              <span class="task-title">Design new landing page</span>
-              <span class="task-menu">⋮</span>
-            </div>
-            <div class="task-footer">
-              <span class="task-priority priority-high">High</span>
-              <span class="task-date">Jan 25</span>
-              <div class="task-avatar">SC</div>
-            </div>
-          </div>
-          <div class="task-card">
-            <div class="task-header">
-              <span class="task-title">Update API documentation</span>
-              <span class="task-menu">⋮</span>
-            </div>
-            <div class="task-footer">
-              <span class="task-priority priority-low">Low</span>
-              <span class="task-date">Jan 28</span>
-              <div class="task-avatar">MJ</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="task-column">
-        <div class="column-header color-violet">
-          <div class="column-title">
-            <span class="column-dot"></span>
-            <h2>In Progress</h2>
-            <span class="column-count">2</span>
-          </div>
-        </div>
-        <div class="tasks">
-          <div class="task-card">
-            <div class="task-header">
-              <span class="task-title">Build authentication system</span>
-              <span class="task-menu">⋮</span>
-            </div>
-            <div class="task-footer">
-              <span class="task-priority priority-high">High</span>
-              <span class="task-date">Jan 22</span>
-              <div class="task-avatar">AK</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="task-column">
-        <div class="column-header color-emerald">
-          <div class="column-title">
-            <span class="column-dot"></span>
-            <h2>Done</h2>
-            <span class="column-count">2</span>
-          </div>
-        </div>
-        <div class="tasks">
-          <div class="task-card task-done">
-            <div class="task-header">
-              <span class="task-title">Setup project structure</span>
-              <span class="task-menu">⋮</span>
-            </div>
-            <div class="task-footer">
-              <span class="task-priority priority-medium">Medium</span>
-              <span class="task-date">Jan 15</span>
-              <div class="task-avatar">MJ</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: 'styles.css',
-        content: `* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: #020617;
-  color: white;
-}
-
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(20px, -30px) scale(1.1); }
-}
-
-.bg-container {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.blob {
-  position: absolute;
-  top: 25%;
-  left: 50%;
-  width: 37.5rem;
-  height: 37.5rem;
-  background: rgba(139, 92, 246, 0.1);
-  border-radius: 50%;
-  filter: blur(150px);
-  animation: blob 7s infinite;
-}
-
-.container {
-  position: relative;
-  z-index: 10;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-/* Header */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2rem 0;
-}
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.brand-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to bottom right, #8b5cf6, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-}
-
-.brand-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.btn-add {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, #8b5cf6, #a855f7);
-  border: none;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-add:hover {
-  background: linear-gradient(to right, #7c3aed, #9333ea);
-  box-shadow: 0 10px 20px -3px rgba(139, 92, 246, 0.5);
-  transform: translateY(-2px);
-}
-
-/* Stats */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-@media (max-width: 1024px) {
-  .stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.stat-icon {
-  font-size: 2rem;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: #94a3b8;
-}
-
-/* Task Columns */
-.task-columns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  padding-bottom: 2rem;
-}
-
-@media (max-width: 1024px) {
-  .task-columns {
-    grid-template-columns: 1fr;
-  }
-}
-
-.task-column {
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1rem;
-}
-
-.column-header {
-  margin-bottom: 1rem;
-}
-
-.column-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.column-dot {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 50%;
-}
-
-.color-amber .column-dot {
-  background: linear-gradient(to right, #f59e0b, #f97316);
-}
-
-.color-violet .column-dot {
-  background: linear-gradient(to right, #8b5cf6, #a855f7);
-}
-
-.color-emerald .column-dot {
-  background: linear-gradient(to right, #10b981, #059669);
-}
-
-.column-title h2 {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.column-count {
-  padding: 0.125rem 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-  font-size: 0.75rem;
-}
-
-/* Tasks */
-.tasks {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.task-card {
-  padding: 1rem;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.task-card:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  background: rgba(139, 92, 246, 0.08);
-  box-shadow: 0 5px 15px -3px rgba(139, 92, 246, 0.2);
-}
-
-.task-done .task-title {
-  text-decoration: line-through;
-  color: #64748b;
-}
-
-.task-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-}
-
-.task-title {
-  font-weight: 500;
-  flex: 1;
-}
-
-.task-menu {
-  color: #94a3b8;
-  cursor: pointer;
-}
-
-.task-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.task-priority {
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  border: 1px solid;
-}
-
-.priority-high {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.priority-medium {
-  background: rgba(251, 191, 36, 0.1);
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.3);
-}
-
-.priority-low {
-  background: rgba(107, 114, 128, 0.1);
-  color: #9ca3af;
-  border-color: rgba(107, 114, 128, 0.3);
-}
-
-.task-date {
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-.task-avatar {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: linear-gradient(to bottom right, rgba(139, 92, 246, 0.5), rgba(168, 85, 247, 0.5));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.625rem;
-  font-weight: 700;
-}`,
-      },
-      {
-        path: 'app.js',
-        content: `console.log('✅ Task Manager loaded!');
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Add task button
-  const addBtn = document.querySelector('.btn-add');
-  if (addBtn) {
-    addBtn.addEventListener('click', () => {
-      alert('Add new task functionality would go here!');
-    });
-  }
-});`,
-      },
-    ],
+  )
+}`),
   },
-};
-
-export function getGuestTemplateFiles(templateId: string) {
-  const template = GUEST_TEMPLATES[templateId] || GUEST_TEMPLATES.blank
-  return template.files.map(file => ({
-    id: `${templateId}-${file.path}`,
-    project_id: 'demo',
-    path: file.path,
-    content: file.content,
-    language: getLanguageFromPath(file.path),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }))
 }
 
-function getLanguageFromPath(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase()
-  switch (ext) {
-    case 'html': return 'html'
-    case 'css': return 'css'
-    case 'js': return 'javascript'
-    case 'ts': return 'typescript'
-    case 'tsx': return 'typescript'
-    case 'jsx': return 'javascript'
-    case 'json': return 'json'
-    case 'md': return 'markdown'
-    default: return 'plaintext'
-  }
+// Helper function to get template files by ID
+export function getGuestTemplateFiles(templateId: string): { path: string; content: string }[] {
+  const template = GUEST_TEMPLATES[templateId]
+  return template ? template.files : GUEST_TEMPLATES.blank.files
 }
+
+export default GUEST_TEMPLATES

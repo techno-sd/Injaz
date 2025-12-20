@@ -6,13 +6,12 @@
 // PLATFORM TYPES
 // =============================================================================
 
-export type PlatformType = 'website' | 'webapp' | 'mobile'
+export type PlatformType = 'website' | 'webapp'
 
 // Sub-platform categories for more specific project types
 export type WebsiteSubType = 'portfolio' | 'blog' | 'landing' | 'business'
 export type WebappSubType = 'dashboard' | 'ecommerce' | 'saas' | 'social'
-export type MobileSubType = 'social' | 'ecommerce' | 'fitness' | 'utility'
-export type SubPlatformType = WebsiteSubType | WebappSubType | MobileSubType
+export type SubPlatformType = WebsiteSubType | WebappSubType
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -565,7 +564,7 @@ export interface PlatformTemplate {
 // =============================================================================
 
 export function isValidPlatform(platform: string): platform is PlatformType {
-  return ['website', 'webapp', 'mobile'].includes(platform)
+  return ['website', 'webapp'].includes(platform)
 }
 
 export function isValidAIMode(mode: string): mode is AIMode {
@@ -653,7 +652,7 @@ export function createEmptySchema(platform: PlatformType, subPlatform?: SubPlatf
     structure: {
       pages: [],
       navigation: {
-        type: platform === 'mobile' ? 'tabs' : 'header',
+        type: 'header',
         items: [],
       },
       layouts: [],
@@ -673,8 +672,6 @@ export function getSubPlatformsForPlatform(platform: PlatformType): SubPlatformT
       return ['portfolio', 'blog', 'landing', 'business']
     case 'webapp':
       return ['dashboard', 'ecommerce', 'saas', 'social']
-    case 'mobile':
-      return ['social', 'ecommerce', 'fitness', 'utility']
     default:
       return []
   }

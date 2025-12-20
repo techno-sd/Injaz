@@ -85,7 +85,7 @@ describe('Schema Cache', () => {
 
       await cache.setSchema('Build a dashboard', 'webapp', testSchema)
 
-      const cached = await cache.getSchema('Build a dashboard', 'mobile')
+      const cached = await cache.getSchema('Build a dashboard', 'website')
 
       expect(cached).toBeNull()
     })
@@ -148,15 +148,15 @@ describe('Schema Cache', () => {
       const cache = getSchemaCache()
 
       await cache.setSchema('webapp prompt', 'webapp', testSchema)
-      await cache.setSchema('mobile prompt', 'mobile', testSchema)
+      await cache.setSchema('website prompt', 'website', testSchema)
 
       await cache.invalidatePlatform('webapp')
 
       const webappCache = await cache.getSchema('webapp prompt', 'webapp')
-      const mobileCache = await cache.getSchema('mobile prompt', 'mobile')
+      const websiteCache = await cache.getSchema('website prompt', 'website')
 
       expect(webappCache).toBeNull()
-      expect(mobileCache).toBeDefined()
+      expect(websiteCache).toBeDefined()
     })
   })
 })

@@ -1,7 +1,7 @@
 // Platform Configuration for Multi-Platform Project Support
 // Defines platform types, sub-categories, and their configurations
 
-import type { PlatformType, SubPlatformType, WebsiteSubType, WebappSubType, MobileSubType } from '@/types/app-schema'
+import type { PlatformType, SubPlatformType, WebsiteSubType, WebappSubType } from '@/types/app-schema'
 
 // =============================================================================
 // PLATFORM CATEGORY CONFIGURATION
@@ -108,45 +108,6 @@ const WEBAPP_CATEGORIES: PlatformCategory[] = [
 ]
 
 // =============================================================================
-// MOBILE SUB-PLATFORMS
-// =============================================================================
-
-const MOBILE_CATEGORIES: PlatformCategory[] = [
-  {
-    id: 'social' as MobileSubType,
-    name: 'Social App',
-    description: 'Connect and share content',
-    icon: 'MessageSquare',
-    gradient: 'from-pink-500 to-rose-600',
-    features: ['Stories', 'Chat', 'Profiles', 'Feed'],
-  },
-  {
-    id: 'ecommerce' as MobileSubType,
-    name: 'E-commerce',
-    description: 'Mobile shopping experience',
-    icon: 'Store',
-    gradient: 'from-emerald-500 to-teal-600',
-    features: ['Product Browse', 'Cart', 'Checkout', 'Order Tracking'],
-  },
-  {
-    id: 'fitness' as MobileSubType,
-    name: 'Fitness',
-    description: 'Health and wellness tracking',
-    icon: 'Dumbbell',
-    gradient: 'from-amber-500 to-orange-600',
-    features: ['Workout Plans', 'Progress Tracking', 'Goals', 'Statistics'],
-  },
-  {
-    id: 'utility' as MobileSubType,
-    name: 'Utility',
-    description: 'Tools and productivity apps',
-    icon: 'Wrench',
-    gradient: 'from-gray-500 to-slate-600',
-    features: ['Notes', 'Tasks', 'Reminders', 'Settings'],
-  },
-]
-
-// =============================================================================
 // PLATFORM CONFIGURATIONS
 // =============================================================================
 
@@ -154,13 +115,13 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformConfig> = {
   website: {
     id: 'website',
     name: 'Website',
-    description: 'Static HTML/CSS/JS websites',
+    description: 'Marketing websites & landing pages',
     icon: 'Globe',
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/30',
-    tech: 'Vanilla',
-    techStack: ['HTML', 'CSS', 'JavaScript'],
+    tech: 'Vite + React',
+    techStack: ['Vite', 'React', 'TypeScript', 'Tailwind'],
     categories: WEBSITE_CATEGORIES,
   },
   webapp: {
@@ -171,21 +132,9 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformConfig> = {
     color: 'text-violet-400',
     bgColor: 'bg-violet-500/10',
     borderColor: 'border-violet-500/30',
-    tech: 'Next.js + Supabase',
-    techStack: ['Next.js', 'React', 'TypeScript', 'Supabase', 'Tailwind'],
+    tech: 'Vite + React + Supabase',
+    techStack: ['Vite', 'React', 'TypeScript', 'Supabase', 'Tailwind'],
     categories: WEBAPP_CATEGORIES,
-  },
-  mobile: {
-    id: 'mobile',
-    name: 'Mobile App',
-    description: 'iOS & Android applications',
-    icon: 'Smartphone',
-    color: 'text-cyan-400',
-    bgColor: 'bg-cyan-500/10',
-    borderColor: 'border-cyan-500/30',
-    tech: 'React Native + Expo',
-    techStack: ['React Native', 'Expo', 'TypeScript'],
-    categories: MOBILE_CATEGORIES,
   },
 }
 
@@ -236,14 +185,6 @@ export const PLATFORM_FEATURES: Record<PlatformType, string[]> = {
     'API Routes',
     'Real-time Updates',
     'PWA Support',
-    'Server-Side Rendering',
-  ],
-  mobile: [
-    'Cross-Platform',
-    'Native Performance',
-    'Push Notifications',
-    'Offline Support',
-    'App Store Ready',
   ],
 }
 
@@ -254,7 +195,6 @@ export const PLATFORM_FEATURES: Record<PlatformType, string[]> = {
 export const DEFAULT_TEMPLATE_IDS: Record<PlatformType, string> = {
   website: 'blank-website',
   webapp: 'blank-webapp',
-  mobile: 'blank-mobile',
 }
 
 // =============================================================================
@@ -272,11 +212,6 @@ export const PLATFORM_COLORS = {
     light: '#ede9fe',   // violet-100
     dark: '#4c1d95',    // violet-900
   },
-  mobile: {
-    primary: '#06b6d4', // cyan-500
-    light: '#cffafe',   // cyan-100
-    dark: '#164e63',    // cyan-900
-  },
 }
 
 // =============================================================================
@@ -289,7 +224,8 @@ export const TECH_STACK_ICONS: Record<string, string> = {
   'JavaScript': 'javascript',
   'TypeScript': 'typescript',
   'React': 'react',
-  'Next.js': 'nextjs',
+  'Vite': 'vite',
+  'Vite + React': 'vite',
   'React Native': 'react',
   'Expo': 'expo',
   'Supabase': 'supabase',

@@ -314,7 +314,7 @@ export function getPerformanceReport(): PerformanceReport {
     return {
       totalBuilds: 0,
       averageBuildTime: 0,
-      averageByPlatform: { website: 0, webapp: 0, mobile: 0 },
+      averageByPlatform: { website: 0, webapp: 0 },
       cacheHitRate: 0,
       modeDistribution: {},
       bottlenecks: [],
@@ -375,7 +375,6 @@ export function getPerformanceReport(): PerformanceReport {
     averageByPlatform: {
       website: metricsTracker.getAverageByPlatform('website'),
       webapp: metricsTracker.getAverageByPlatform('webapp'),
-      mobile: metricsTracker.getAverageByPlatform('mobile'),
     },
     cacheHitRate: metricsTracker.getCacheHitRate(),
     modeDistribution,

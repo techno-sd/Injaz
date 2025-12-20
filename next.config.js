@@ -12,8 +12,10 @@ const nextConfig = {
         source: '/:path*',
         headers: [
           {
+            // Use 'credentialless' instead of 'require-corp' for better compatibility
+            // This allows loading cross-origin resources (like WebContainer CDN) without CORP headers
             key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp',
+            value: 'credentialless',
           },
           {
             key: 'Cross-Origin-Opener-Policy',

@@ -19,6 +19,314 @@ export interface TemplateMetadata {
   thumbnailGradient?: string
 }
 
+// =============================================================================
+// BASE VITE + REACT FILES (shared across all templates)
+// =============================================================================
+
+const BASE_PACKAGE_JSON = JSON.stringify({
+  name: 'my-app',
+  version: '0.1.0',
+  private: true,
+  type: 'module',
+  scripts: {
+    dev: 'vite',
+    build: 'tsc && vite build',
+    preview: 'vite preview'
+  },
+  dependencies: {
+    'react': '^18.3.1',
+    'react-dom': '^18.3.1',
+    'react-router-dom': '^6.26.0',
+    '@tanstack/react-query': '^5.51.1',
+    'class-variance-authority': '^0.7.0',
+    'clsx': '^2.1.1',
+    'tailwind-merge': '^2.3.0',
+    'lucide-react': '^0.396.0',
+    'sonner': '^1.5.0',
+    'framer-motion': '^11.0.0'
+  },
+  devDependencies: {
+    'typescript': '^5.4.5',
+    '@types/react': '^18.3.3',
+    '@types/react-dom': '^18.3.0',
+    'vite': '^5.3.4',
+    '@vitejs/plugin-react': '^4.3.1',
+    'tailwindcss': '^3.4.4',
+    'postcss': '^8.4.38',
+    'autoprefixer': '^10.4.19'
+  }
+}, null, 2)
+
+const BASE_INDEX_HTML = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>`
+
+const BASE_MAIN_TSX = `import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'sonner'
+import App from './App'
+import './index.css'
+
+const queryClient = new QueryClient()
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+        <Toaster position="top-right" richColors />
+      </BrowserRouter>
+    </QueryClientProvider>
+  </React.StrictMode>
+)`
+
+const BASE_APP_TSX = `import { Routes, Route } from 'react-router-dom'
+import Index from './pages/Index'
+import NotFound from './pages/NotFound'
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  )
+}
+
+export default App`
+
+const BASE_NOT_FOUND = `import { Link } from 'react-router-dom'
+
+export default function NotFound() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
+      <h1 className="text-6xl font-bold mb-4">404</h1>
+      <p className="text-xl text-muted-foreground mb-8">Page not found</p>
+      <Link
+        to="/"
+        className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+      >
+        Go Home
+      </Link>
+    </div>
+  )
+}`
+
+const BASE_INDEX_CSS = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r;
+  }
+}`
+
+const BASE_UTILS_TS = `import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}`
+
+const BASE_VITE_CONFIG = `import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+})`
+
+const BASE_TAILWIND_CONFIG = `import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  darkMode: ['class'],
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
+  theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
+    extend: {
+      colors: {
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 0.5s ease-out',
+        'fade-up': 'fade-up 0.5s ease-out',
+      },
+    },
+  },
+  plugins: [],
+}
+
+export default config`
+
+const BASE_TSCONFIG = JSON.stringify({
+  compilerOptions: {
+    target: 'ES2020',
+    useDefineForClassFields: true,
+    lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+    module: 'ESNext',
+    skipLibCheck: true,
+    moduleResolution: 'bundler',
+    allowImportingTsExtensions: true,
+    resolveJsonModule: true,
+    isolatedModules: true,
+    noEmit: true,
+    jsx: 'react-jsx',
+    strict: true,
+    noUnusedLocals: true,
+    noUnusedParameters: true,
+    noFallthroughCasesInSwitch: true,
+    baseUrl: '.',
+    paths: {
+      '@/*': ['./src/*']
+    }
+  },
+  include: ['src'],
+  references: [{ path: './tsconfig.node.json' }]
+}, null, 2)
+
+const BASE_TSCONFIG_NODE = JSON.stringify({
+  compilerOptions: {
+    composite: true,
+    skipLibCheck: true,
+    module: 'ESNext',
+    moduleResolution: 'bundler',
+    allowSyntheticDefaultImports: true
+  },
+  include: ['vite.config.ts']
+}, null, 2)
+
+const BASE_POSTCSS_CONFIG = `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`
+
+// Helper function to create base files for a template
+function createBaseFiles(pageContent: string, additionalFiles: { path: string; content: string }[] = []): { path: string; content: string }[] {
+  return [
+    { path: 'package.json', content: BASE_PACKAGE_JSON },
+    { path: 'index.html', content: BASE_INDEX_HTML },
+    { path: 'src/main.tsx', content: BASE_MAIN_TSX },
+    { path: 'src/App.tsx', content: BASE_APP_TSX },
+    { path: 'src/pages/Index.tsx', content: pageContent },
+    { path: 'src/pages/NotFound.tsx', content: BASE_NOT_FOUND },
+    { path: 'src/index.css', content: BASE_INDEX_CSS },
+    { path: 'src/lib/utils.ts', content: BASE_UTILS_TS },
+    { path: 'vite.config.ts', content: BASE_VITE_CONFIG },
+    { path: 'tailwind.config.ts', content: BASE_TAILWIND_CONFIG },
+    { path: 'tsconfig.json', content: BASE_TSCONFIG },
+    { path: 'tsconfig.node.json', content: BASE_TSCONFIG_NODE },
+    { path: 'postcss.config.js', content: BASE_POSTCSS_CONFIG },
+    ...additionalFiles,
+  ]
+}
+
 export const PROJECT_TEMPLATES: TemplateMetadata[] = [
   {
     id: 'landing-page',
@@ -29,15 +337,12 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['marketing', 'saas', 'startup'],
     previewImage: '/templates/landing.png',
     difficulty: 'Beginner',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Hero Section', 'Feature Grid', 'Responsive Design', 'Call-to-Action'],
     platform: 'webapp',
     subPlatform: 'landing',
     thumbnailGradient: 'from-amber-500 to-orange-600',
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function Home() {
+    files: createBaseFiles(`export default function Home() {
   const features = [
     { icon: '⚡', title: 'Lightning Fast', desc: 'Optimized for speed and performance', gradient: 'from-amber-500 to-orange-600' },
     { icon: '🔒', title: 'Enterprise Security', desc: 'Bank-grade encryption built-in', gradient: 'from-emerald-500 to-teal-600' },
@@ -161,23 +466,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </footer>
     </main>
   )
-}`
-      },
-      {
-        path: 'app/layout.tsx',
-        content: `export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <body className="antialiased">{children}</body>
-    </html>
-  )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'dashboard',
@@ -188,12 +477,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['analytics', 'admin', 'business'],
     previewImage: '/templates/dashboard.png',
     difficulty: 'Intermediate',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Stat Cards', 'Charts', 'Tables', 'Responsive Layout'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function Dashboard() {
+    files: createBaseFiles(`export default function Dashboard() {
   const stats = [
     { label: 'Total Revenue', value: '$45,231', change: '+20.1%', up: true, gradient: 'from-emerald-500 to-teal-600' },
     { label: 'Active Users', value: '2,345', change: '+15.3%', up: true, gradient: 'from-blue-500 to-indigo-600' },
@@ -311,9 +597,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </div>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'blog',
@@ -324,12 +608,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['blog', 'content', 'writing'],
     previewImage: '/templates/blog.png',
     difficulty: 'Beginner',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Post Listing', 'Author Info', 'Date Formatting', 'Responsive'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function Blog() {
+    files: createBaseFiles(`export default function Blog() {
   const featuredPost = {
     title: 'The Future of Web Development: AI-Powered Design',
     excerpt: 'Explore how artificial intelligence is revolutionizing web development and what it means for the future of digital design.',
@@ -458,9 +739,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </footer>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'ecommerce',
@@ -471,12 +750,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['shop', 'store', 'products'],
     previewImage: '/templates/ecommerce.png',
     difficulty: 'Advanced',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Product Grid', 'Shopping Cart', 'Product Cards', 'Responsive'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function Shop() {
+    files: createBaseFiles(`export default function Shop() {
   const products = [
     { id: 1, name: 'Premium Sneakers', price: 129.99, oldPrice: 179.99, image: '👟', category: 'Footwear', gradient: 'from-rose-100 to-pink-100', rating: 4.8, reviews: 234 },
     { id: 2, name: 'Smart Watch Pro', price: 299.99, image: '⌚', category: 'Electronics', gradient: 'from-blue-100 to-cyan-100', rating: 4.9, reviews: 567 },
@@ -579,9 +855,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </footer>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'portfolio',
@@ -592,12 +866,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['portfolio', 'personal', 'showcase'],
     previewImage: '/templates/portfolio.png',
     difficulty: 'Beginner',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Hero Section', 'Project Grid', 'Gradient Design', 'Dark Mode'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function Portfolio() {
+    files: createBaseFiles(`export default function Portfolio() {
   const skills = [
     { name: 'React', color: 'from-cyan-500 to-blue-600' },
     { name: 'TypeScript', color: 'from-blue-500 to-indigo-600' },
@@ -696,9 +967,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </footer>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'saas',
@@ -709,12 +978,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['saas', 'startup', 'business'],
     previewImage: '/templates/saas.png',
     difficulty: 'Intermediate',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Pricing Cards', 'Hero Section', 'Feature Lists', 'CTA Buttons'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function SaaS() {
+    files: createBaseFiles(`export default function SaaS() {
   const plans = [
     { name: 'Starter', price: 9, features: ['5 Team Members', '10 Projects', 'Basic Analytics', 'Email Support'], icon: '🚀', gradient: 'from-gray-500 to-gray-700' },
     { name: 'Pro', price: 29, features: ['25 Team Members', 'Unlimited Projects', 'Advanced Analytics', 'Priority Support', 'API Access'], icon: '⚡', gradient: 'from-violet-500 to-purple-600', popular: true },
@@ -824,9 +1090,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </footer>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'auth-pages',
@@ -837,12 +1101,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['auth', 'login', 'security'],
     previewImage: '/templates/auth.png',
     difficulty: 'Intermediate',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Login Form', 'Signup Form', 'Validation', 'Responsive'],
-    files: [
-      {
-        path: 'app/login/page.tsx',
-        content: `export default function Login() {
+    files: createBaseFiles(`export default function Index() {
   return (
     <div className="min-h-screen bg-slate-950 text-white flex">
       {/* Left Side - Branding */}
@@ -915,9 +1176,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </div>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'admin-panel',
@@ -928,12 +1187,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['admin', 'dashboard', 'management'],
     previewImage: '/templates/admin.png',
     difficulty: 'Advanced',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Sidebar Navigation', 'Data Tables', 'User Management', 'Settings'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function AdminPanel() {
+    files: createBaseFiles(`export default function AdminPanel() {
   const navItems = ['Dashboard', 'Users', 'Products', 'Analytics', 'Settings']
   const users = [
     { id: 1, name: 'Sarah Chen', email: 'sarah@example.com', role: 'Admin', status: 'Active', avatar: 'SC' },
@@ -1046,9 +1302,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </div>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'task-manager',
@@ -1059,12 +1313,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['tasks', 'productivity', 'kanban'],
     previewImage: '/templates/tasks.png',
     difficulty: 'Intermediate',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Kanban Board', 'Task Cards', 'Status Columns', 'Add Tasks'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function TaskManager() {
+    files: createBaseFiles(`export default function TaskManager() {
   const columns = [
     { id: 'todo', title: 'To Do', color: 'amber', tasks: [
       { id: 1, title: 'Design new landing page', priority: 'High', assignee: 'SC', dueDate: 'Jan 25' },
@@ -1179,9 +1430,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </main>
     </div>
   )
-}`
-      }
-    ]
+}`)
   },
   {
     id: 'docs-site',
@@ -1192,12 +1441,9 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
     tags: ['docs', 'documentation', 'technical'],
     previewImage: '/templates/docs.png',
     difficulty: 'Intermediate',
-    techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript'],
+    techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript'],
     features: ['Sidebar Navigation', 'Search', 'Code Blocks', 'Table of Contents'],
-    files: [
-      {
-        path: 'app/page.tsx',
-        content: `export default function Docs() {
+    files: createBaseFiles(`export default function Docs() {
   const navSections = [
     { title: 'Getting Started', items: [
       { name: 'Introduction', active: true },
@@ -1343,9 +1589,7 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
       </aside>
     </div>
   )
-}`
-      }
-    ]
+}`)
   }
 ]
 
@@ -1353,18 +1597,15 @@ export const PROJECT_TEMPLATES: TemplateMetadata[] = [
 const SAAS_DASHBOARD_TEMPLATE: TemplateMetadata = {
   id: 'modern-saas-dashboard',
   name: 'Modern SaaS Dashboard',
-  description: 'Production-ready dashboard with charts, metrics, and dark mode. Built with Next.js 14 and shadcn/ui patterns.',
+  description: 'Production-ready dashboard with charts, metrics, and dark mode. Built with Vite + React and shadcn/ui patterns.',
   category: 'Business',
   icon: '📈',
   tags: ['dashboard', 'saas', 'analytics', 'charts', 'modern'],
   previewImage: '/templates/modern-dashboard.png',
   difficulty: 'Intermediate',
-  techStack: ['Next.js 14', 'Tailwind CSS', 'TypeScript', 'Framer Motion'],
+  techStack: ['Vite + React', 'Tailwind CSS', 'TypeScript', 'Framer Motion'],
   features: ['Interactive Charts', 'Real-time Metrics', 'Dark Mode', 'Responsive Sidebar', 'Data Tables'],
-  files: [
-    {
-      path: 'app/page.tsx',
-      content: `import { ArrowUpRight, ArrowDownRight, Users, DollarSign, ShoppingCart, Activity, MoreHorizontal, Search, Bell, Settings, LogOut, ChevronRight, TrendingUp } from 'lucide-react'
+  files: createBaseFiles(`import { ArrowUpRight, ArrowDownRight, Users, DollarSign, ShoppingCart, Activity, MoreHorizontal, Search, Bell, Settings, LogOut, ChevronRight, TrendingUp } from 'lucide-react'
 
 export default function Dashboard() {
   const stats = [
@@ -1602,95 +1843,7 @@ export default function Dashboard() {
       </main>
     </div>
   )
-}`
-    },
-    {
-      path: 'app/layout.tsx',
-      content: `import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
-  title: 'Analytics Dashboard',
-  description: 'Modern SaaS analytics dashboard',
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
-    </html>
-  )
-}`
-    },
-    {
-      path: 'app/globals.css',
-      content: `@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --background: 10 10 15;
-  --foreground: 255 255 255;
-}
-
-body {
-  background-color: rgb(var(--background));
-  color: rgb(var(--foreground));
-}`
-    },
-    {
-      path: 'tailwind.config.ts',
-      content: `import type { Config } from 'tailwindcss'
-
-const config: Config = {
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-export default config`
-    },
-    {
-      path: 'package.json',
-      content: `{
-  "name": "modern-saas-dashboard",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
-  },
-  "dependencies": {
-    "next": "14.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "lucide-react": "^0.396.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.4.5",
-    "@types/node": "^20.14.9",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "tailwindcss": "^3.4.4",
-    "postcss": "^8.4.38",
-    "autoprefixer": "^10.4.19"
-  }
-}`
-    }
-  ]
+}`)
 }
 
 // Add the new template to the array

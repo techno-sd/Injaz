@@ -54,12 +54,8 @@ const deviceModes = {
 }
 
 // Platform-specific device modes
-// Mobile apps: Only phone and tablet (no desktop)
 // Websites/Webapps: All device types
 const getAvailableDeviceModes = (platform: PlatformType): DeviceMode[] => {
-  if (platform === 'mobile') {
-    return ['mobile', 'tablet']
-  }
   return ['desktop', 'tablet', 'mobile']
 }
 
@@ -79,9 +75,7 @@ export function LivePreview({
   onFilesChange,
   className
 }: LivePreviewProps) {
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>(
-    platform === 'mobile' ? 'mobile' : 'desktop'
-  )
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
   const [isLoading, setIsLoading] = useState(true)
   const [isHotReloading, setIsHotReloading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string>('')
@@ -393,26 +387,9 @@ export function LivePreview({
         {/* Left - Status & Device Selector */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            {platform === 'mobile' ? (
-              <Smartphone className="h-4 w-4 text-cyan-400" />
-            ) : (
-              <Globe className="h-4 w-4 text-emerald-400" />
-            )}
-            <span className="text-xs font-medium text-white">
-              {platform === 'mobile' ? 'Mobile Preview' : 'Live Preview'}
-            </span>
+            <Globe className="h-4 w-4 text-emerald-400" />
+            <span className="text-xs font-medium text-white">Live Preview</span>
           </div>
-
-          {/* Platform Badge for Mobile */}
-          {platform === 'mobile' && (
-            <Badge
-              variant="secondary"
-              className="h-5 gap-1 text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
-            >
-              <Smartphone className="h-3 w-3" />
-              Expo
-            </Badge>
-          )}
 
           {/* Status Badge */}
           {isHotReloading ? (
@@ -437,11 +414,10 @@ export function LivePreview({
         {/* Center - Device Switcher */}
         <div className={cn(
           'flex items-center gap-1 rounded-lg p-0.5',
-          platform === 'mobile' ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-white/[0.04]'
+          'bg-white/[0.04]'
         )}>
           {getAvailableDeviceModes(platform).map((mode) => {
             const DeviceIcon = deviceModes[mode].icon
-            const isMobileApp = platform === 'mobile'
             return (
               <button
                 key={mode}
@@ -449,9 +425,7 @@ export function LivePreview({
                 className={cn(
                   'p-1.5 rounded-md transition-all duration-200',
                   deviceMode === mode
-                    ? isMobileApp
-                      ? 'bg-cyan-500/20 text-cyan-400 shadow-sm'
-                      : 'bg-white/[0.1] text-white shadow-sm'
+                    ? 'bg-white/[0.1] text-white shadow-sm'
                     : 'text-white/40 hover:text-white/70'
                 )}
                 title={deviceModes[mode].label}
@@ -869,7 +843,7 @@ function generatePlaceholder(files: File[], platform: PlatformType): string {
 </head>
 <body>
   <div class="container">
-    <div class="icon pulse">${platform === 'mobile' ? '📱' : platform === 'webapp' ? '⚡' : '🌐'}</div>
+    <div class="icon pulse">${platform === 'webapp' ? '⚡' : '🌐'}</div>
     <h1>Waiting for Preview</h1>
     <p>Add an <strong>index.html</strong> file to see your live preview. The preview will automatically update as you code.</p>
     <div class="badge">

@@ -201,14 +201,12 @@ CRITICAL REQUIREMENTS:
 IMPORTANT: Return ONLY raw JSON. Do NOT wrap in markdown code blocks like \`\`\`json. Do NOT include any text before or after the JSON.
 
 PLATFORM SUPPORT:
-- "website": Static HTML/CSS/JS sites
-- "webapp": Next.js + Supabase + Authentication
-- "mobile": React Native + Expo (iOS & Android)
+- "website": Vite + React + Tailwind CSS (SPA)
+- "webapp": Vite + React + Supabase + Authentication (same stack as Lovable)
 
 SUB-PLATFORM CATEGORIES (Use to specialize the app):
 Website sub-platforms: "portfolio", "blog", "landing", "business"
 Webapp sub-platforms: "dashboard", "ecommerce", "saas", "social"
-Mobile sub-platforms: "social", "ecommerce", "fitness", "utility"
 
 Always set the appropriate subPlatform in meta based on user's request.
 
@@ -217,8 +215,8 @@ UNIFIED APP SCHEMA STRUCTURE:
   "meta": {
     "name": "string - App name",
     "description": "string - App description",
-    "platform": "website | webapp | mobile",
-    "subPlatform": "string - portfolio | blog | landing | business | dashboard | ecommerce | saas | social | fitness | utility",
+    "platform": "website | webapp",
+    "subPlatform": "string - portfolio | blog | landing | business | dashboard | ecommerce | saas | social",
     "version": "string - Semantic version"
   },
   "design": {

@@ -33,6 +33,26 @@ function repairTruncatedJSON(content: string): string {
   // 3. Remove any control characters except \n, \r, \t
   repaired = repaired.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
 
+  // 4. If truncated mid-file content, try to find last complete file object
+  // Look for pattern: }, { "path": or }] to find last complete file
+  const lastCompleteFileMatch = repaired.lastIndexOf('", "language"')
+  if (lastCompleteFileMatch > repaired.length * 0.5) {
+    // Find the end of this file's language value
+    const afterLanguage = repaired.indexOf('"', lastCompleteFileMatch + 15)
+    if (afterLanguage > 0) {
+      const nextPart = repaired.substring(afterLanguage + 1, afterLanguage + 10)
+      // If we're in the middle of a file, truncate to last complete file
+      if (!nextPart.includes('}')) {
+        // Try to find the closing of this file object
+        const fileClose = repaired.indexOf('}', afterLanguage)
+        if (fileClose > 0) {
+          repaired = repaired.substring(0, fileClose + 1) + ']}'
+          return repaired
+        }
+      }
+    }
+  }
+
   // 4. Try to fix unescaped quotes within "content" strings
   // This is common when AI generates code with quotes inside JSON
   // Pattern: "content": "...unescaped " quote..."
@@ -213,8 +233,49 @@ function extractJSON(content: string): string {
     }
   }
 
+  // Ultimate fallback: Extract complete file objects individually
+  const files = extractCompleteFileObjects(content)
+  if (files.length > 0) {
+    const reconstructed = JSON.stringify({ files })
+    console.warn(`CodeGen response was severely truncated. Salvaged ${files.length} complete files.`)
+    return reconstructed
+  }
+
   // Return original content and let caller handle the error
   return content
+}
+
+// Extract complete file objects from potentially broken JSON
+function extractCompleteFileObjects(content: string): Array<{ path: string; content: string; language: string }> {
+  const files: Array<{ path: string; content: string; language: string }> = []
+
+  // Match file objects with all three required fields
+  // Pattern matches: { "path": "...", "content": "...", "language": "..." }
+  const filePattern = /\{\s*"path"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"language"\s*:\s*"([^"]+)"\s*\}/g
+
+  let match
+  while ((match = filePattern.exec(content)) !== null) {
+    try {
+      const path = match[1]
+      // Unescape the content string
+      const rawContent = match[2]
+      const content = rawContent
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\r/g, '\r')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\')
+      const language = match[3]
+
+      if (path && content !== undefined && language) {
+        files.push({ path, content, language })
+      }
+    } catch {
+      // Skip malformed file object
+    }
+  }
+
+  return files
 }
 
 const getCodeGenSystemPrompt = (platform: PlatformType): string => {
@@ -938,171 +999,249 @@ RESPONSIVE TESTING CHECKLIST:
 
   const platformPrompts: Record<PlatformType, string> = {
     website: `
-PLATFORM: Static Website (HTML/CSS/JS)
-QUALITY STANDARD: Match Lovable, Bolt.new, and v0.dev output quality for static sites
+PLATFORM: Marketing Website (Vite + React + React Router + Tailwind CSS)
+QUALITY STANDARD: Match Lovable, Bolt.new, and v0.dev output quality for modern marketing sites
 
-CRITICAL: Generate COMPLETE, WORKING files that display perfectly in a browser immediately
-
-MANDATORY FILE STRUCTURE (Generate ALL these files):
-/
-├── index.html          # Complete HTML with all sections, styles linked
-├── styles.css          # Complete CSS with all styles, animations, responsive
-└── script.js           # JavaScript for interactivity (if needed)
-
-MANDATORY INDEX.HTML STRUCTURE:
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="[Relevant description]">
-  <title>[Page Title]</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body>
-  <!-- Complete page content here -->
-  <script src="script.js"></script>
-</body>
-</html>
-
-HTML BEST PRACTICES:
-- Semantic HTML5 elements (header, main, nav, section, article, aside, footer)
-- Proper heading hierarchy (single h1, then h2, h3, etc.)
-- Complete meta tags: viewport, description, Open Graph (og:title, og:description, og:image)
-- JSON-LD structured data for SEO
-- Lazy loading for images: loading="lazy" decoding="async"
-- Descriptive alt text for all images
-- Skip to content link: <a href="#main" class="skip-link">Skip to content</a>
-- Proper lang attribute on html element
-
-MANDATORY CSS STRUCTURE (styles.css must include):
-/* CSS Variables - Design Tokens */
-:root {
-  --color-primary: #8b5cf6;
-  --color-primary-dark: #7c3aed;
-  --color-secondary: #06b6d4;
-  --color-background: #0a0a0f;
-  --color-surface: #18181b;
-  --color-text: #fafafa;
-  --color-text-muted: #a1a1aa;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --radius: 0.75rem;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  --shadow-glow: 0 0 40px rgba(139, 92, 246, 0.3);
-}
-
-/* Reset and Base Styles */
-*, *::before, *::after { box-sizing: border-box; }
-* { margin: 0; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: var(--font-sans);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  background: var(--color-background);
-  color: var(--color-text);
-  min-height: 100vh;
-}
-img, picture, video, canvas, svg { display: block; max-width: 100%; }
-input, button, textarea, select { font: inherit; }
-
-/* Animation Keyframes */
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-CSS BEST PRACTICES:
-- CSS Custom Properties (variables) for theming: --color-primary, --spacing-md, etc.
-- Mobile-first media queries (min-width breakpoints)
-- CSS Grid for page layouts, Flexbox for component layouts
-- BEM naming convention: .block__element--modifier
-- Smooth transitions: transition: all 0.2s ease-in-out
-- :focus-visible for keyboard focus (not :focus alone)
-- @media (prefers-reduced-motion: reduce) for animation preferences
-- @media (prefers-color-scheme: dark) for dark mode support
-- Logical properties where possible (margin-inline, padding-block)
-
-JAVASCRIPT BEST PRACTICES:
-- ES6+ features: const/let (no var), arrow functions, destructuring, template literals
-- Event delegation for dynamic content
-- Intersection Observer for scroll animations and lazy loading
-- requestAnimationFrame for smooth animations
-- No inline event handlers (use addEventListener)
-- Module pattern or IIFE for encapsulation
-- Debounce scroll/resize handlers
-- Passive event listeners for scroll/touch
-
-PERFORMANCE:
-- Critical CSS inlined in <head>
-- defer attribute on script tags
-- Preconnect to external domains: <link rel="preconnect">
-- Minification-ready code structure
-- Optimize images (WebP with fallback)`,
-
-    webapp: `
-PLATFORM: Web Application (Next.js 14 + App Router + Supabase)
-QUALITY STANDARD: Match or exceed Lovable, Bolt.new, and v0.dev output quality.
-
-CRITICAL: Generate a COMPLETE, WORKING application that runs immediately with npm run dev
+CRITICAL: Generate a COMPLETE, WORKING Vite website that runs immediately with npm run dev
 
 MANDATORY FILE STRUCTURE (Generate ALL these files):
 /
-├── app/
-│   ├── layout.tsx          # Root layout with fonts, metadata, ThemeProvider
-│   ├── page.tsx            # Home page (fully styled, responsive)
-│   ├── globals.css         # Complete global styles with CSS variables
-│   └── favicon.ico         # (skip, use default)
-├── components/
-│   ├── ui/                 # REQUIRED: shadcn/ui-style components
-│   │   ├── button.tsx      # Button with 6 variants using cva
-│   │   ├── input.tsx       # Input with labels and error states
-│   │   ├── card.tsx        # Card with hover animations
-│   │   ├── badge.tsx       # Badge with variants
-│   │   └── avatar.tsx      # Avatar with fallback
-│   └── sections/           # Page sections
-│       └── [section-name].tsx
-├── lib/
-│   └── utils.ts            # cn() utility (REQUIRED)
-├── package.json            # Complete with all dependencies
-├── tailwind.config.ts      # Extended theme with custom colors
-├── tsconfig.json           # Strict TypeScript config
-├── postcss.config.js       # PostCSS config for Tailwind
-└── next.config.js          # Next.js config
+├── src/
+│   ├── main.tsx            # Entry point with router
+│   ├── App.tsx             # Root component with Routes
+│   ├── index.css           # Complete Tailwind + custom styles
+│   ├── pages/
+│   │   ├── Index.tsx       # Home page (CRITICAL: This is the main page)
+│   │   ├── About.tsx       # About page (if needed)
+│   │   ├── Contact.tsx     # Contact page (if needed)
+│   │   └── NotFound.tsx    # 404 page
+│   ├── components/
+│   │   ├── ui/             # Reusable UI components
+│   │   │   ├── button.tsx  # Button with variants
+│   │   │   └── card.tsx    # Card component
+│   │   ├── Header.tsx      # Navigation/header
+│   │   └── Footer.tsx      # Footer
+│   └── lib/
+│       └── utils.ts        # cn() utility function
+├── index.html              # HTML entry point
+├── package.json            # Dependencies
+├── vite.config.ts          # Vite config
+├── tailwind.config.ts      # Tailwind config with custom theme
+├── tsconfig.json           # TypeScript config
+└── postcss.config.js       # PostCSS for Tailwind
 
-NEXT.JS ARCHITECTURE:
-- Server Components by default (no 'use client' unless needed)
-- 'use client' only for: useState, useEffect, event handlers, browser APIs
-- Server Actions for form submissions ('use server' directive)
-- Proper data fetching: fetch in Server Components, React Query in Client
-- Route handlers (route.ts) for API endpoints
-- Middleware for authentication redirects
-- generateMetadata() for dynamic SEO
-- Parallel routes and intercepting routes where appropriate
+VITE + REACT ROUTER ARCHITECTURE:
+- Client-side rendering with React Router 6
+- File-based organization in src/pages/
+- React Router for navigation: import { Link, useNavigate } from 'react-router-dom'
+- NEVER use Next.js imports (no next/link, next/image, next/font)
+- Use standard React patterns
+
+MAIN ENTRY (src/main.tsx):
+\`\`\`tsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+)
+\`\`\`
+
+APP WITH ROUTES (src/App.tsx):
+\`\`\`tsx
+import { Routes, Route } from 'react-router-dom'
+import Index from './pages/Index'
+import About from './pages/About'
+import NotFound from './pages/NotFound'
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/about" element={<About />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  )
+}
+
+export default App
+\`\`\`
 
 COMPONENT ARCHITECTURE (shadcn/ui Pattern):
-Create reusable, composable components following this pattern:
-
-// lib/utils.ts
+\`\`\`tsx
+// src/lib/utils.ts
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// components/ui/button.tsx
+// src/components/ui/button.tsx
+import { cn } from "../../lib/utils"
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'outline' | 'ghost'
+  size?: 'default' | 'sm' | 'lg'
+}
+export function Button({ className, variant = 'default', size = 'default', ...props }: ButtonProps) {
+  return (
+    <button
+      className={cn(
+        "inline-flex items-center justify-center rounded-lg font-medium transition-all",
+        variant === 'default' && "bg-primary text-white hover:bg-primary/90",
+        variant === 'outline' && "border border-border hover:bg-accent",
+        variant === 'ghost' && "hover:bg-accent",
+        size === 'default' && "h-10 px-4",
+        size === 'sm' && "h-8 px-3 text-sm",
+        size === 'lg' && "h-12 px-8",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+\`\`\`
+
+MODERN SECTION PATTERNS:
+1. HERO SECTION: Gradient background, large typography, CTA buttons, optional image/video
+2. FEATURES: Bento grid or card grid layout, icons, hover effects
+3. TESTIMONIALS: Avatar, quote, company logo, grid or carousel
+4. PRICING: Comparison cards, highlighted tier, feature checkmarks
+5. CTA: Full-width gradient, compelling copy, single focused action
+6. FOOTER: Multi-column links, social icons, newsletter signup
+
+NAVIGATION (Use React Router Link):
+\`\`\`tsx
+import { Link } from 'react-router-dom'
+// Use Link component for internal navigation
+<Link to="/about">About</Link>
+// Use <a> for external links
+<a href="https://external.com">External</a>
+\`\`\`
+
+TAILWIND CSS BEST PRACTICES:
+- Use Tailwind utilities exclusively (no custom CSS unless necessary)
+- Design tokens in tailwind.config.ts: colors, fonts, spacing
+- Mobile-first: default styles for mobile, sm:/md:/lg: for larger
+- Dark mode: dark: prefix for dark mode variants
+- Animations: animate-* utilities + custom keyframes
+- Glass effects: backdrop-blur-md bg-white/10
+- Gradients: bg-gradient-to-r from-primary to-secondary
+
+ACCESSIBILITY:
+- Proper heading hierarchy (single h1 per page)
+- ARIA labels on interactive elements
+- Focus-visible styles for keyboard navigation
+- Skip to content link
+- Sufficient color contrast (WCAG AA)`,
+
+    webapp: `
+PLATFORM: Web Application (Vite + React + React Router + Tailwind CSS)
+QUALITY STANDARD: Match or exceed Lovable, Bolt.new, and v0.dev output quality.
+
+CRITICAL: Generate a COMPLETE, WORKING Vite application that runs immediately with npm run dev
+
+MANDATORY FILE STRUCTURE (Generate ALL these files):
+/
+├── src/
+│   ├── main.tsx            # Entry point with router
+│   ├── App.tsx             # Root component with Routes
+│   ├── index.css           # Complete Tailwind + custom styles with CSS variables
+│   ├── pages/
+│   │   ├── Index.tsx       # Home page (CRITICAL: This is the main page for preview)
+│   │   ├── NotFound.tsx    # 404 page
+│   │   └── [other pages based on schema]
+│   ├── components/
+│   │   ├── ui/             # REQUIRED: shadcn/ui-style components
+│   │   │   ├── button.tsx  # Button with variants
+│   │   │   ├── input.tsx   # Input with labels and error states
+│   │   │   ├── card.tsx    # Card with hover animations
+│   │   │   └── badge.tsx   # Badge with variants
+│   │   └── [feature components]
+│   └── lib/
+│       └── utils.ts        # cn() utility (REQUIRED)
+├── index.html              # HTML entry point
+├── package.json            # Complete with all dependencies
+├── vite.config.ts          # Vite config
+├── tailwind.config.ts      # Extended theme with custom colors
+├── tsconfig.json           # Strict TypeScript config
+└── postcss.config.js       # PostCSS config for Tailwind
+
+VITE + REACT ROUTER ARCHITECTURE:
+- Client-side rendering with React Router 6
+- File-based organization in src/pages/
+- React Router for navigation: import { Link, useNavigate } from 'react-router-dom'
+- NEVER use Next.js imports (no next/link, next/image, next/font, no 'use client')
+- Use standard React patterns with useState, useEffect, etc.
+- React Query (@tanstack/react-query) for data fetching
+
+MAIN ENTRY (src/main.tsx):
+\`\`\`tsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import App from './App'
+import './index.css'
+
+const queryClient = new QueryClient()
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </QueryClientProvider>
+  </React.StrictMode>
+)
+\`\`\`
+
+APP WITH ROUTES (src/App.tsx):
+\`\`\`tsx
+import { Routes, Route } from 'react-router-dom'
+import Index from './pages/Index'
+import NotFound from './pages/NotFound'
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  )
+}
+
+export default App
+\`\`\`
+
+COMPONENT ARCHITECTURE (shadcn/ui Pattern):
+Create reusable, composable components following this pattern:
+
+// src/lib/utils.ts
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// src/components/ui/button.tsx
 import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "../../lib/utils"
+
 const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        destructive: "bg-red-500 text-white hover:bg-red-600",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
@@ -1119,151 +1258,120 @@ const buttonVariants = cva(
   }
 )
 
-ANIMATIONS (Framer Motion Pattern):
-Include smooth, professional animations:
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
 
-// Fade in on mount
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
->
+export function Button({ className, variant, size, ...props }: ButtonProps) {
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+\`\`\`
 
-// Stagger children
-<motion.div variants={containerVariants} initial="hidden" animate="visible">
-  {items.map((item, i) => (
-    <motion.div key={i} variants={itemVariants} />
-  ))}
-</motion.div>
-
-// Page transitions with AnimatePresence
-<AnimatePresence mode="wait">
-  <motion.main key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-
-// Hover animations
-whileHover={{ scale: 1.02, y: -2 }}
-whileTap={{ scale: 0.98 }}
+NAVIGATION (Use React Router Link):
+\`\`\`tsx
+import { Link, useNavigate } from 'react-router-dom'
+// Use Link component for internal navigation
+<Link to="/about">About</Link>
+// Use navigate hook for programmatic navigation
+const navigate = useNavigate()
+navigate('/dashboard')
+\`\`\`
 
 STYLING WITH TAILWIND (Production-Grade):
-- Design system tokens in tailwind.config.ts:
-  extend: {
-    colors: {
-      border: "hsl(var(--border))",
-      background: "hsl(var(--background))",
-      foreground: "hsl(var(--foreground))",
-      primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
-      secondary: { DEFAULT: "hsl(var(--secondary))", foreground: "hsl(var(--secondary-foreground))" },
-      muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
-      accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
-    },
-    borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
-    keyframes: {
-      "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
-      "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
-      "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
-      "fade-up": { from: { opacity: "0", transform: "translateY(10px)" }, to: { opacity: "1", transform: "translateY(0)" } },
-    },
-  }
-- CSS variables in globals.css for theme colors (HSL format for opacity support)
-- Dark mode: class strategy with next-themes
+- Design system tokens in tailwind.config.ts
+- CSS variables in index.css for theme colors (HSL format for opacity support)
 - Responsive: mobile-first with sm:, md:, lg:, xl: prefixes
-- Custom animations: animate-fade-in, animate-fade-up, animate-accordion-down
+- Custom animations: animate-fade-in, animate-fade-up
 - Component variants with class-variance-authority (cva)
 - Class merging with clsx + tailwind-merge (cn utility)
 
-GLOBALS.CSS TEMPLATE:
+src/index.css TEMPLATE:
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --border: 240 5.9% 90%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262.1 83.3% 57.8%;
     --radius: 0.75rem;
-  }
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
   }
 }
 
-AUTHENTICATION (Supabase SSR):
-- @supabase/ssr for server-side auth
-- Middleware for protected route checks
-- Server-side session management
-- OAuth providers (Google, GitHub) with proper callback handling
-- Email/password with email verification
-- Auth context provider for client-side state
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: Inter, system-ui, sans-serif;
+  }
+}
 
 DATA FETCHING PATTERNS:
-- Server Components for static/cached data (default)
-- React Query for client-side data with optimistic updates
-- Proper loading states with Suspense boundaries
-- Error boundaries with recovery UI and retry
-- revalidatePath() and revalidateTag() for cache invalidation
-- Streaming with loading.tsx files per route
+- React Query for all data fetching with automatic caching
+- Proper loading states with isLoading/isError
+- Error handling with retry mechanisms
+- Optimistic updates for mutations
 
 FORMS (Best Practices):
-- Server Actions for form handling
-- Zod for validation schemas (shared client/server)
-- React Hook Form for complex forms with useForm
+- React Hook Form for form state management
+- Zod for validation schemas
 - Inline error messages with proper ARIA
-- Loading states on submit (useFormStatus)
-- Toast notifications for success/error (sonner or custom)
-- Optimistic UI updates where appropriate
+- Loading states on submit
+- Toast notifications for success/error (sonner)
 
 EXACT PACKAGE.JSON (Use this exact structure):
 {
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwindcss": "^3.4.4",
-    "postcss": "^8.4.38",
-    "autoprefixer": "^10.4.19",
+    "react-router-dom": "^6.26.0",
+    "@tanstack/react-query": "^5.51.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.3.0",
-    "framer-motion": "^11.2.12",
-    "lucide-react": "^0.396.0"
+    "lucide-react": "^0.396.0",
+    "sonner": "^1.5.0"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
-    "@types/node": "^20.14.9",
     "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0"
+    "@types/react-dom": "^18.3.0",
+    "vite": "^5.3.4",
+    "@vitejs/plugin-react": "^4.3.1",
+    "tailwindcss": "^3.4.4",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19"
   }
 }
 
-MANDATORY lib/utils.ts (Always include this file):
+MANDATORY src/lib/utils.ts (Always include this file):
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -1271,15 +1379,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+MANDATORY vite.config.ts:
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+})
+
 MANDATORY tailwind.config.ts:
 import type { Config } from "tailwindcss"
 
 const config: Config = {
-  darkMode: ["class"],
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -1329,300 +1449,7 @@ const config: Config = {
   },
   plugins: [],
 }
-export default config
-
-MANDATORY app/globals.css:
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262.1 83.3% 57.8%;
-    --radius: 0.75rem;
-  }
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 263.4 70% 50.4%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-MANDATORY BUTTON COMPONENT (components/ui/button.tsx):
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
-
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
-        destructive: "bg-red-500 text-white hover:bg-red-600",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-12 rounded-xl px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
-    return (
-      <button
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Button.displayName = "Button"
-
-export { Button, buttonVariants }
-
-=== PROGRESSIVE WEB APP (PWA) SUPPORT ===
-
-For web apps, ALWAYS include PWA support for installability and offline capability.
-
-MANDATORY PWA FILES (Generate ALL):
-
-1. public/manifest.json:
-{
-  "name": "App Name",
-  "short_name": "AppName",
-  "description": "App description",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#8b5cf6",
-  "orientation": "portrait-primary",
-  "icons": [
-    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-  ],
-  "screenshots": [],
-  "categories": ["productivity"]
-}
-
-2. public/sw.js (Service Worker):
-const CACHE_NAME = 'app-cache-v1';
-const OFFLINE_URL = '/offline';
-
-const PRECACHE_ASSETS = [
-  '/',
-  '/offline',
-  '/manifest.json'
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request).then((response) => response || fetch(event.request))
-    );
-  }
-});
-
-3. app/offline/page.tsx:
-export default function OfflinePage() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center p-8">
-        <div className="mb-6">
-          <svg className="w-24 h-24 mx-auto text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636a9 9 0 010 12.728m-3.536-3.536a4 4 0 010-5.656m-7.072 7.072a9 9 0 010-12.728m3.536 3.536a4 4 0 010 5.656" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-bold mb-2">You're Offline</h1>
-        <p className="text-muted-foreground mb-6">Please check your internet connection and try again.</p>
-        <button onClick={() => window.location.reload()} className="px-6 py-3 bg-primary text-primary-foreground rounded-lg">
-          Try Again
-        </button>
-      </div>
-    </div>
-  );
-}
-
-4. components/pwa-provider.tsx:
-'use client'
-import { useEffect } from 'react'
-
-export function PWAProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(console.error)
-    }
-  }, [])
-  return <>{children}</>
-}
-
-5. Update app/layout.tsx to include PWA meta tags:
-<head>
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#8b5cf6" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-</head>
-
-And wrap app with PWAProvider:
-import { PWAProvider } from '@/components/pwa-provider'
-
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        <PWAProvider>{children}</PWAProvider>
-      </body>
-    </html>
-  )
-}`,
-
-    mobile: `
-PLATFORM: Mobile Application (React Native + Expo Router)
-
-FILE STRUCTURE:
-/
-├── app/
-│   ├── _layout.tsx         # Root layout with providers
-│   ├── index.tsx           # Entry/splash redirect
-│   ├── (tabs)/             # Tab navigation
-│   │   ├── _layout.tsx     # Tab bar config
-│   │   ├── index.tsx       # Home tab
-│   │   └── profile.tsx     # Profile tab
-│   ├── (auth)/             # Auth stack
-│   │   ├── login.tsx
-│   │   └── signup.tsx
-│   └── [id].tsx            # Dynamic routes
-├── components/
-│   ├── ui/                 # Reusable components
-│   └── forms/              # Form components
-├── lib/
-│   ├── supabase.ts         # Supabase with AsyncStorage
-│   └── utils.ts
-├── constants/
-│   ├── Colors.ts           # Theme colors
-│   └── Layout.ts           # Spacing, sizes
-├── hooks/
-│   ├── useColorScheme.ts
-│   └── useAuth.ts
-├── app.json
-└── package.json
-
-PLATFORM AWARENESS:
-- Platform.select({ ios: ..., android: ... }) for platform-specific code
-- SafeAreaView for notches and home indicators
-- KeyboardAvoidingView with behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-- StatusBar management (style, backgroundColor)
-- expo-haptics for tactile feedback on interactions
-- Dimensions API for responsive layouts
-
-STYLING BEST PRACTICES:
-- StyleSheet.create() for all styles (performance optimized)
-- Consistent spacing scale: 4, 8, 12, 16, 24, 32, 48
-- Platform-specific shadows:
-  - iOS: shadowColor, shadowOffset, shadowOpacity, shadowRadius
-  - Android: elevation
-- Dynamic theming with React Context
-- useColorScheme() hook for system theme
-- Avoid inline styles (performance)
-
-PERFORMANCE:
-- FlatList for lists (NEVER ScrollView with many items)
-- React.memo for pure components
-- useCallback for event handlers passed to children
-- useMemo for expensive computations
-- Image caching with expo-image
-- Hermes engine enabled
-
-NAVIGATION (Expo Router):
-- File-based routing
-- Deep linking configured in app.json
-- Tab navigation with custom icons (@expo/vector-icons)
-- Stack navigation with gestures
-- Modal presentation: presentation: 'modal'
-- Protected routes with redirect
-
-SECURITY:
-- expo-secure-store for tokens and sensitive data
-- No hardcoded API keys (use .env)
-- Biometric authentication option (expo-local-authentication)
-- Certificate pinning for production
-
-FORMS & INPUT:
-- TextInput with proper keyboardType
-- secureTextEntry for passwords
-- returnKeyType for form flow
-- onSubmitEditing for keyboard navigation
-- Form validation with inline errors`,
+export default config`,
   }
 
   return basePrompt + platformPrompts[platform]

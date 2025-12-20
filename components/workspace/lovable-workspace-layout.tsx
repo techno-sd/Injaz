@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, type ComponentType } from 'react'
+import { useState, useEffect, useCallback, useMemo, type ComponentType } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -53,6 +53,30 @@ const LivePreview = dynamic(() => import('./live-preview').then(mod => ({ defaul
   ssr: false,
 })
 
+const WebContainerPreview = dynamic(() => import('./webcontainer-preview').then(mod => ({ default: mod.WebContainerPreview })), {
+  loading: () => (
+    <div className="h-full flex items-center justify-center bg-[#0d0d12]">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+        <span className="text-sm text-white/60">Starting WebContainer...</span>
+      </div>
+    </div>
+  ),
+  ssr: false,
+})
+
+const SandpackPreview = dynamic(() => import('./sandpack-preview').then(mod => ({ default: mod.SandpackPreview })), {
+  loading: () => (
+    <div className="h-full flex items-center justify-center bg-[#0d0d12]">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <span className="text-sm text-white/60">Loading Sandpack...</span>
+      </div>
+    </div>
+  ),
+  ssr: false,
+})
+
 import { AIChatbot } from './ai-chatbot'
 
 interface LovableWorkspaceLayoutProps {
@@ -76,6 +100,39 @@ function getFileIcon(path: string) {
     case 'png': case 'jpg': case 'svg': return <Image className="h-4 w-4 text-purple-400" />
     default: return <FileText className="h-4 w-4 text-white/40" />
   }
+}
+
+// Check if project should use Sandpack preview (React-based or webapp)
+// Returns true for most cases to use Sandpack as the default preview
+function needsWebContainer(files: File[]): boolean {
+  // Default to true for empty/new projects (Sandpack will show default app)
+  if (files.length === 0) return true
+
+  // Check for any React/JSX/TSX/JS files
+  const hasWebFiles = files.some(f =>
+    f.path.endsWith('.tsx') ||
+    f.path.endsWith('.jsx') ||
+    f.path.endsWith('.ts') ||
+    f.path.endsWith('.js') ||
+    f.path.includes('pages/') ||
+    f.path.includes('components/') ||
+    f.path.includes('src/')
+  )
+
+  if (hasWebFiles) return true
+
+  // Also check for package.json
+  const hasPackageJson = files.some(f => f.path === 'package.json')
+  if (hasPackageJson) return true
+
+  // Check for any HTML/CSS files (static site)
+  const hasStaticFiles = files.some(f =>
+    f.path.endsWith('.html') ||
+    f.path.endsWith('.css')
+  )
+
+  // Default to Sandpack for most projects
+  return hasStaticFiles || files.length < 10
 }
 
 // View modes for the main content area
@@ -107,6 +164,8 @@ export function LovableWorkspaceLayout({
   const [isSaving, setIsSaving] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [showChatPanel, setShowChatPanel] = useState(true)
+  // Use WebContainer by default (full Vite support, like Lovable.dev)
+  const [useSandpackFallback, setUseSandpackFallback] = useState(false)
 
   // Check if this is a temporary/unsaved project
   const isTemporaryProject = project.id.startsWith('new-') || project.id === 'demo' || project.id === 'new'
@@ -337,6 +396,9 @@ export function LovableWorkspaceLayout({
 
   // Get platform from project
   const projectPlatform = (project as any).platform || 'webapp'
+
+  // Check if this project needs WebContainer (Vite, Next.js, etc.)
+  const useWebContainer = useMemo(() => needsWebContainer(files), [files])
 
   return (
     <TooltipProvider>
@@ -570,7 +632,27 @@ export function LovableWorkspaceLayout({
             {/* Main Content Area - Code + Preview */}
             <div className="flex-1 flex flex-col">
               {viewMode === 'preview' && (
-                <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
+                useWebContainer ? (
+                  useSandpackFallback ? (
+                    <SandpackPreview
+                      files={files}
+                      platform={projectPlatform}
+                    />
+                  ) : (
+                    <WebContainerPreview
+                      projectId={project.id}
+                      files={files}
+                      platform={projectPlatform}
+                      onFallbackToSandpack={() => setUseSandpackFallback(true)}
+                    />
+                  )
+                ) : (
+                  <LivePreview
+                    files={files}
+                    platform={projectPlatform}
+                    onFilesChange={handleFilesChange}
+                  />
+                )
               )}
 
               {viewMode === 'code' && (
@@ -743,7 +825,27 @@ export function LovableWorkspaceLayout({
 
                     {/* Preview Panel */}
                     <ResizablePanel defaultSize={50} minSize={25}>
-                      <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
+                      {useWebContainer ? (
+                        useSandpackFallback ? (
+                          <SandpackPreview
+                            files={files}
+                            platform={projectPlatform}
+                          />
+                        ) : (
+                          <WebContainerPreview
+                            projectId={project.id}
+                            files={files}
+                            platform={projectPlatform}
+                            onFallbackToSandpack={() => setUseSandpackFallback(true)}
+                          />
+                        )
+                      ) : (
+                        <LivePreview
+                          files={files}
+                          platform={projectPlatform}
+                          onFilesChange={handleFilesChange}
+                        />
+                      )}
                     </ResizablePanel>
                   </ResizablePanelGroup>
                 </div>
@@ -819,7 +921,27 @@ export function LovableWorkspaceLayout({
             )}
 
             {mobileView === 'preview' && (
-              <LivePreview files={files} platform={projectPlatform} onFilesChange={handleFilesChange} />
+              useWebContainer ? (
+                useSandpackFallback ? (
+                  <SandpackPreview
+                    files={files}
+                    platform={projectPlatform}
+                  />
+                ) : (
+                  <WebContainerPreview
+                    projectId={project.id}
+                    files={files}
+                    platform={projectPlatform}
+                    onFallbackToSandpack={() => setUseSandpackFallback(true)}
+                  />
+                )
+              ) : (
+                <LivePreview
+                  files={files}
+                  platform={projectPlatform}
+                  onFilesChange={handleFilesChange}
+                />
+              )
             )}
           </div>
         </div>

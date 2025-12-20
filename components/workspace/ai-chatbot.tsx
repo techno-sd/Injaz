@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/components/ui/use-toast'
 import {
   Sparkles,
@@ -16,9 +15,6 @@ import {
   Paperclip,
   Wand2,
   CheckCircle2,
-  Circle,
-  ChevronDown,
-  ChevronRight,
   Zap,
   Layout,
   Palette,
@@ -26,18 +22,27 @@ import {
   Settings,
   FileCheck,
   FolderOpen,
+  Code2,
+  Layers,
+  Cpu,
+  PenTool,
+  GitBranch,
+  Package,
+  FileText,
 } from 'lucide-react'
 import type { Message, File, PlatformType } from '@/types'
 import { cn } from '@/lib/utils'
 import { getSuggestionsForPlatform } from '@/lib/ai-suggestions'
 
-// Activity step type for Bolt-style activity log
-type ActivityStep = {
+// Activity item type for Lovable-style activity feed
+type ActivityItem = {
   id: string
-  label: string
-  status: 'pending' | 'running' | 'complete'
+  type: 'planning' | 'generating' | 'file' | 'complete' | 'thinking'
+  message: string
   icon?: React.ReactNode
-  children?: { label: string; file?: string }[]
+  file?: string
+  status: 'running' | 'complete'
+  timestamp: number
 }
 
 interface AIChatbotProps {
@@ -83,39 +88,39 @@ function MessageContent({ content }: { content: string }) {
     <div className="space-y-3">
       {parts.map((part, index) => (
         part.type === 'code' ? (
-          <div key={index} className="relative group rounded-lg overflow-hidden bg-[#0d0d12] border border-white/[0.06]">
-            <div className="flex items-center justify-between px-3 py-2 bg-white/[0.02] border-b border-white/[0.06]">
-              <span className="text-[10px] font-medium text-white/40 uppercase tracking-wide">
+          <div key={index} className="relative group rounded-xl overflow-hidden bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.02] border-b border-white/[0.06]">
+              <span className="text-[11px] font-medium text-white/40 uppercase tracking-wide">
                 {part.language}
               </span>
               <button
                 onClick={() => copyCode(part.content, index)}
-                className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] text-white/40 hover:text-white/70 hover:bg-white/[0.05] transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-white/40 hover:text-white/70 hover:bg-white/[0.05] transition-all"
               >
                 {copiedBlock === index ? (
                   <>
-                    <Check className="h-3 w-3 text-emerald-400" />
+                    <Check className="h-3.5 w-3.5 text-emerald-400" />
                     <span className="text-emerald-400">Copied</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="h-3 w-3" />
+                    <Copy className="h-3.5 w-3.5" />
                     <span>Copy</span>
                   </>
                 )}
               </button>
             </div>
-            <pre className="p-3 overflow-x-auto text-[13px] leading-relaxed">
+            <pre className="p-4 overflow-x-auto text-[13px] leading-relaxed">
               <code className="text-white/80 font-mono">{part.content}</code>
             </pre>
           </div>
         ) : (
-          <p key={index} className="text-[14px] text-white/80 leading-[1.7] whitespace-pre-wrap">
+          <p key={index} className="text-[14px] text-white/80 leading-[1.75] whitespace-pre-wrap">
             {part.content.split('\n').map((line, i) => (
               <span key={i}>
                 {line.split(/(`[^`]+`)/).map((segment, j) => (
                   segment.startsWith('`') && segment.endsWith('`') ? (
-                    <code key={j} className="px-1.5 py-0.5 rounded bg-white/[0.06] text-violet-300 text-[13px] font-mono">
+                    <code key={j} className="px-1.5 py-0.5 rounded-md bg-violet-500/10 text-violet-300 text-[13px] font-mono border border-violet-500/20">
                       {segment.slice(1, -1)}
                     </code>
                   ) : (
@@ -132,124 +137,146 @@ function MessageContent({ content }: { content: string }) {
   )
 }
 
-// Progress status type
-type ProgressStatus = {
-  phase: 'idle' | 'planning' | 'generating' | 'complete'
-  message: string
-  currentFile?: string
-  filesGenerated?: number
-  progress?: number // 0-100 percentage
-}
-
-// Bolt-style Activity Log Component
-function ActivityLog({
-  steps,
-  isExpanded,
-  onToggle,
-  progress,
-}: {
-  steps: ActivityStep[]
-  isExpanded: boolean
-  onToggle: () => void
-  progress?: number
-}) {
-  const completedCount = steps.filter(s => s.status === 'complete').length
-  const totalCount = steps.length
-  const isComplete = completedCount === totalCount && totalCount > 0
+// Lovable-style Activity Item Component
+function ActivityItemComponent({ item, isLast }: { item: ActivityItem; isLast: boolean }) {
+  const getIcon = () => {
+    if (item.icon) return item.icon
+    switch (item.type) {
+      case 'thinking':
+        return <Cpu className="h-3.5 w-3.5" />
+      case 'planning':
+        return <Layout className="h-3.5 w-3.5" />
+      case 'generating':
+        return <Code2 className="h-3.5 w-3.5" />
+      case 'file':
+        return <FileCode className="h-3.5 w-3.5" />
+      case 'complete':
+        return <CheckCircle2 className="h-3.5 w-3.5" />
+      default:
+        return <Zap className="h-3.5 w-3.5" />
+    }
+  }
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-      {/* Header */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          {isComplete ? (
-            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            </div>
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center">
-              <Loader2 className="h-4 w-4 text-violet-400 animate-spin" />
-            </div>
-          )}
-          <div className="text-left">
-            <div className="text-sm font-medium text-white/90">
-              {isComplete ? 'Generation complete' : 'Generating...'}
-            </div>
-            <div className="text-xs text-white/40">
-              {completedCount} of {totalCount} steps complete
-            </div>
+    <div className="relative flex items-start gap-3 py-1.5 animate-in fade-in-0 slide-in-from-left-2 duration-300">
+      {/* Timeline connector */}
+      {!isLast && (
+        <div className="absolute left-[11px] top-7 w-[2px] h-[calc(100%-4px)] bg-gradient-to-b from-white/10 to-transparent" />
+      )}
+
+      {/* Icon */}
+      <div className={cn(
+        "relative z-10 w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300",
+        item.status === 'complete'
+          ? "bg-emerald-500/20 text-emerald-400"
+          : "bg-violet-500/20 text-violet-400"
+      )}>
+        {item.status === 'running' ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : item.status === 'complete' ? (
+          <CheckCircle2 className="h-3.5 w-3.5" />
+        ) : (
+          getIcon()
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 pt-0.5">
+        <p className={cn(
+          "text-sm transition-colors duration-300",
+          item.status === 'complete' ? "text-white/60" : "text-white/80"
+        )}>
+          {item.message}
+        </p>
+        {item.file && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <FileCode className="h-3 w-3 text-violet-400" />
+            <span className="text-xs font-mono text-violet-400/80">{item.file}</span>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {progress !== undefined && progress > 0 && !isComplete && (
-            <span className="text-xs text-white/40">{Math.round(progress)}%</span>
-          )}
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-white/40" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-white/40" />
-          )}
-        </div>
-      </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
-      {/* Progress bar */}
-      {!isComplete && (
-        <div className="h-0.5 bg-white/[0.04]">
-          <div
-            className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-300"
-            style={{ width: `${progress || 0}%` }}
+// Lovable-style Activity Feed Component
+function ActivityFeed({ items, isGenerating }: { items: ActivityItem[]; isGenerating: boolean }) {
+  if (items.length === 0 && !isGenerating) return null
+
+  const completedCount = items.filter(i => i.status === 'complete').length
+  const isComplete = completedCount === items.length && items.length > 0 && !isGenerating
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.04]">
+        {isComplete ? (
+          <div className="w-7 h-7 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          </div>
+        ) : (
+          <div className="w-7 h-7 rounded-xl bg-violet-500/20 flex items-center justify-center">
+            <Loader2 className="h-4 w-4 text-violet-400 animate-spin" />
+          </div>
+        )}
+        <div>
+          <p className="text-sm font-medium text-white/90">
+            {isComplete ? 'Generation complete' : 'Working on it...'}
+          </p>
+          <p className="text-xs text-white/40">
+            {completedCount} of {items.length} steps
+          </p>
+        </div>
+      </div>
+
+      {/* Activity Items */}
+      <div className="px-4 py-3 space-y-0">
+        {items.map((item, index) => (
+          <ActivityItemComponent
+            key={item.id}
+            item={item}
+            isLast={index === items.length - 1}
           />
-        </div>
-      )}
+        ))}
+      </div>
+    </div>
+  )
+}
 
-      {/* Steps list */}
-      {isExpanded && (
-        <div className="px-4 py-3 space-y-1 border-t border-white/[0.06]">
-          {steps.map((step) => (
-            <div key={step.id} className="py-1.5">
-              <div className="flex items-center gap-2.5">
-                {/* Status icon */}
-                {step.status === 'complete' ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                ) : step.status === 'running' ? (
-                  <Loader2 className="h-4 w-4 text-violet-400 animate-spin flex-shrink-0" />
-                ) : (
-                  <Circle className="h-4 w-4 text-white/20 flex-shrink-0" />
-                )}
-                {/* Step icon */}
-                <span className="text-white/40">{step.icon}</span>
-                {/* Label */}
-                <span
-                  className={cn(
-                    'text-sm',
-                    step.status === 'complete'
-                      ? 'text-white/60'
-                      : step.status === 'running'
-                      ? 'text-white/90'
-                      : 'text-white/40'
-                  )}
-                >
-                  {step.label}
-                </span>
-              </div>
-              {/* Children (files) */}
-              {step.children && step.children.length > 0 && step.status !== 'pending' && (
-                <div className="ml-6 mt-1.5 space-y-1">
-                  {step.children.map((child, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-xs text-white/40">
-                      <FileCode className="h-3 w-3" />
-                      <span className="font-mono">{child.file || child.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+// Files Created Summary Component
+function FilesCreatedSummary({ files }: { files: string[] }) {
+  if (files.length === 0) return null
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-500/[0.02] overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+          <FolderOpen className="h-4 w-4 text-emerald-400" />
         </div>
-      )}
+        <div>
+          <p className="text-sm font-medium text-emerald-400">
+            {files.length} file{files.length > 1 ? 's' : ''} created
+          </p>
+        </div>
+      </div>
+      <div className="px-4 pb-4">
+        <div className="flex flex-wrap gap-1.5">
+          {files.slice(0, 12).map((file, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-black/20 text-white/70 font-mono border border-white/[0.04]"
+            >
+              <FileCode className="h-3 w-3 text-emerald-400/60" />
+              {file.split('/').pop()}
+            </span>
+          ))}
+          {files.length > 12 && (
+            <span className="px-2.5 py-1 text-xs rounded-lg bg-black/20 text-white/40 border border-white/[0.04]">
+              +{files.length - 12} more
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -260,47 +287,44 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [generatedFiles, setGeneratedFiles] = useState<string[]>([])
-  const [progress, setProgress] = useState<ProgressStatus>({ phase: 'idle', message: '' })
-  const [activitySteps, setActivitySteps] = useState<ActivityStep[]>([])
-  const [isActivityExpanded, setIsActivityExpanded] = useState(true)
+  const [activityItems, setActivityItems] = useState<ActivityItem[]>([])
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const generatedFilesRef = useRef<string[]>([])
   const filesRef = useRef<File[]>(files)
-  const activityStepsRef = useRef<ActivityStep[]>([])
   const { toast } = useToast()
 
-  // Helper to update activity steps
-  const updateActivityStep = (
-    stepId: string,
-    label: string,
-    status: 'pending' | 'running' | 'complete',
+  // Helper to add activity item
+  const addActivityItem = (
+    type: ActivityItem['type'],
+    message: string,
     icon?: React.ReactNode,
-    children?: { label: string; file?: string }[]
+    file?: string
   ) => {
-    setActivitySteps(prev => {
-      const existing = prev.find(s => s.id === stepId)
-      if (existing) {
-        return prev.map(s =>
-          s.id === stepId
-            ? { ...s, label, status, icon: icon || s.icon, children: children || s.children }
-            : s
-        )
-      } else {
-        return [...prev, { id: stepId, label, status, icon, children }]
-      }
-    })
+    const id = `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setActivityItems(prev => [...prev, {
+      id,
+      type,
+      message,
+      icon,
+      file,
+      status: 'running',
+      timestamp: Date.now(),
+    }])
+    return id
   }
 
-  // Helper to add file to a step's children
-  const addFileToStep = (stepId: string, file: string) => {
-    setActivitySteps(prev =>
-      prev.map(s =>
-        s.id === stepId
-          ? { ...s, children: [...(s.children || []), { label: file, file }] }
-          : s
-      )
-    )
+  // Helper to complete an activity item
+  const completeActivityItem = (id: string) => {
+    setActivityItems(prev => prev.map(item =>
+      item.id === id ? { ...item, status: 'complete' as const } : item
+    ))
+  }
+
+  // Helper to complete all running items
+  const completeAllItems = () => {
+    setActivityItems(prev => prev.map(item => ({ ...item, status: 'complete' as const })))
   }
 
   useEffect(() => {
@@ -312,7 +336,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, isLoading])
+  }, [messages, isLoading, activityItems])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -353,10 +377,11 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
     setIsLoading(true)
     setGeneratedFiles([])
     generatedFilesRef.current = []
-    setProgress({ phase: 'planning', message: 'Analyzing request...' })
-    // Reset activity steps for new request
-    setActivitySteps([])
-    setIsActivityExpanded(true)
+    setActivityItems([])
+    setLastFailedMessage(null) // Clear any previous failed message
+
+    // Add initial thinking activity
+    const thinkingId = addActivityItem('thinking', 'Understanding your request...', <Cpu className="h-3.5 w-3.5" />)
 
     try {
       const response = await fetch('/api/chat', {
@@ -376,9 +401,12 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
         throw new Error(errorData.error || `Server error: ${response.status}`)
       }
 
+      completeActivityItem(thinkingId)
+
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let assistantContent = ''
+      let currentStepId: string | null = null
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -404,85 +432,50 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                 const data = JSON.parse(line.slice(6))
 
                 if (data.type === 'mode') {
-                  // Initial mode info from API
-                  setProgress({
-                    phase: 'planning',
-                    message: `Starting ${data.mode || 'dual'} mode...`,
-                  })
-                } else if (data.type === 'context') {
-                  // Context info from legacy mode
-                  setProgress({
-                    phase: 'planning',
-                    message: `Processing ${data.filesIncluded || 0} files...`,
-                  })
+                  // Initial mode info
+                  currentStepId = addActivityItem('planning', 'Starting generation...', <Zap className="h-3.5 w-3.5" />)
                 } else if (data.type === 'planning') {
-                  // Update progress with planning status
-                  setProgress({
-                    phase: 'planning',
-                    message: data.message || 'Planning application structure...',
-                  })
+                  // Planning step
+                  if (currentStepId) completeActivityItem(currentStepId)
 
-                  // Handle subtask-based activity updates
-                  if (data.subtask && data.status) {
-                    const subtaskIcons: Record<string, React.ReactNode> = {
-                      requirements: <Zap className="h-3.5 w-3.5" />,
-                      platform: <Settings className="h-3.5 w-3.5" />,
-                      structure: <Layout className="h-3.5 w-3.5" />,
-                      design: <Palette className="h-3.5 w-3.5" />,
-                      components: <Box className="h-3.5 w-3.5" />,
-                      features: <Settings className="h-3.5 w-3.5" />,
-                      validation: <FileCheck className="h-3.5 w-3.5" />,
-                    }
-                    updateActivityStep(
-                      `planning-${data.subtask}`,
-                      data.message,
-                      data.status,
-                      subtaskIcons[data.subtask]
-                    )
+                  const icons: Record<string, React.ReactNode> = {
+                    requirements: <FileText className="h-3.5 w-3.5" />,
+                    platform: <Settings className="h-3.5 w-3.5" />,
+                    structure: <Layers className="h-3.5 w-3.5" />,
+                    design: <Palette className="h-3.5 w-3.5" />,
+                    components: <Box className="h-3.5 w-3.5" />,
+                    features: <Settings className="h-3.5 w-3.5" />,
+                    validation: <FileCheck className="h-3.5 w-3.5" />,
                   }
-                } else if (data.type === 'generating') {
-                  // Update progress with generating status
-                  const isFileName = data.file && (data.file.includes('.') || data.file.includes('/'))
-                  setProgress({
-                    phase: 'generating',
-                    message: isFileName ? 'Generating files...' : (data.file || data.message || 'Generating code...'),
-                    currentFile: isFileName ? data.file : (data.path || undefined),
-                    filesGenerated: generatedFilesRef.current.length,
-                    progress: data.progress,
-                  })
 
-                  // Handle subtask-based activity updates for codegen
-                  if (data.subtask && data.status) {
-                    const subtaskIcons: Record<string, React.ReactNode> = {
-                      init: <Zap className="h-3.5 w-3.5" />,
-                      codegen: <FileCode className="h-3.5 w-3.5" />,
-                      file: <FileCode className="h-3.5 w-3.5" />,
-                      validate: <FileCheck className="h-3.5 w-3.5" />,
-                      write: <FolderOpen className="h-3.5 w-3.5" />,
-                    }
-                    updateActivityStep(
-                      `codegen-${data.subtask}`,
-                      data.message,
-                      data.status,
-                      subtaskIcons[data.subtask]
-                    )
-                    // If this is a file subtask with a file path, add it as a child
-                    if (data.subtask === 'file' && data.file) {
-                      addFileToStep('codegen-file', data.file)
-                    }
-                  }
-                } else if (data.type === 'schema') {
-                  // Schema created
-                  setProgress({
-                    phase: 'generating',
-                    message: 'Schema ready. Generating files...',
-                  })
-                  updateActivityStep(
-                    'schema-ready',
-                    'Schema generated',
-                    'complete',
-                    <FileCheck className="h-3.5 w-3.5" />
+                  currentStepId = addActivityItem(
+                    'planning',
+                    data.message || 'Planning...',
+                    icons[data.subtask] || <Layout className="h-3.5 w-3.5" />
                   )
+                } else if (data.type === 'generating') {
+                  // Generating step
+                  if (currentStepId) completeActivityItem(currentStepId)
+
+                  const icons: Record<string, React.ReactNode> = {
+                    init: <Zap className="h-3.5 w-3.5" />,
+                    codegen: <Code2 className="h-3.5 w-3.5" />,
+                    file: <FileCode className="h-3.5 w-3.5" />,
+                    validate: <FileCheck className="h-3.5 w-3.5" />,
+                    write: <PenTool className="h-3.5 w-3.5" />,
+                  }
+
+                  const isFile = data.file && data.file.includes('.')
+                  currentStepId = addActivityItem(
+                    isFile ? 'file' : 'generating',
+                    data.message || (isFile ? `Creating ${data.file}` : 'Generating code...'),
+                    icons[data.subtask] || <Code2 className="h-3.5 w-3.5" />,
+                    isFile ? data.file : undefined
+                  )
+                } else if (data.type === 'schema') {
+                  // Schema ready
+                  if (currentStepId) completeActivityItem(currentStepId)
+                  currentStepId = addActivityItem('generating', 'Schema generated, creating files...', <Package className="h-3.5 w-3.5" />)
                 } else if (data.type === 'content') {
                   assistantContent += data.content
                   setMessages(prev =>
@@ -500,6 +493,10 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     if (action.type === 'create_or_update_file') {
                       const normalizedPath = normalizePath(action.path)
                       newFileNames.push(normalizedPath)
+
+                      // Add file creation activity
+                      const fileId = addActivityItem('file', `Creating ${normalizedPath.split('/').pop()}`, <FileCode className="h-3.5 w-3.5" />, normalizedPath)
+                      setTimeout(() => completeActivityItem(fileId), 200)
 
                       const existingIndex = updatedFiles.findIndex(f => normalizePath(f.path) === normalizedPath)
                       if (existingIndex >= 0) {
@@ -541,21 +538,13 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                   setGeneratedFiles(generatedFilesRef.current)
                   filesRef.current = updatedFiles
                   onFilesChange(updatedFiles)
-
-                  // Update progress with file count
-                  if (newFileNames.length > 0) {
-                    setProgress({
-                      phase: 'generating',
-                      message: `Generated ${generatedFilesRef.current.length} file${generatedFilesRef.current.length > 1 ? 's' : ''}...`,
-                      currentFile: newFileNames[newFileNames.length - 1],
-                      filesGenerated: generatedFilesRef.current.length,
-                    })
-                  }
                 } else if (data.type === 'complete' || data.type === 'done') {
-                  // Mark as complete
-                  setProgress({ phase: 'complete', message: 'Complete!' })
+                  if (currentStepId) completeActivityItem(currentStepId)
+                  completeAllItems()
                 } else if (data.type === 'error') {
-                  throw new Error(data.error || data.message || 'Generation failed')
+                  const error = new Error(data.error || data.message || 'Generation failed') as any
+                  error.retryable = data.retryable || false
+                  throw error
                 }
               } catch (error) {
                 if (!(error instanceof SyntaxError)) {
@@ -567,6 +556,9 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
         }
       }
 
+      // Complete all items when done
+      completeAllItems()
+
       if (generatedFilesRef.current.length > 0) {
         toast({
           title: 'Files Generated',
@@ -575,26 +567,34 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
       }
     } catch (error: any) {
       console.error('Chat error:', error)
+
+      const isRetryable = error.retryable || error.message?.includes('502') || error.message?.includes('temporarily unavailable')
+
       toast({
-        title: 'Error',
+        title: isRetryable ? 'Connection Error' : 'Error',
         description: error.message || 'Failed to get response',
         variant: 'destructive',
       })
+
+      // Store for potential retry
+      if (isRetryable) {
+        setLastFailedMessage(userMessage.content)
+      }
+
       setMessages(prev => [
         ...prev.filter(m => m.role !== 'assistant' || m.content),
         {
           id: crypto.randomUUID(),
           project_id: projectId,
           role: 'assistant',
-          content: `I encountered an error: ${error.message}. Please try again.`,
+          content: isRetryable
+            ? `I encountered a temporary connection issue. The AI provider may be overloaded. Please click "Retry" or try again in a moment.`
+            : `I encountered an error: ${error.message}. Please try again.`,
           created_at: new Date().toISOString(),
         }
       ])
     } finally {
       setIsLoading(false)
-      setProgress({ phase: 'idle', message: '' })
-      // Keep activity steps visible for completed state
-      // They will be reset on next sendMessage call
     }
   }
 
@@ -618,6 +618,28 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
   }
 
   const handleRetry = () => {
+    // Clear the last failed message state
+    setLastFailedMessage(null)
+
+    // If we have a stored failed message, use that
+    if (lastFailedMessage) {
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        project_id: projectId,
+        role: 'user',
+        content: lastFailedMessage,
+        created_at: new Date().toISOString(),
+      }
+      // Remove the error message from assistant
+      const cleanedMessages = messages.filter(m =>
+        !(m.role === 'assistant' && m.content?.includes('connection issue'))
+      )
+      setMessages(cleanedMessages)
+      sendMessage(userMessage, cleanedMessages)
+      return
+    }
+
+    // Otherwise, retry the last user message
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
     if (lastUserMessage) {
       const messagesBeforeLast = messages.slice(0, messages.indexOf(lastUserMessage))
@@ -640,30 +662,30 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto" ref={scrollRef}>
         {messages.length === 0 ? (
-          // Empty State
+          // Empty State - Lovable style
           <div className="h-full flex flex-col items-center justify-center px-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center mb-6 shadow-xl shadow-violet-500/25">
-              <Wand2 className="h-7 w-7 text-white" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center mb-6 shadow-2xl shadow-violet-500/30">
+              <Wand2 className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-semibold text-white mb-2 tracking-tight">
+            <h1 className="text-2xl font-semibold text-white mb-3 tracking-tight">
               What would you like to build?
             </h1>
-            <p className="text-sm text-white/40 mb-10 text-center max-w-[300px]">
-              Describe your idea in detail and I'll generate production-ready code
+            <p className="text-sm text-white/40 mb-10 text-center max-w-[320px] leading-relaxed">
+              Describe your idea and I'll generate production-ready code for you
             </p>
 
-            {/* Suggestion Cards */}
-            <div className="w-full max-w-md grid grid-cols-2 gap-2">
+            {/* Suggestion Cards - Lovable style */}
+            <div className="w-full max-w-md grid grid-cols-2 gap-2.5">
               {suggestions.map((suggestion) => (
                 <button
                   key={suggestion.id}
                   onClick={() => setInput(suggestion.text)}
-                  className="p-4 text-left rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/[0.1] transition-all group"
+                  className="p-4 text-left rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] hover:border-violet-500/30 transition-all duration-300 group hover:shadow-lg hover:shadow-violet-500/5"
                 >
-                  <span className="text-xl mb-2 block group-hover:scale-110 transition-transform origin-left">
+                  <span className="text-2xl mb-3 block group-hover:scale-110 transition-transform duration-300 origin-left">
                     {suggestion.emoji}
                   </span>
-                  <span className="text-xs text-white/60 group-hover:text-white/80 line-clamp-2 leading-relaxed">
+                  <span className="text-xs text-white/60 group-hover:text-white/80 line-clamp-2 leading-relaxed transition-colors">
                     {suggestion.text}
                   </span>
                 </button>
@@ -671,114 +693,80 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
             </div>
           </div>
         ) : (
-          // Chat Messages
-          <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+          // Chat Messages - Lovable style
+          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {messages.map((msg, idx) => (
               <div
                 key={msg.id}
-                className={cn(
-                  "animate-in fade-in-0 slide-in-from-bottom-3 duration-500",
-                  msg.role === 'user' ? 'pl-12' : 'pr-4'
-                )}
+                className="animate-in fade-in-0 slide-in-from-bottom-2 duration-400"
               >
                 {msg.role === 'user' ? (
-                  // User Message
-                  <div className="flex items-start gap-4 justify-end">
-                    <div className="flex-1 max-w-[85%]">
-                      <p className="text-[14px] text-white/90 leading-[1.7] whitespace-pre-wrap">
-                        {msg.content}
-                      </p>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                      <User className="h-4 w-4 text-white" />
+                  // User Message - clean bubble style
+                  <div className="flex justify-end">
+                    <div className="max-w-[85%] flex items-end gap-3">
+                      <div className="rounded-2xl rounded-br-md px-4 py-3 bg-gradient-to-br from-violet-600 to-purple-600 shadow-lg shadow-violet-500/20">
+                        <p className="text-[14px] text-white leading-[1.6] whitespace-pre-wrap">
+                          {msg.content}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  // Assistant Message
-                  <div className="flex items-start gap-4 group">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/20">
+                  // Assistant Message - Lovable style
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/25">
                       <Sparkles className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0 space-y-4">
-                      {msg.content ? (
-                        <>
+                      {/* Activity Feed - shows during/after generation */}
+                      {idx === messages.length - 1 && activityItems.length > 0 && (
+                        <ActivityFeed items={activityItems} isGenerating={isLoading} />
+                      )}
+
+                      {/* Message Content */}
+                      {msg.content && (
+                        <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.03] border border-white/[0.06]">
                           <MessageContent content={msg.content} />
+                        </div>
+                      )}
 
-                          {/* Generated Files */}
-                          {idx === messages.length - 1 && generatedFiles.length > 0 && (
-                            <div className="p-4 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20">
-                              <div className="flex items-center gap-2 mb-3">
-                                <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                                  <FileCode className="h-3.5 w-3.5 text-emerald-400" />
-                                </div>
-                                <span className="text-sm font-medium text-emerald-400">
-                                  {generatedFiles.length} file{generatedFiles.length > 1 ? 's' : ''} created
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {generatedFiles.slice(0, 10).map((file, i) => (
-                                  <span
-                                    key={i}
-                                    className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.04] text-white/60 font-mono"
-                                  >
-                                    {file.split('/').pop()}
-                                  </span>
-                                ))}
-                                {generatedFiles.length > 10 && (
-                                  <span className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.04] text-white/40">
-                                    +{generatedFiles.length - 10} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                      {/* Files Created Summary */}
+                      {idx === messages.length - 1 && generatedFiles.length > 0 && !isLoading && (
+                        <FilesCreatedSummary files={generatedFiles} />
+                      )}
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <button
-                              onClick={() => copyToClipboard(msg.content, msg.id)}
-                              className="p-2 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors"
-                              title="Copy message"
-                            >
-                              {copiedId === msg.id ? (
-                                <Check className="h-4 w-4 text-emerald-400" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                            </button>
-                            {idx === messages.length - 1 && (
-                              <button
-                                onClick={handleRetry}
-                                className="p-2 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors"
-                                title="Regenerate response"
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </button>
+                      {/* Actions */}
+                      {msg.content && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button
+                            onClick={() => copyToClipboard(msg.content, msg.id)}
+                            className="p-2 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all"
+                            title="Copy message"
+                          >
+                            {copiedId === msg.id ? (
+                              <Check className="h-4 w-4 text-emerald-400" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
                             )}
-                          </div>
-                        </>
-                      ) : (
-                        // Bolt-style Activity Log
-                        activitySteps.length > 0 ? (
-                          <ActivityLog
-                            steps={activitySteps}
-                            isExpanded={isActivityExpanded}
-                            onToggle={() => setIsActivityExpanded(!isActivityExpanded)}
-                            progress={progress.progress}
-                          />
-                        ) : (
-                          // Fallback progress indicator
-                          <div className="flex items-center gap-3 py-1">
-                            <div className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-                              <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse [animation-delay:150ms]" />
-                              <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse [animation-delay:300ms]" />
-                            </div>
-                            <span className="text-sm text-white/50">
-                              {progress.message || 'Thinking...'}
-                            </span>
-                          </div>
-                        )
+                          </button>
+                          {idx === messages.length - 1 && (
+                            <button
+                              onClick={handleRetry}
+                              className={cn(
+                                "p-2 rounded-xl transition-all",
+                                lastFailedMessage
+                                  ? "text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 animate-pulse"
+                                  : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"
+                              )}
+                              title={lastFailedMessage ? "Retry failed request" : "Regenerate response"}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -788,30 +776,12 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
 
             {/* Loading State */}
             {isLoading && messages[messages.length - 1]?.role === 'user' && (
-              <div className="flex items-start gap-4 animate-in fade-in-0 slide-in-from-bottom-3 duration-500 pr-4">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/20">
+              <div className="flex items-start gap-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-400">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/25">
                   <Sparkles className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  {activitySteps.length > 0 ? (
-                    <ActivityLog
-                      steps={activitySteps}
-                      isExpanded={isActivityExpanded}
-                      onToggle={() => setIsActivityExpanded(!isActivityExpanded)}
-                      progress={progress.progress}
-                    />
-                  ) : (
-                    <div className="flex items-center gap-3 py-1">
-                      <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-                        <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse [animation-delay:150ms]" />
-                        <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse [animation-delay:300ms]" />
-                      </div>
-                      <span className="text-sm text-white/50">
-                        {progress.message || 'Thinking...'}
-                      </span>
-                    </div>
-                  )}
+                  <ActivityFeed items={activityItems} isGenerating={true} />
                 </div>
               </div>
             )}
@@ -819,13 +789,13 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-white/[0.06] bg-[#09090b] p-4">
+      {/* Input Area - Lovable style */}
+      <div className="border-t border-white/[0.06] bg-[#09090b]/80 backdrop-blur-xl p-4">
         <div className="max-w-3xl mx-auto">
           <div className={cn(
-            "relative rounded-2xl border transition-all duration-200",
+            "relative rounded-2xl border transition-all duration-300",
             input.trim()
-              ? "border-violet-500/50 bg-violet-500/[0.02]"
+              ? "border-violet-500/40 bg-violet-500/[0.03] shadow-lg shadow-violet-500/10"
               : "border-white/[0.08] bg-white/[0.02]"
           )}>
             <textarea
@@ -840,7 +810,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
             />
             <div className="absolute right-2 bottom-2 flex items-center gap-1">
               <button
-                className="p-2 rounded-xl text-white/30 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
+                className="p-2.5 rounded-xl text-white/30 hover:text-white/50 hover:bg-white/[0.04] transition-all"
                 title="Attach file"
               >
                 <Paperclip className="h-5 w-5" />
@@ -850,9 +820,9 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                 disabled={!input.trim() || isLoading}
                 size="icon"
                 className={cn(
-                  "h-10 w-10 rounded-xl transition-all duration-200",
+                  "h-10 w-10 rounded-xl transition-all duration-300",
                   input.trim() && !isLoading
-                    ? "bg-violet-500 hover:bg-violet-400 text-white shadow-lg shadow-violet-500/25"
+                    ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/40 hover:scale-105"
                     : "bg-white/[0.04] text-white/20 cursor-not-allowed"
                 )}
               >
@@ -865,7 +835,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
             </div>
           </div>
           <p className="mt-3 text-[11px] text-white/25 text-center">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] text-white/40 font-mono">Enter</kbd> to send · <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] text-white/40 font-mono">Shift + Enter</kbd> for new line
+            Press <kbd className="px-1.5 py-0.5 rounded-md bg-white/[0.06] text-white/40 font-mono text-[10px]">Enter</kbd> to send · <kbd className="px-1.5 py-0.5 rounded-md bg-white/[0.06] text-white/40 font-mono text-[10px]">Shift + Enter</kbd> for new line
           </p>
         </div>
       </div>
