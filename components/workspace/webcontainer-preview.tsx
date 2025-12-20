@@ -136,10 +136,10 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   }, [platform, deviceMode])
 
   // Build file tree from files array
-  function buildFileTree(files: File[]) {
+  const buildFileTree = useCallback((fileList: File[]) => {
     const tree: any = {}
 
-    files.forEach(file => {
+    fileList.forEach(file => {
       const parts = file.path.split('/')
       let current = tree
 
@@ -164,30 +164,24 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
     })
 
     return tree
-  }
+  }, [])
+
+  const addLog = useCallback((message: string) => {
+    setLogs(prev => [...prev, message])
+  }, [])
 
   // Start the WebContainer dev server
-  async function startDevServer() {
-    if (!webcontainer || hasStarted.current) return
-
-    // If server is already running, just update files without full restart
-    if (isServerRunning && previewUrl) {
-      addLog('Server already running, updating files...')
-      hasStarted.current = true
-      try {
-        const fileTree = buildFileTree(files)
-        await webcontainer.mount(fileTree)
-        addLog('Files updated')
-        // Trigger iframe refresh
-        if (iframeRef.current) {
-          iframeRef.current.src = previewUrl
-        }
-        return
-      } catch (err) {
-        console.error('Failed to update files:', err)
-        // Fall through to full restart
-      }
+  const startDevServer = useCallback(async () => {
+    if (!webcontainer) {
+      console.log('[Preview] startDevServer: No webcontainer available')
+      return
     }
+    if (hasStarted.current) {
+      console.log('[Preview] startDevServer: Already started')
+      return
+    }
+
+    console.log('[Preview] startDevServer: Beginning server start')
 
     try {
       hasStarted.current = true
@@ -316,18 +310,52 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
       setIsStarting(false)
       hasStarted.current = false
     }
-  }
+  }, [webcontainer, files, buildFileTree, addLog, setPreviewUrl, setIsServerRunning])
 
-  function addLog(message: string) {
-    setLogs(prev => [...prev, message])
-  }
-
-  // Start dev server when WebContainer is ready
+  // Start dev server when WebContainer is ready and all conditions are met
   useEffect(() => {
-    if (webcontainer && !isBooting && files.length > 0) {
-      startDevServer()
+    // Don't start if conditions aren't met
+    if (!webcontainer || isBooting || files.length === 0) {
+      return
     }
-  }, [webcontainer, isBooting, files.length])
+
+    // Don't start if already started or server is running
+    if (hasStarted.current || isServerRunning || previewUrl) {
+      return
+    }
+
+    // Don't start if currently installing or starting
+    if (isInstalling || isStarting) {
+      return
+    }
+
+    // All conditions met - start the dev server
+    console.log('[Preview] Starting dev server - all conditions met')
+    startDevServer()
+  }, [webcontainer, isBooting, files.length, isServerRunning, previewUrl, isInstalling, isStarting, startDevServer])
+
+  // Fallback: Auto-retry if we're in the waiting state for too long
+  // This handles edge cases where the main effect doesn't trigger properly
+  useEffect(() => {
+    // Only run if we're in the "waiting" state (ready but not started)
+    const shouldBeStarting = webcontainer && !isBooting && files.length > 0 &&
+                             !hasStarted.current && !isServerRunning && !previewUrl &&
+                             !isInstalling && !isStarting && !error
+
+    if (!shouldBeStarting) {
+      return
+    }
+
+    // Set a fallback timer to auto-start after 500ms if nothing else triggered it
+    const fallbackTimer = setTimeout(() => {
+      if (!hasStarted.current && !previewUrl && !isInstalling && !isStarting) {
+        console.log('[Preview] Fallback timer triggering startDevServer')
+        startDevServer()
+      }
+    }, 500)
+
+    return () => clearTimeout(fallbackTimer)
+  }, [webcontainer, isBooting, files.length, isServerRunning, previewUrl, isInstalling, isStarting, error, startDevServer])
 
   // Debounced file update function
   const updateChangedFiles = useCallback(
@@ -542,6 +570,34 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
           className="mt-4"
           variant="outline"
         >
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
+  // Show waiting state when WebContainer is ready but dev server hasn't started yet
+  if (!isBooting && !error && !isInstalling && !isStarting && !previewUrl && files.length > 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-6">
+        <div className="relative">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+        <p className="text-sm font-medium mt-6">Preparing dev server...</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          WebContainer ready, starting development server
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-6 text-xs"
+          onClick={() => {
+            hasStarted.current = false
+            setLogs([])
+            startDevServer()
+          }}
+        >
+          <RefreshCw className="h-3 w-3 mr-1.5" />
           Retry
         </Button>
       </div>

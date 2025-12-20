@@ -41,6 +41,15 @@ interface WebContainerProviderProps {
 let globalWebContainer: WebContainer | null = null
 let bootPromise: Promise<WebContainer> | null = null
 
+// Track if we've already initialized in this module instance
+// This prevents double-initialization in React Strict Mode
+let hasModuleInitialized = false
+
+// Use a unique key per page load to detect refreshes
+// On refresh, this will be a new value, forcing a fresh boot
+const PAGE_LOAD_KEY = 'webcontainer_page_load'
+const currentPageLoad = typeof window !== 'undefined' ? Date.now().toString() : ''
+
 // Boot timeout in milliseconds
 const BOOT_TIMEOUT = 60000 // Increased to 60 seconds for first boot
 
@@ -195,23 +204,84 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
   }
 
   useEffect(() => {
-    // Prevent double initialization in strict mode
-    if (hasInitialized.current) return
+    // Check if this is a page refresh or HMR
+    const lastPageLoad = typeof window !== 'undefined' ? sessionStorage.getItem(PAGE_LOAD_KEY) : null
+    const isPageRefresh = lastPageLoad !== null && lastPageLoad !== currentPageLoad
+    const isFirstLoad = lastPageLoad === null
+
+    // Store current page load ID
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(PAGE_LOAD_KEY, currentPageLoad)
+    }
+
+    console.log('[WebContainerProvider] useEffect running:', {
+      hasInitialized: hasInitialized.current,
+      hasModuleInitialized,
+      hasGlobalInstance: !!globalWebContainer,
+      isPageRefresh,
+      isFirstLoad,
+      lastPageLoad,
+      currentPageLoad,
+    })
+
+    // Prevent double initialization in React Strict Mode
+    if (hasInitialized.current) {
+      console.log('[WebContainerProvider] Component already initialized, skipping')
+      return
+    }
     hasInitialized.current = true
     mountedRef.current = true
 
-    // If we already have a global instance, use it immediately
-    if (globalWebContainer) {
-      setWebcontainer(globalWebContainer)
-      setBootStage(BOOT_STAGES.ready)
-      setIsBooting(false)
-    } else {
+    // Boot fresh on first load or page refresh
+    const initializeWebContainer = async () => {
+      // If there's an existing instance, teardown first
+      if (globalWebContainer) {
+        console.log('[WebContainerProvider] Tearing down existing instance for fresh boot')
+        try {
+          await globalWebContainer.teardown()
+        } catch (e) {
+          console.error('[WebContainerProvider] Error tearing down:', e)
+        }
+        globalWebContainer = null
+        bootPromise = null
+      }
+
+      // Reset all state for fresh start
+      setPreviewUrl('')
+      setIsServerRunning(false)
+
+      // Boot fresh WebContainer
+      console.log('[WebContainerProvider] Starting fresh boot')
       bootWebContainer()
     }
 
+    // On page refresh or first load: always boot fresh
+    if (isFirstLoad || isPageRefresh) {
+      console.log('[WebContainerProvider] First load or page refresh - booting fresh')
+      hasModuleInitialized = true
+      initializeWebContainer()
+      return
+    }
+
+    // HMR case: reuse existing instance if available
+    if (hasModuleInitialized && globalWebContainer) {
+      console.log('[WebContainerProvider] HMR detected, reusing instance')
+      setWebcontainer(globalWebContainer)
+      setBootStage(BOOT_STAGES.ready)
+      setIsBooting(false)
+      // Reset server state to trigger dev server restart
+      setPreviewUrl('')
+      setIsServerRunning(false)
+      return
+    }
+
+    // Fallback: boot fresh
+    console.log('[WebContainerProvider] Fallback - booting fresh')
+    hasModuleInitialized = true
+    initializeWebContainer()
+
     return () => {
       mountedRef.current = false
-      // Don't teardown on unmount - keep singleton for reuse
     }
   }, [])
 
