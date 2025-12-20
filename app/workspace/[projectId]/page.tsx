@@ -466,33 +466,18 @@ export { Button, buttonVariants }`,
         id: 'pages-index',
         project_id: params.projectId,
         path: 'src/pages/Index.tsx',
-        content: `import { Button } from "../components/ui/button"
-import { Sparkles, ArrowRight } from "lucide-react"
-
-const Index = () => {
+        content: `const Index = () => {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="text-center space-y-6 max-w-2xl">
-        <div className="flex justify-center">
-          <Sparkles className="h-16 w-16 text-purple-400 animate-pulse" />
+    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+          <svg className="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
         </div>
-        <h1 className="text-4xl md:text-6xl font-bold text-white">
-          Welcome to Your App
-        </h1>
-        <p className="text-xl text-gray-300">
-          Start chatting with AI to build your application.
-          This template includes React Router, Tanstack Query, and shadcn/ui components.
-        </p>
-        <div className="flex gap-4 justify-center flex-wrap">
-          <Button size="lg" className="gap-2">
-            Get Started <ArrowRight className="h-4 w-4" />
-          </Button>
-          <Button size="lg" variant="outline" className="text-white border-white/20 hover:bg-white/10">
-            Learn More
-          </Button>
-        </div>
+        <p className="text-sm text-white/40">Your preview will appear here</p>
       </div>
-    </main>
+    </div>
   )
 }
 

@@ -135,10 +135,14 @@ export default function App() {
     sandpackFiles['/src/App.tsx'] = {
       code: `export default function App() {
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome</h1>
-        <p className="text-gray-400">Start building your app</p>
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/5 flex items-center justify-center">
+          <svg className="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <p className="text-sm text-white/40">Your preview will appear here</p>
       </div>
     </div>
   )
@@ -202,17 +206,16 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
       <div className="h-full flex flex-col bg-[#0a0a0f]">
         <div className="h-10 border-b border-white/10 px-4 flex items-center justify-between shrink-0 bg-[#0d0d12]">
           <div className="flex items-center gap-2">
-            <Monitor className="h-4 w-4 text-purple-400" />
-            <span className="text-sm font-medium text-white/80">Preview</span>
+            <Monitor className="h-4 w-4 text-white/40" />
+            <span className="text-sm font-medium text-white/40">Preview</span>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center bg-[#1a1a2e]">
-          <div className="text-center space-y-4">
-            <div className="text-5xl">✨</div>
-            <h2 className="text-xl font-semibold text-white">No Preview Available</h2>
-            <p className="text-gray-400 max-w-xs">
-              Start chatting with AI to generate your app
-            </p>
+        <div className="flex-1 flex items-center justify-center bg-[#0d0d12]">
+          <div className="text-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
+              <Monitor className="h-6 w-6 text-white/20" />
+            </div>
+            <p className="text-sm text-white/40">Your preview will appear here</p>
           </div>
         </div>
       </div>

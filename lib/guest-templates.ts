@@ -325,30 +325,16 @@ export const GUEST_TEMPLATES: Record<string, GuestTemplate> = {
     description: 'Start from scratch with Vite + React',
     files: createGuestBaseFiles(`export default function Index() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="text-center space-y-6">
-        <div className="text-6xl animate-bounce">✨</div>
-        <h1 className="text-4xl md:text-6xl font-bold text-white">
-          Welcome to Your App
-        </h1>
-        <p className="text-xl text-gray-300 max-w-md mx-auto">
-          Start chatting with AI to build your application
-        </p>
-        <div className="flex gap-4 justify-center flex-wrap">
-          <button className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
-            Get Started
-          </button>
-          <button className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20">
-            Learn More
-          </button>
+    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+          <svg className="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
         </div>
-        <div className="flex gap-3 justify-center flex-wrap pt-4">
-          <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-gray-300">Lightning Fast</span>
-          <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-gray-300">Beautiful Design</span>
-          <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-gray-300">AI Powered</span>
-        </div>
+        <p className="text-sm text-white/40">Your preview will appear here</p>
       </div>
-    </main>
+    </div>
   )
 }`),
   },

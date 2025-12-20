@@ -984,14 +984,11 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
         )}
 
         {!previewUrl && !showTerminal && (
-          <div className="flex flex-col items-center justify-center text-center gap-4">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-              <Globe className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center justify-center text-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center">
+              <Monitor className="h-6 w-6 text-muted-foreground/40" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Waiting for preview...</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">Dev server is starting</p>
-            </div>
+            <p className="text-sm text-muted-foreground/60">Your preview will appear here</p>
           </div>
         )}
       </div>

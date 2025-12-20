@@ -1392,6 +1392,7 @@ EXACT PACKAGE.JSON (Use this exact structure):
     "vite": "^5.3.4",
     "@vitejs/plugin-react": "^4.3.1",
     "tailwindcss": "^3.4.4",
+    "tailwindcss-animate": "^1.0.7",
     "postcss": "^8.4.38",
     "autoprefixer": "^10.4.19"
   }
@@ -1421,6 +1422,7 @@ export default defineConfig({
 
 MANDATORY tailwind.config.ts:
 import type { Config } from "tailwindcss"
+import animate from "tailwindcss-animate"
 
 const config: Config = {
   content: [
@@ -1473,7 +1475,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [animate],
 }
 export default config
 
