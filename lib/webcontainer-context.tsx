@@ -9,6 +9,11 @@ interface WebContainerContextType {
   error: string | null
   bootStage: string
   restart: () => Promise<void>
+  // Persistent preview state
+  previewUrl: string
+  setPreviewUrl: (url: string) => void
+  isServerRunning: boolean
+  setIsServerRunning: (running: boolean) => void
 }
 
 const WebContainerContext = createContext<WebContainerContextType>({
@@ -17,6 +22,10 @@ const WebContainerContext = createContext<WebContainerContextType>({
   error: null,
   bootStage: 'Initializing...',
   restart: async () => {},
+  previewUrl: '',
+  setPreviewUrl: () => {},
+  isServerRunning: false,
+  setIsServerRunning: () => {},
 })
 
 export function useWebContainer() {
@@ -52,6 +61,10 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
   const [bootStage, setBootStage] = useState<string>(BOOT_STAGES.checking)
   const mountedRef = useRef(true)
   const hasInitialized = useRef(false)
+
+  // Persistent preview state - survives component unmount/remount
+  const [previewUrl, setPreviewUrl] = useState<string>('')
+  const [isServerRunning, setIsServerRunning] = useState(false)
 
   const bootWebContainer = async () => {
     try {
@@ -203,7 +216,17 @@ export function WebContainerProvider({ children }: WebContainerProviderProps) {
   }, [])
 
   return (
-    <WebContainerContext.Provider value={{ webcontainer, isBooting, error, bootStage, restart }}>
+    <WebContainerContext.Provider value={{
+      webcontainer,
+      isBooting,
+      error,
+      bootStage,
+      restart,
+      previewUrl,
+      setPreviewUrl,
+      isServerRunning,
+      setIsServerRunning,
+    }}>
       {children}
     </WebContainerContext.Provider>
   )

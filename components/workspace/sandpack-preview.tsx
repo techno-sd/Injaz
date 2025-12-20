@@ -9,6 +9,7 @@ import {
   SandpackProvider,
   SandpackLayout,
   SandpackPreview as SandpackPreviewPane,
+  SandpackConsole,
 } from '@codesandbox/sandpack-react'
 import type { File } from '@/types'
 import type { SandpackFiles } from '@codesandbox/sandpack-react'
@@ -24,6 +25,10 @@ interface SandpackPreviewProps {
 function convertToSandpackFiles(files: File[]): SandpackFiles {
   const sandpackFiles: SandpackFiles = {}
 
+  let hasIndexCss = false
+  let indexPageContent: string | null = null
+
+  // First pass: collect files and check what we have
   for (const file of files) {
     if (!file.content) continue
 
@@ -33,9 +38,111 @@ function convertToSandpackFiles(files: File[]): SandpackFiles {
       path = '/' + path
     }
 
+    // Track CSS and Index page
+    if (path === '/src/index.css') hasIndexCss = true
+    if (path.includes('pages/Index.tsx')) {
+      // Clean up Index content for Sandpack
+      let content = file.content
+      content = content.replace(/import\s*{\s*Link[^}]*}\s*from\s*['"]react-router-dom['"];?\n?/g, '')
+      content = content.replace(/import\s*{\s*useNavigate[^}]*}\s*from\s*['"]react-router-dom['"];?\n?/g, '')
+      content = content.replace(/<Link\s+to=/g, '<a href=')
+      content = content.replace(/<\/Link>/g, '</a>')
+      indexPageContent = content
+    }
+
+    // Skip files that we'll override for Sandpack compatibility
+    if (path === '/src/main.tsx' || path === '/src/App.tsx' || path === '/index.html') {
+      continue
+    }
+
+    // Skip config files that don't work in Sandpack
+    if (path.includes('vite.config') || path.includes('tsconfig') || path.includes('postcss.config') || path.includes('tailwind.config')) {
+      continue
+    }
+
+    // Skip NotFound page (routing doesn't work in Sandpack)
+    if (path.includes('NotFound')) {
+      continue
+    }
+
+    // Clean up content for Sandpack compatibility
+    let content = file.content
+    // Remove react-router-dom imports and replace Link with <a>
+    content = content.replace(/import\s*{\s*Link[^}]*}\s*from\s*['"]react-router-dom['"];?\n?/g, '')
+    content = content.replace(/import\s*{\s*useNavigate[^}]*}\s*from\s*['"]react-router-dom['"];?\n?/g, '')
+    content = content.replace(/<Link\s+to=/g, '<a href=')
+    content = content.replace(/<\/Link>/g, '</a>')
+    // Remove sonner imports if present
+    content = content.replace(/import\s*{\s*toast[^}]*}\s*from\s*['"]sonner['"];?\n?/g, '')
+    content = content.replace(/import\s*{\s*Toaster[^}]*}\s*from\s*['"]sonner['"];?\n?/g, '')
+
     sandpackFiles[path] = {
-      code: file.content,
-      active: path.includes('Index') || path.includes('App'),
+      code: content,
+      active: path.includes('Index'),
+    }
+  }
+
+  // Add Sandpack-compatible index.html
+  sandpackFiles['/index.html'] = {
+    code: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>App Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>`,
+  }
+
+  // Add simplified main.tsx (no BrowserRouter, no React Query - just render)
+  sandpackFiles['/src/main.tsx'] = {
+    code: `import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+${hasIndexCss ? "import './index.css'" : ''}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)`,
+  }
+
+  // Add simplified App.tsx that directly renders Index (no routing)
+  const hasIndexPage = Object.keys(sandpackFiles).some(p => p.includes('pages/Index'))
+
+  if (hasIndexPage) {
+    sandpackFiles['/src/App.tsx'] = {
+      code: `import Index from './pages/Index'
+
+export default function App() {
+  return <Index />
+}`,
+    }
+  } else if (indexPageContent) {
+    // If we have Index content but maybe wrong path, inline it
+    sandpackFiles['/src/App.tsx'] = {
+      code: indexPageContent.replace(/export default function Index/, 'export default function App'),
+    }
+  } else {
+    sandpackFiles['/src/App.tsx'] = {
+      code: `export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">Welcome</h1>
+        <p className="text-gray-400">Start building your app</p>
+      </div>
+    </div>
+  )
+}`,
     }
   }
 
@@ -88,16 +195,6 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
   const handleRefresh = useCallback(() => {
     setRefreshKey(k => k + 1)
   }, [])
-
-  // Determine the entry file
-  const entryFile = useMemo(() => {
-    const paths = files.map(f => f.path)
-    if (paths.some(p => p.includes('src/main.tsx'))) return '/src/main.tsx'
-    if (paths.some(p => p.includes('src/main.ts'))) return '/src/main.ts'
-    if (paths.some(p => p.includes('src/index.tsx'))) return '/src/index.tsx'
-    if (paths.some(p => p.includes('src/App.tsx'))) return '/src/App.tsx'
-    return '/src/main.tsx'
-  }, [files])
 
   // No files - show placeholder
   if (!sandpackFiles || Object.keys(sandpackFiles).length === 0) {
@@ -176,17 +273,15 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
           )}
         >
           <SandpackProvider
-            template="vite-react-ts"
+            template="react-ts"
             files={sandpackFiles}
             theme={customTheme}
             options={{
               externalResources: [
                 'https://cdn.tailwindcss.com',
               ],
-              visibleFiles: [entryFile],
-              activeFile: entryFile,
               recompileMode: 'delayed',
-              recompileDelay: 500,
+              recompileDelay: 300,
             }}
             customSetup={{
               dependencies: {
@@ -201,15 +296,17 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
                 'sonner': '^1.5.0',
                 'framer-motion': '^11.0.0',
               },
+              entry: '/src/main.tsx',
             }}
           >
-            <SandpackLayout>
+            <SandpackLayout style={{ height: '100%', flexDirection: 'column' }}>
               <SandpackPreviewPane
                 showNavigator={false}
                 showRefreshButton={false}
                 showOpenInCodeSandbox={false}
-                style={{ height: '100%', minHeight: '500px' }}
+                style={{ flex: 1, minHeight: '400px' }}
               />
+              <SandpackConsole style={{ height: '100px' }} />
             </SandpackLayout>
           </SandpackProvider>
         </div>

@@ -36,7 +36,6 @@ interface WebContainerPreviewProps {
   projectId: string
   files: File[]
   platform?: PlatformType
-  onFallbackToSandpack?: () => void
 }
 
 const deviceModes = {
@@ -60,9 +59,18 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   }
 }
 
-export function WebContainerPreview({ projectId, files, platform = 'webapp', onFallbackToSandpack }: WebContainerPreviewProps) {
-  const { webcontainer, isBooting, error: bootError, bootStage, restart } = useWebContainer()
-  const [previewUrl, setPreviewUrl] = useState<string>('')
+export function WebContainerPreview({ projectId, files, platform = 'webapp' }: WebContainerPreviewProps) {
+  const {
+    webcontainer,
+    isBooting,
+    error: bootError,
+    bootStage,
+    restart,
+    previewUrl,
+    setPreviewUrl,
+    isServerRunning,
+    setIsServerRunning,
+  } = useWebContainer()
   const [isInstalling, setIsInstalling] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
@@ -162,6 +170,25 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp', onF
   async function startDevServer() {
     if (!webcontainer || hasStarted.current) return
 
+    // If server is already running, just update files without full restart
+    if (isServerRunning && previewUrl) {
+      addLog('Server already running, updating files...')
+      hasStarted.current = true
+      try {
+        const fileTree = buildFileTree(files)
+        await webcontainer.mount(fileTree)
+        addLog('Files updated')
+        // Trigger iframe refresh
+        if (iframeRef.current) {
+          iframeRef.current.src = previewUrl
+        }
+        return
+      } catch (err) {
+        console.error('Failed to update files:', err)
+        // Fall through to full restart
+      }
+    }
+
     try {
       hasStarted.current = true
       setError(null)
@@ -180,6 +207,7 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp', onF
       webcontainer.on('server-ready', (port, url) => {
         addLog(`Server ready at ${url}`)
         setPreviewUrl(url)
+        setIsServerRunning(true)
         setIsStarting(false)
       })
 
@@ -476,17 +504,6 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp', onF
                 Diagnose
               </Button>
             </div>
-            {onFallbackToSandpack && (
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full mt-3 text-xs bg-blue-600 hover:bg-blue-700"
-                onClick={onFallbackToSandpack}
-              >
-                <Zap className="h-3 w-3 mr-1.5" />
-                Use Sandpack Preview (No Download)
-              </Button>
-            )}
           </div>
         ) : (
           <p className="text-xs text-muted-foreground mt-6 max-w-xs">
