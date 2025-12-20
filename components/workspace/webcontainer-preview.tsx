@@ -2,30 +2,125 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useWebContainer } from '@/lib/webcontainer-context'
-import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink, Zap, CheckCircle2, Circle } from 'lucide-react'
+import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink, Zap, CheckCircle2, Circle, Package, Server, Code2, Cpu, Shield, Download, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { File, PlatformType } from '@/types'
 
-// Boot step component for showing progress
-function BootStep({ label, status }: { label: string; status: 'pending' | 'active' | 'done' }) {
+// Enhanced progress step with beautiful animations
+interface ProgressStepProps {
+  icon: React.ReactNode
+  label: string
+  description?: string
+  status: 'pending' | 'active' | 'done'
+  isLast?: boolean
+}
+
+function ProgressStep({ icon, label, description, status, isLast = false }: ProgressStepProps) {
+  const statusLabel = status === 'done' ? 'Completed' : status === 'active' ? 'In progress' : 'Pending'
+
   return (
-    <div className="flex items-center gap-2 text-xs">
-      {status === 'done' ? (
-        <CheckCircle2 className="h-4 w-4 text-green-500" />
-      ) : status === 'active' ? (
-        <Loader2 className="h-4 w-4 text-primary animate-spin" />
-      ) : (
-        <Circle className="h-4 w-4 text-muted-foreground/40" />
-      )}
-      <span className={cn(
-        status === 'done' && 'text-green-500',
-        status === 'active' && 'text-primary font-medium',
-        status === 'pending' && 'text-muted-foreground/60'
-      )}>
-        {label}
-      </span>
+    <div
+      className="flex items-start gap-4"
+      role="listitem"
+      aria-label={`${label}: ${statusLabel}`}
+    >
+      {/* Step indicator with connecting line */}
+      <div className="flex flex-col items-center" aria-hidden="true">
+        <div
+          className={cn(
+            'relative flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-500',
+            status === 'done' && 'border-emerald-500 bg-emerald-500/20',
+            status === 'active' && 'border-primary bg-primary/20 animate-pulse',
+            status === 'pending' && 'border-muted-foreground/30 bg-muted/30'
+          )}
+        >
+          {status === 'done' ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-hidden="true" />
+          ) : status === 'active' ? (
+            <div className="relative">
+              {icon}
+              <span className="absolute -inset-1 rounded-full bg-primary/30 animate-ping" aria-hidden="true" />
+            </div>
+          ) : (
+            <div className="text-muted-foreground/50">{icon}</div>
+          )}
+        </div>
+        {/* Connecting line */}
+        {!isLast && (
+          <div
+            className={cn(
+              'w-0.5 h-8 transition-all duration-500',
+              status === 'done' ? 'bg-emerald-500' : 'bg-muted-foreground/20'
+            )}
+            aria-hidden="true"
+          />
+        )}
+      </div>
+
+      {/* Step content */}
+      <div className="flex-1 pt-2">
+        <p
+          className={cn(
+            'text-sm font-medium transition-colors duration-300',
+            status === 'done' && 'text-emerald-500',
+            status === 'active' && 'text-foreground',
+            status === 'pending' && 'text-muted-foreground/60'
+          )}
+        >
+          {label}
+          <span className="sr-only"> - {statusLabel}</span>
+        </p>
+        {description && status === 'active' && (
+          <p className="text-xs text-muted-foreground mt-0.5 animate-in fade-in slide-in-from-top-1 duration-300">
+            {description}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Animated dots for loading states
+function LoadingDots() {
+  return (
+    <span className="inline-flex gap-1 ml-1">
+      <span className="h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+      <span className="h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+      <span className="h-1 w-1 rounded-full bg-current animate-bounce" />
+    </span>
+  )
+}
+
+// Gradient progress bar with accessibility
+function GradientProgressBar({ progress, className, label = 'Loading progress' }: { progress: number; className?: string; label?: string }) {
+  return (
+    <div
+      className={cn('h-1.5 w-full rounded-full bg-muted/50 overflow-hidden', className)}
+      role="progressbar"
+      aria-valuenow={Math.round(progress)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label}
+    >
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-violet-500 via-primary to-cyan-500 transition-all duration-700 ease-out relative will-change-[width]"
+        style={{ width: `${progress}%` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" aria-hidden="true" />
+      </div>
+    </div>
+  )
+}
+
+// Floating particles background (purely decorative)
+function FloatingParticles() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-violet-500/10 rounded-full blur-3xl animate-blob" />
+      <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-blob animation-delay-4000" />
     </div>
   )
 }
@@ -438,118 +533,129 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
     )
   }
 
-  if (isBooting) {
+  // Show boot UI while booting OR while waiting to start (before install begins)
+  // This prevents the gap between boot completion and install start
+  const isPreparingToInstall = !isBooting && !isInstalling && !isStarting && !previewUrl && !error && files.length > 0
+
+  if (isBooting || isPreparingToInstall) {
     // Determine progress based on boot stage
     const getProgress = () => {
-      if (bootStage.includes('Checking')) return 20
-      if (bootStage.includes('Verifying')) return 40
-      if (bootStage.includes('Connecting')) return 60
-      if (bootStage.includes('Downloading')) return 80
+      if (isPreparingToInstall) return 100
+      if (bootStage.includes('Checking')) return 15
+      if (bootStage.includes('Verifying')) return 30
+      if (bootStage.includes('Connecting')) return 50
+      if (bootStage.includes('Downloading')) return 75
       if (bootStage.includes('ready')) return 100
-      return 10
+      return 5
     }
     const progress = getProgress()
 
+    // Step statuses
+    const getStepStatus = (stepProgress: number): 'pending' | 'active' | 'done' => {
+      if (progress > stepProgress) return 'done'
+      if (progress >= stepProgress - 20) return 'active'
+      return 'pending'
+    }
+
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-background p-6 text-center">
-        <div className="relative">
-          <div className="h-20 w-20 rounded-full border-4 border-muted" />
-          {/* Progress ring */}
-          <svg className="absolute inset-0 h-20 w-20 -rotate-90">
-            <circle
-              cx="40"
-              cy="40"
-              r="36"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="4"
-              className="text-primary/30"
-            />
-            <circle
-              cx="40"
-              cy="40"
-              r="36"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeDasharray={`${progress * 2.26} 226`}
-              className="text-primary transition-all duration-500"
-            />
-          </svg>
-          <Loader2 className="h-8 w-8 animate-spin text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-        </div>
+      <div className="h-full relative flex flex-col items-center justify-center bg-gradient-to-b from-background via-background to-muted/20 p-8">
+        <FloatingParticles />
 
-        <p className="text-sm font-medium mt-6">Booting WebContainer...</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {progress}% complete
-        </p>
-
-        {/* Progress steps */}
-        <div className="mt-6 space-y-2 text-left">
-          <BootStep
-            label="Checking browser compatibility"
-            status={bootStage.includes('Checking') ? 'active' : progress > 20 ? 'done' : 'pending'}
-          />
-          <BootStep
-            label="Verifying cross-origin isolation"
-            status={bootStage.includes('Verifying') ? 'active' : progress > 40 ? 'done' : 'pending'}
-          />
-          <BootStep
-            label="Downloading WebContainer runtime"
-            status={bootStage.includes('Downloading') ? 'active' : progress > 80 ? 'done' : 'pending'}
-          />
-          <BootStep
-            label="Initializing environment"
-            status={bootStage.includes('ready') ? 'done' : 'pending'}
-          />
-        </div>
-
-        {showDownloadHelp ? (
-          <div className="mt-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 max-w-sm">
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mb-2">
-              Download taking too long?
-            </p>
-            <p className="text-xs text-muted-foreground mb-3">
-              Try: Disable ad blockers, use Chrome/Edge, or check your network connection.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs flex-1"
-                onClick={() => window.location.reload()}
-              >
-                <RefreshCw className="h-3 w-3 mr-1.5" />
-                Retry
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs flex-1"
-                onClick={runNetworkDiagnostic}
-              >
-                <AlertCircle className="h-3 w-3 mr-1.5" />
-                Diagnose
-              </Button>
+        <div className="relative z-10 w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-primary shadow-lg shadow-primary/25 mb-4">
+              <Cpu className="h-8 w-8 text-white" />
             </div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              {isPreparingToInstall ? 'Preparing Your Environment' : 'Starting WebContainer'}
+              <LoadingDots />
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Setting up a full Node.js environment in your browser
+            </p>
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground mt-6 max-w-xs">
-            First boot downloads ~20MB of runtime assets. This is cached for future use.
-          </p>
-        )}
 
-        {!showDownloadHelp && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-4 text-xs"
-            onClick={() => window.location.reload()}
+          {/* Progress bar */}
+          <div className="mb-8">
+            <div className="flex justify-between text-xs text-muted-foreground mb-2">
+              <span>Progress</span>
+              <span className="font-medium text-foreground">{progress}%</span>
+            </div>
+            <GradientProgressBar progress={progress} />
+          </div>
+
+          {/* Progress steps */}
+          <div
+            className="bg-card/50 backdrop-blur-sm rounded-xl border p-6 shadow-lg"
+            role="list"
+            aria-label="WebContainer boot progress steps"
           >
-            <RefreshCw className="h-3 w-3 mr-1.5" />
-            Taking too long? Refresh page
-          </Button>
-        )}
+            <ProgressStep
+              icon={<Shield className="h-5 w-5 text-primary" />}
+              label="Checking browser compatibility"
+              description="Verifying WebContainer requirements"
+              status={bootStage.includes('Checking') ? 'active' : getStepStatus(15)}
+            />
+            <ProgressStep
+              icon={<Globe className="h-5 w-5 text-primary" />}
+              label="Verifying security isolation"
+              description="Ensuring cross-origin isolation is enabled"
+              status={bootStage.includes('Verifying') ? 'active' : getStepStatus(30)}
+            />
+            <ProgressStep
+              icon={<Download className="h-5 w-5 text-primary" />}
+              label="Downloading runtime"
+              description="Fetching WebContainer assets (~20MB, cached)"
+              status={bootStage.includes('Downloading') ? 'active' : getStepStatus(75)}
+            />
+            <ProgressStep
+              icon={<Server className="h-5 w-5 text-primary" />}
+              label="Initializing environment"
+              description="Setting up Node.js runtime"
+              status={bootStage.includes('ready') || isPreparingToInstall ? 'done' : getStepStatus(100)}
+            />
+            <ProgressStep
+              icon={<Package className="h-5 w-5 text-primary" />}
+              label="Mounting project files"
+              description="Preparing to install dependencies"
+              status={isPreparingToInstall ? 'active' : 'pending'}
+              isLast
+            />
+          </div>
+
+          {/* Help section */}
+          {showDownloadHelp ? (
+            <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                    Download taking longer than expected
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 mb-3">
+                    This could be due to network issues or browser extensions blocking requests.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                      Retry
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={runNetworkDiagnostic}>
+                      Run Diagnostics
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center mt-6">
+              {isPreparingToInstall
+                ? 'Mounting project files and preparing npm install...'
+                : 'First boot downloads ~20MB. Assets are cached for faster future loads.'}
+            </p>
+          )}
+        </div>
       </div>
     )
   }
@@ -576,40 +682,13 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
     )
   }
 
-  // Show waiting state when WebContainer is ready but dev server hasn't started yet
-  if (!isBooting && !error && !isInstalling && !isStarting && !previewUrl && files.length > 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-6">
-        <div className="relative">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-        <p className="text-sm font-medium mt-6">Preparing dev server...</p>
-        <p className="text-xs text-muted-foreground mt-2">
-          WebContainer ready, starting development server
-        </p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-6 text-xs"
-          onClick={() => {
-            hasStarted.current = false
-            setLogs([])
-            startDevServer()
-          }}
-        >
-          <RefreshCw className="h-3 w-3 mr-1.5" />
-          Retry
-        </Button>
-      </div>
-    )
-  }
-
   if (isInstalling || isStarting) {
     // Parse logs to extract package info
     const getPackageProgress = () => {
-      const lastLogs = logs.slice(-20)
+      const lastLogs = logs.slice(-30)
       let packagesAdded = 0
       let currentPackage = ''
+      let currentAction = ''
 
       for (const log of lastLogs) {
         if (log.includes('added') && log.includes('packages')) {
@@ -617,154 +696,159 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
           if (match) packagesAdded = parseInt(match[1])
         }
         if (log.includes('npm') && log.includes('install')) {
-          currentPackage = 'Resolving dependencies...'
+          currentAction = 'Resolving dependencies'
         }
         if (log.includes('reify:')) {
           const match = log.match(/reify:([^\s]+)/)
-          if (match) currentPackage = match[1].split('/').pop() || ''
+          if (match) {
+            currentPackage = match[1].split('/').pop() || ''
+            currentAction = `Installing ${currentPackage}`
+          }
+        }
+        if (log.includes('WARN') || log.includes('warn')) {
+          // Skip warnings
         }
       }
-      return { packagesAdded, currentPackage }
+      return { packagesAdded, currentPackage, currentAction }
     }
 
-    const { packagesAdded, currentPackage } = getPackageProgress()
-    const estimatedTotal = 15 // Approximate number of packages
+    const { packagesAdded, currentAction } = getPackageProgress()
+    const estimatedTotal = 20
     const progress = isInstalling
-      ? Math.min(90, (packagesAdded / estimatedTotal) * 100)
-      : 95
+      ? Math.min(85, 10 + (packagesAdded / estimatedTotal) * 75)
+      : 92
 
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-6">
-        {/* Animated Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        </div>
+      <div className="h-full relative flex flex-col items-center justify-center bg-gradient-to-b from-background via-background to-muted/20 p-8">
+        <FloatingParticles />
 
-        <div className="relative z-10 flex flex-col items-center">
-          {/* Circular Progress */}
-          <div className="relative mb-8">
-            <svg className="h-32 w-32 -rotate-90" viewBox="0 0 100 100">
-              {/* Background circle */}
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                className="text-white/10"
-              />
-              {/* Progress circle */}
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="url(#progressGradient)"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={`${progress * 2.83} 283`}
-                className="transition-all duration-500 ease-out"
-              />
-              <defs>
-                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#a855f7" />
-                  <stop offset="100%" stopColor="#3b82f6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            {/* Center icon */}
-            <div className="absolute inset-0 flex items-center justify-center">
+        <div className="relative z-10 w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className={cn(
+              'inline-flex items-center justify-center w-20 h-20 rounded-2xl shadow-lg mb-4 transition-all duration-500',
+              isInstalling
+                ? 'bg-gradient-to-br from-violet-500 to-indigo-600 shadow-violet-500/30'
+                : 'bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-emerald-500/30'
+            )}>
+              {isInstalling ? (
+                <Package className="h-10 w-10 text-white animate-pulse" />
+              ) : (
+                <Play className="h-10 w-10 text-white" />
+              )}
+            </div>
+            <h2 className="text-2xl font-bold">
+              {isInstalling ? (
+                <>Installing Dependencies<LoadingDots /></>
+              ) : (
+                <>Starting Dev Server<LoadingDots /></>
+              )}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              {isInstalling
+                ? 'Running npm install to set up your project'
+                : 'Launching Vite development server'}
+            </p>
+          </div>
+
+          {/* Large progress indicator */}
+          <div className="mb-8">
+            <div className="flex justify-between items-end mb-3">
+              <div>
+                <span className="text-4xl font-bold bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent">
+                  {Math.round(progress)}%
+                </span>
+                <span className="text-muted-foreground text-sm ml-2">complete</span>
+              </div>
+              {packagesAdded > 0 && (
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  {packagesAdded} packages
+                </Badge>
+              )}
+            </div>
+            <GradientProgressBar progress={progress} className="h-2" />
+          </div>
+
+          {/* Current action indicator */}
+          {currentAction && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-xl border mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="relative">
-                {isInstalling ? (
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
-                    <svg className="h-6 w-6 text-white animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                  </div>
-                ) : (
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25">
-                    <Zap className="h-6 w-6 text-white" />
-                  </div>
-                )}
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{currentAction}</p>
+                <p className="text-xs text-muted-foreground">Processing...</p>
               </div>
             </div>
-          </div>
-
-          {/* Title */}
-          <h3 className="text-xl font-bold text-white mb-2">
-            {isInstalling ? 'Installing Dependencies' : 'Starting Dev Server'}
-          </h3>
-
-          {/* Progress percentage */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-              {Math.round(progress)}%
-            </span>
-            <span className="text-white/40 text-sm">complete</span>
-          </div>
-
-          {/* Current action */}
-          {currentPackage && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full mb-6">
-              <Loader2 className="h-3 w-3 animate-spin text-purple-400" />
-              <span className="text-xs text-white/60 font-mono truncate max-w-[200px]">
-                {currentPackage}
-              </span>
-            </div>
           )}
 
-          {/* Steps */}
-          <div className="space-y-3 mb-6">
-            <BootStep
-              label="Mounting project files"
+          {/* Progress steps */}
+          <div
+            className="bg-card/50 backdrop-blur-sm rounded-xl border p-6 shadow-lg"
+            role="list"
+            aria-label="Installation progress steps"
+          >
+            <ProgressStep
+              icon={<Code2 className="h-5 w-5 text-primary" />}
+              label="Mount project files"
+              description="Project files ready"
               status="done"
             />
-            <BootStep
-              label="Installing npm packages"
+            <ProgressStep
+              icon={<Package className="h-5 w-5 text-primary" />}
+              label="Install npm packages"
+              description={packagesAdded > 0 ? `${packagesAdded} packages installed` : 'Resolving dependencies...'}
               status={isInstalling ? 'active' : 'done'}
             />
-            <BootStep
-              label="Starting Vite dev server"
+            <ProgressStep
+              icon={<Server className="h-5 w-5 text-primary" />}
+              label="Start development server"
+              description="Launching Vite..."
               status={isStarting ? 'active' : isInstalling ? 'pending' : 'done'}
             />
-            <BootStep
-              label="Ready to preview"
+            <ProgressStep
+              icon={<Globe className="h-5 w-5 text-primary" />}
+              label="Preview ready"
+              description="Your app will appear shortly"
               status="pending"
+              isLast
             />
           </div>
 
-          {/* Packages count */}
-          {packagesAdded > 0 && (
-            <div className="flex items-center gap-2 text-white/40 text-xs">
-              <CheckCircle2 className="h-3 w-3 text-green-400" />
-              <span>{packagesAdded} packages installed</span>
-            </div>
-          )}
-
           {/* Terminal toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-6 text-xs text-white/40 hover:text-white/60"
-            onClick={() => setShowTerminal(!showTerminal)}
-          >
-            <TerminalIcon className="h-3 w-3 mr-1.5" />
-            {showTerminal ? 'Hide' : 'Show'} Terminal Output
-          </Button>
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTerminal(!showTerminal)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <TerminalIcon className="h-4 w-4 mr-2" />
+              {showTerminal ? 'Hide' : 'Show'} Terminal Output
+            </Button>
+          </div>
 
           {/* Terminal logs */}
           {showTerminal && (
-            <div className="w-full max-w-lg mt-4 bg-black/50 backdrop-blur rounded-lg border border-white/10 p-4 font-mono text-xs max-h-48 overflow-y-auto">
-              {logs.slice(-15).map((log, i) => (
-                <div key={i} className="text-green-400/80 leading-relaxed">
-                  <span className="text-white/20 mr-2">$</span>
-                  {log}
+            <div className="mt-4 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
                 </div>
-              ))}
+                <span className="text-xs text-zinc-500 font-mono">terminal</span>
+              </div>
+              <div className="p-4 font-mono text-xs max-h-48 overflow-y-auto">
+                {logs.slice(-15).map((log, i) => (
+                  <div key={i} className="text-emerald-400/80 leading-relaxed py-0.5">
+                    <span className="text-zinc-600 mr-2 select-none">$</span>
+                    {log}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

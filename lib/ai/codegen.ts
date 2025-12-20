@@ -325,6 +325,7 @@ MANDATORY RULES FOR QUALITY:
 6. Accessibility first - proper ARIA labels, keyboard navigation, focus management
 7. Modern UI/UX patterns from 2024-2025 design trends
 8. Generate a complete package.json with ALL required dependencies
+9. CRITICAL: App.tsx must ONLY import pages that you generate. Never import ./pages/Services, ./pages/About, ./pages/Contact unless you create those files. Check your files array before adding imports!
 
 CODE QUALITY REQUIREMENTS:
 
@@ -1008,13 +1009,12 @@ MANDATORY FILE STRUCTURE (Generate ALL these files):
 /
 ├── src/
 │   ├── main.tsx            # Entry point with router
-│   ├── App.tsx             # Root component with Routes
+│   ├── App.tsx             # Root component with Routes (ONLY import pages you generate!)
 │   ├── index.css           # Complete Tailwind + custom styles
 │   ├── pages/
-│   │   ├── Index.tsx       # Home page (CRITICAL: This is the main page)
-│   │   ├── About.tsx       # About page (if needed)
-│   │   ├── Contact.tsx     # Contact page (if needed)
-│   │   └── NotFound.tsx    # 404 page
+│   │   ├── Index.tsx       # Home page (REQUIRED: This is the main page)
+│   │   └── NotFound.tsx    # 404 page (REQUIRED)
+│   │   # Additional pages are OPTIONAL - only generate if specifically requested
 │   ├── components/
 │   │   ├── ui/             # Reusable UI components
 │   │   │   ├── button.tsx  # Button with variants
@@ -1055,17 +1055,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 \`\`\`
 
 APP WITH ROUTES (src/App.tsx):
+CRITICAL: Only import pages that you ACTUALLY GENERATE. Do NOT import pages that don't exist.
+If generating only Index.tsx, App.tsx should only import Index and NotFound:
 \`\`\`tsx
 import { Routes, Route } from 'react-router-dom'
 import Index from './pages/Index'
-import About from './pages/About'
 import NotFound from './pages/NotFound'
+// Only add other page imports if you GENERATE those page files
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/about" element={<About />} />
+      {/* Only add routes for pages you generate */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
@@ -1134,12 +1136,32 @@ TAILWIND CSS BEST PRACTICES:
 - Glass effects: backdrop-blur-md bg-white/10
 - Gradients: bg-gradient-to-r from-primary to-secondary
 
-ACCESSIBILITY:
+ACCESSIBILITY (WCAG 2.1 AA Compliance):
 - Proper heading hierarchy (single h1 per page)
-- ARIA labels on interactive elements
-- Focus-visible styles for keyboard navigation
-- Skip to content link
-- Sufficient color contrast (WCAG AA)`,
+- ARIA labels on all interactive elements
+- Focus-visible styles: focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+- Skip to content link at top of page
+- Sufficient color contrast (4.5:1 minimum)
+- Keyboard navigation support
+- prefers-reduced-motion support for animations
+
+LAZY LOADING (For Performance):
+\`\`\`tsx
+// Use React.lazy for route-based code splitting
+import { lazy, Suspense } from 'react'
+
+const About = lazy(() => import('./pages/About'))
+
+// Wrap lazy components in Suspense
+<Suspense fallback={<div className="animate-pulse">Loading...</div>}>
+  <About />
+</Suspense>
+\`\`\`
+
+FOCUS STYLES (Add to all interactive elements):
+- Buttons: focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary
+- Links: focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+- Inputs: focus-visible:ring-2 focus-visible:ring-ring`,
 
     webapp: `
 PLATFORM: Web Application (Vite + React + React Router + Tailwind CSS)
@@ -1151,12 +1173,12 @@ MANDATORY FILE STRUCTURE (Generate ALL these files):
 /
 ├── src/
 │   ├── main.tsx            # Entry point with router
-│   ├── App.tsx             # Root component with Routes
+│   ├── App.tsx             # Root component with Routes (ONLY import pages you generate!)
 │   ├── index.css           # Complete Tailwind + custom styles with CSS variables
 │   ├── pages/
-│   │   ├── Index.tsx       # Home page (CRITICAL: This is the main page for preview)
-│   │   ├── NotFound.tsx    # 404 page
-│   │   └── [other pages based on schema]
+│   │   ├── Index.tsx       # Home page (REQUIRED: This is the main page for preview)
+│   │   └── NotFound.tsx    # 404 page (REQUIRED)
+│   │   # Additional pages are OPTIONAL - only generate if specifically requested
 │   ├── components/
 │   │   ├── ui/             # REQUIRED: shadcn/ui-style components
 │   │   │   ├── button.tsx  # Button with variants
@@ -1204,15 +1226,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 \`\`\`
 
 APP WITH ROUTES (src/App.tsx):
+CRITICAL: Only import pages that you ACTUALLY GENERATE. Do NOT import pages that don't exist.
+If you generate About.tsx or Contact.tsx, add them. Otherwise, only include Index and NotFound:
 \`\`\`tsx
 import { Routes, Route } from 'react-router-dom'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
+// Only add other page imports if you GENERATE those page files
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
+      {/* Only add routes for pages you generate */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
@@ -1449,7 +1475,107 @@ const config: Config = {
   },
   plugins: [],
 }
-export default config`,
+export default config
+
+MANDATORY tsconfig.json:
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+
+MANDATORY postcss.config.js:
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+
+MANDATORY index.html (SEO-optimized):
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Your app description here" />
+    <meta name="theme-color" content="#7c3aed" />
+    <title>My App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+ERROR BOUNDARY (src/components/ErrorBoundary.tsx) - Include for production apps:
+import { Component, ReactNode } from 'react'
+
+interface Props { children: ReactNode; fallback?: ReactNode }
+interface State { hasError: boolean; error?: Error }
+
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { hasError: false }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-destructive mb-4">Something went wrong</h1>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary text-white rounded-lg">
+              Reload page
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+LOADING SKELETON (src/components/ui/skeleton.tsx):
+import { cn } from "@/lib/utils"
+
+export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("animate-pulse rounded-md bg-muted", className)}
+      {...props}
+    />
+  )
+}
+
+ACCESSIBILITY - Skip to Content Link (add to layout):
+<a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg">
+  Skip to main content
+</a>
+<main id="main-content">...</main>`,
   }
 
   return basePrompt + platformPrompts[platform]
