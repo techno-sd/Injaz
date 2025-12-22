@@ -136,6 +136,7 @@ function formatTime(dateString: string): string {
 // Tool Badge Component (Claude-style)
 function ToolBadge({ type, target, status }: { type: ToolType; target: string; status: string }) {
   const fileName = target.split('/').pop() || target
+  const fullPath = target
 
   const typeColors: Record<ToolType, string> = {
     Read: 'text-teal-400',
@@ -147,15 +148,83 @@ function ToolBadge({ type, target, status }: { type: ToolType; target: string; s
     Task: 'text-violet-400',
   }
 
+  const statusIcons = {
+    running: <Loader2 className="h-3 w-3 animate-spin text-emerald-400" />,
+    complete: <Check className="h-3 w-3 text-emerald-400" />,
+    error: <span className="h-3 w-3 text-red-400">✕</span>,
+  }
+
   return (
-    <div className="flex items-center gap-2 py-1.5 text-sm group">
-      <span className={cn("font-medium", typeColors[type] || 'text-emerald-400')}>{type}</span>
-      <span className="text-white/50 font-mono text-xs group-hover:text-white/70 transition-colors">{fileName}</span>
-      {status === 'running' && (
-        <Loader2 className="h-3 w-3 animate-spin text-emerald-400" />
-      )}
-      {status === 'complete' && (
-        <Check className="h-3 w-3 text-emerald-400" />
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-center gap-2 py-1 text-sm group"
+    >
+      <span className={cn(
+        "font-medium min-w-[40px]",
+        typeColors[type] || 'text-emerald-400',
+        status === 'running' && 'animate-pulse'
+      )}>
+        {type}
+      </span>
+      <span
+        className="text-white/50 font-mono text-xs group-hover:text-white/70 transition-colors truncate max-w-[200px]"
+        title={fullPath}
+      >
+        {fileName}
+      </span>
+      {statusIcons[status as keyof typeof statusIcons]}
+    </motion.div>
+  )
+}
+
+// File operations progress component
+function FileOperationsProgress({ operations, totalExpected }: { operations: ToolOperation[]; totalExpected?: number }) {
+  const completed = operations.filter(op => op.status === 'complete').length
+  const hasRunning = operations.some(op => op.status === 'running')
+  const total = totalExpected || operations.length
+
+  if (operations.length === 0) return null
+
+  return (
+    <div className="space-y-2">
+      {/* Progress header */}
+      <div className="flex items-center justify-between text-xs text-white/50">
+        <span className="flex items-center gap-1.5">
+          {hasRunning ? (
+            <Loader2 className="h-3 w-3 text-emerald-400 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3 text-emerald-400" />
+          )}
+          <span>{hasRunning ? 'Creating files' : 'Files created'}</span>
+        </span>
+        <span className="font-mono">
+          {completed}/{total}
+        </span>
+      </div>
+
+      {/* Operations list */}
+      <div className="space-y-0.5 py-2 px-3 rounded-lg bg-slate-800/50 border border-white/[0.05] max-h-[200px] overflow-y-auto">
+        {operations.slice(-15).map((op) => (
+          <ToolBadge
+            key={op.id}
+            type={op.type}
+            target={op.target}
+            status={op.status}
+          />
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      {total > 0 && (
+        <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${(completed / total) * 100}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
       )}
     </div>
   )
@@ -414,6 +483,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
   const [thinkingContent, setThinkingContent] = useState<string>('')
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [toolOperations, setToolOperations] = useState<ToolOperation[]>([])
+  const [totalExpectedFiles, setTotalExpectedFiles] = useState<number>(0)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [elapsedTime, setElapsedTime] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -526,6 +596,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
     setThinkingContent('')
     setTodos([])
     setToolOperations([])
+    setTotalExpectedFiles(0)
     setCurrentPhase('Thinking')
 
     try {
@@ -581,6 +652,41 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     setThinkingContent(prev => prev + (data.message || '') + '\n')
                   } else if (phase === 'transition') {
                     setCurrentPhase('Generating code')
+                  } else if (phase === 'generating') {
+                    setCurrentPhase('Generating code')
+                  } else if (phase === 'creating') {
+                    // File creation progress - show file being written
+                    setCurrentPhase('')
+
+                    // Capture total expected files if provided
+                    if (data.total && data.total > 0) {
+                      setTotalExpectedFiles(data.total)
+                    }
+
+                    const message = data.message || ''
+                    // Extract file name from message like "Creating src/App.tsx"
+                    const fileMatch = message.match(/(?:Creating|Writing|Generating)\s+(.+)/i)
+                    if (fileMatch) {
+                      const fileName = fileMatch[1].trim()
+                      setToolOperations(prev => {
+                        // Avoid duplicates
+                        const exists = prev.some(op => op.target === fileName && op.status === 'running')
+                        if (exists) return prev
+                        return [...prev, {
+                          id: crypto.randomUUID(),
+                          type: 'Write',
+                          target: fileName,
+                          status: 'running'
+                        }]
+                      })
+                    }
+                  } else if (phase === 'template') {
+                    setCurrentPhase('Using template')
+                    setTodos(prev => [...prev, {
+                      id: crypto.randomUUID(),
+                      content: data.message || 'Applying template',
+                      status: 'in_progress'
+                    }])
                   } else if (phase === 'templates') {
                     setCurrentPhase('Selecting templates')
                     // Add todo for templates
@@ -617,14 +723,39 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     }
                   }
 
-                  const fileName = data.file || data.path
-                  if (fileName) {
-                    setToolOperations(prev => [...prev, {
-                      id: crypto.randomUUID(),
-                      type: 'Write',
-                      target: fileName,
-                      status: 'complete'
-                    }])
+                  // Handle file writing status
+                  if (data.subtask === 'file' && data.file) {
+                    const fileName = data.file
+                    const status = data.status === 'writing' ? 'running' : 'complete'
+                    setToolOperations(prev => {
+                      const existingIndex = prev.findIndex(op => op.target === fileName)
+                      if (existingIndex >= 0) {
+                        const updated = [...prev]
+                        updated[existingIndex] = { ...updated[existingIndex], status }
+                        return updated
+                      }
+                      return [...prev, {
+                        id: crypto.randomUUID(),
+                        type: 'Write',
+                        target: fileName,
+                        status
+                      }]
+                    })
+                  } else {
+                    // Fallback for other generating events with file info
+                    const fileName = data.file || data.path
+                    if (fileName) {
+                      setToolOperations(prev => {
+                        const exists = prev.some(op => op.target === fileName)
+                        if (exists) return prev
+                        return [...prev, {
+                          id: crypto.randomUUID(),
+                          type: 'Write',
+                          target: fileName,
+                          status: 'complete'
+                        }]
+                      })
+                    }
                   }
                 }
 
@@ -656,14 +787,29 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                       newFileNames.push(normalizedPath)
 
                       const existingIndex = updatedFiles.findIndex(f => normalizePath(f.path) === normalizedPath)
+                      const operationType = existingIndex >= 0 ? 'Edit' : 'Write'
 
-                      // Add tool operation
-                      setToolOperations(prev => [...prev, {
-                        id: crypto.randomUUID(),
-                        type: existingIndex >= 0 ? 'Edit' : 'Write',
-                        target: normalizedPath,
-                        status: 'complete'
-                      }])
+                      // Update tool operation status to complete, or add new one
+                      setToolOperations(prev => {
+                        const existingOpIndex = prev.findIndex(op => op.target === normalizedPath)
+                        if (existingOpIndex >= 0) {
+                          // Update existing operation to complete
+                          const updated = [...prev]
+                          updated[existingOpIndex] = {
+                            ...updated[existingOpIndex],
+                            type: operationType,
+                            status: 'complete'
+                          }
+                          return updated
+                        }
+                        // Add new completed operation
+                        return [...prev, {
+                          id: crypto.randomUUID(),
+                          type: operationType,
+                          target: normalizedPath,
+                          status: 'complete'
+                        }]
+                      })
 
                       if (existingIndex >= 0) {
                         updatedFiles[existingIndex] = {
@@ -921,18 +1067,12 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                         <TodoList items={todos} />
                       )}
 
-                      {/* Tool operations */}
-                      {idx === messages.length - 1 && toolOperations.length > 0 && (
-                        <div className="space-y-0.5 py-2 px-3 rounded-lg bg-slate-800/50 border border-white/[0.05]">
-                          {toolOperations.slice(-10).map((op) => (
-                            <ToolBadge
-                              key={op.id}
-                              type={op.type}
-                              target={op.target}
-                              status={op.status}
-                            />
-                          ))}
-                        </div>
+                      {/* Tool operations - show completed file operations */}
+                      {idx === messages.length - 1 && toolOperations.length > 0 && !isLoading && (
+                        <FileOperationsProgress
+                          operations={toolOperations}
+                          totalExpected={toolOperations.length}
+                        />
                       )}
 
                       {/* Message Content */}
@@ -985,33 +1125,30 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                 className="flex gap-3 mb-6"
               >
                 <AIAvatar isAnimating={true} />
-                <div className="flex-1 space-y-2">
-                {/* Thinking indicator */}
-                {currentPhase && (
-                  <ThinkingSection content={thinkingContent || currentPhase} defaultExpanded={true} />
-                )}
+                <div className="flex-1 space-y-3">
+                  {/* Thinking indicator - only show when no file operations yet */}
+                  {currentPhase && toolOperations.length === 0 && (
+                    <ThinkingSection content={thinkingContent || currentPhase} defaultExpanded={true} />
+                  )}
 
-                {/* Todos during loading */}
-                {todos.length > 0 && (
-                  <TodoList items={todos} />
-                )}
+                  {/* Todos during loading */}
+                  {todos.length > 0 && (
+                    <TodoList items={todos} />
+                  )}
 
-                {/* Tool operations during loading */}
-                {toolOperations.length > 0 && (
-                  <div className="space-y-0.5 py-2 px-3 rounded-lg bg-slate-800/50 border border-white/[0.05]">
-                    {toolOperations.slice(-10).map((op) => (
-                      <ToolBadge
-                        key={op.id}
-                        type={op.type}
-                        target={op.target}
-                        status={op.status}
-                      />
-                    ))}
-                  </div>
-                )}
+                  {/* File operations progress - Claude/Cursor style */}
+                  {toolOperations.length > 0 && (
+                    <FileOperationsProgress
+                      operations={toolOperations}
+                      totalExpected={totalExpectedFiles}
+                    />
+                  )}
 
-                {/* Processing dots */}
-                <ProcessingIndicator phase={currentPhase} elapsedTime={elapsedTime} />
+                  {/* Processing dots with timer */}
+                  <ProcessingIndicator
+                    phase={toolOperations.length > 0 ? '' : currentPhase}
+                    elapsedTime={elapsedTime}
+                  />
                 </div>
               </motion.div>
             )}

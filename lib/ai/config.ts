@@ -21,26 +21,26 @@ export interface ModelConfig {
 // These are used if .env doesn't specify overrides
 // ============================================
 export const MODEL_DEFAULTS = {
-  // Qwen3 Coder - Excellent code generation, follows instructions well
+  // Grok Code Fast 1 - Optimized for code generation
   primary: {
-    id: 'qwen/qwen3-coder',
-    name: 'Qwen3 Coder 480B',
+    id: 'x-ai/grok-code-fast-1',
+    name: 'Grok Code Fast 1',
     provider: 'openrouter' as const,
     costPer1MInput: 0.20,
-    costPer1MOutput: 0.60,
-    maxTokens: 131072,
-    strengths: ['code generation', 'instruction following', 'complete outputs'] as const,
+    costPer1MOutput: 1.50,
+    maxTokens: 256000,
+    strengths: ['code generation', 'fast', 'follows JSON format'] as const,
   },
 
-  // Premium quality fallback (when primary fails)
+  // Claude Haiku as fallback (fast, cheap)
   fallback: {
-    id: 'anthropic/claude-3.5-sonnet',
-    name: 'Claude 3.5 Sonnet',
+    id: 'anthropic/claude-3-haiku',
+    name: 'Claude 3 Haiku',
     provider: 'openrouter' as const,
-    costPer1MInput: 3.00,
-    costPer1MOutput: 15.00,
+    costPer1MInput: 0.25,
+    costPer1MOutput: 1.25,
     maxTokens: 200000,
-    strengths: ['best code quality', 'complex reasoning', 'nuanced understanding'] as const,
+    strengths: ['fast', 'cheap', 'good code quality'] as const,
   },
 } as const
 

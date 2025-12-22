@@ -53,12 +53,23 @@ Every app MUST include these files:
 10. src/index.css - Global styles with Tailwind directives
 11. src/vite-env.d.ts - Vite type declarations
 
-## CRITICAL: ALL IMPORTED FILES MUST EXIST
-If you import a file like "./pages/Home", you MUST include "src/pages/Home.tsx" in your files array.
-If you import "./components/Button", you MUST include "src/components/Button.tsx" in your files array.
-NEVER import a local file that you don't also generate. This is the #1 cause of errors.
+## CRITICAL: ALL IMPORTED FILES MUST EXIST - THIS IS THE #1 CAUSE OF ERRORS
+BEFORE you write ANY import statement, ensure the file exists in your output:
+- If you import "./pages/Home", you MUST include "src/pages/Home.tsx" in your files array
+- If you import "./components/Button", you MUST include "src/components/Button.tsx" in your files array
+- If you import "./hooks/useAuth", you MUST include "src/hooks/useAuth.ts" in your files array
 
-Before outputting, verify: For EVERY import statement, the imported file exists in your files array.
+NEVER reference a file you haven't generated. NEVER use placeholder imports.
+
+MANDATORY VERIFICATION STEP:
+1. List every import statement in your generated files
+2. For each relative import (starting with ./ or ../), verify the file path exists in your files array
+3. If ANY import would fail, either generate that file OR remove the import
+
+Examples of COMMON ERRORS to avoid:
+- Importing "./pages/Home" but only generating src/App.tsx (MISSING: src/pages/Home.tsx)
+- Importing "./components/Header" but not including it in files array
+- Importing a component in a route that doesn't exist
 
 ## CODE REQUIREMENTS
 1. All imports must be valid - only import from installed packages or local files YOU GENERATE

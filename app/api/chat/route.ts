@@ -347,11 +347,14 @@ async function handleDualModeChat({
           }
 
           if (event.type === 'progress') {
-            // Send progress updates
+            // Send progress updates with file info if available
+            const message = event.data?.message || 'Creating files...'
             const progressData = JSON.stringify({
               type: 'planning',
               phase: 'creating',
-              message: event.data?.message || 'Creating files...',
+              message: message,
+              progress: event.data?.progress,
+              total: event.data?.total,
             })
             controller.enqueue(encoder.encode(`data: ${progressData}\n\n`))
           }
@@ -360,7 +363,16 @@ async function handleDualModeChat({
             const file = event.data.file
             generatedFiles.push({ path: file.path, content: file.content })
 
-            // Send file action
+            // First, send "writing" status for real-time feedback
+            const writingData = JSON.stringify({
+              type: 'generating',
+              subtask: 'file',
+              file: file.path,
+              status: 'writing',
+            })
+            controller.enqueue(encoder.encode(`data: ${writingData}\n\n`))
+
+            // Then send file action (marks as complete)
             const actionData = JSON.stringify({
               type: 'actions',
               actions: [{

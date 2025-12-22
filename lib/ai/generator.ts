@@ -122,6 +122,89 @@ function findBalancedJson(str: string): string | null {
   return null
 }
 
+// Streaming file extractor - extracts complete file objects as they stream in
+class StreamingFileExtractor {
+  private buffer = ''
+  private extractedPaths = new Set<string>()
+
+  // Add chunk to buffer and try to extract files
+  addChunk(chunk: string): GeneratorFile[] {
+    this.buffer += chunk
+    return this.extractFiles()
+  }
+
+  // Try to extract complete file objects from buffer
+  private extractFiles(): GeneratorFile[] {
+    const files: GeneratorFile[] = []
+
+    // Look for file patterns: { "path": "...", "content": "..." }
+    // We need to find complete file objects within the "files" array
+
+    // Find all potential file object starts
+    const filePattern = /\{\s*"path"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"/g
+    let match
+
+    while ((match = filePattern.exec(this.buffer)) !== null) {
+      const path = match[1]
+
+      // Skip if already extracted
+      if (this.extractedPaths.has(path)) continue
+
+      // Find the end of this file object
+      const contentStart = match.index + match[0].length
+
+      // Find the closing of the content string (handling escapes)
+      let i = contentStart
+      let inEscape = false
+      let contentEnd = -1
+
+      while (i < this.buffer.length) {
+        if (inEscape) {
+          inEscape = false
+          i++
+          continue
+        }
+        if (this.buffer[i] === '\\') {
+          inEscape = true
+          i++
+          continue
+        }
+        if (this.buffer[i] === '"') {
+          contentEnd = i
+          break
+        }
+        i++
+      }
+
+      if (contentEnd === -1) continue // Content not complete yet
+
+      // Check if we have the closing brace
+      const afterContent = this.buffer.slice(contentEnd + 1).match(/^\s*\}/)
+      if (!afterContent) continue
+
+      // Extract the file
+      const content = this.buffer.slice(contentStart, contentEnd)
+      // Unescape the content
+      const unescapedContent = content
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\r/g, '\r')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\')
+
+      files.push({ path, content: unescapedContent })
+      this.extractedPaths.add(path)
+    }
+
+    return files
+  }
+
+  // Get all extracted files (for final validation)
+  getExtractedCount(): number {
+    return this.extractedPaths.size
+  }
+}
+
 // Validate generated files and check for missing imports
 function validateFiles(files: GeneratorFile[]): { valid: boolean; errors: string[]; warnings: string[]; missingImports: Array<{ from: string; importPath: string; resolvedPath: string }> } {
   const errors: string[] = []
@@ -193,7 +276,7 @@ function generateStubFiles(missingImports: Array<{ from: string; importPath: str
   const stubFiles: GeneratorFile[] = []
   const generatedPaths = new Set<string>()
 
-  for (const { resolvedPath, importPath } of missingImports) {
+  for (const { resolvedPath, importPath, from } of missingImports) {
     // Determine the actual file path
     let filePath = resolvedPath
     if (!filePath.endsWith('.tsx') && !filePath.endsWith('.ts')) {
@@ -201,6 +284,11 @@ function generateStubFiles(missingImports: Array<{ from: string; importPath: str
       const lastPart = importPath.split('/').pop() || ''
       const isComponent = /^[A-Z]/.test(lastPart)
       filePath = resolvedPath + (isComponent ? '.tsx' : '.ts')
+    }
+
+    // Ensure path starts with src/ if it doesn't have a directory
+    if (!filePath.startsWith('src/') && !filePath.includes('/')) {
+      filePath = 'src/' + filePath
     }
 
     // Skip if we already generated this stub
@@ -213,31 +301,55 @@ function generateStubFiles(missingImports: Array<{ from: string; importPath: str
     const isHook = componentName.startsWith('use')
     const isUtil = filePath.includes('/lib/') || filePath.includes('/utils/')
 
+    console.log(`[Generator] Creating stub: ${filePath} (imported from ${from})`)
+
     let content: string
     if (isHook) {
-      content = `// Auto-generated stub for missing hook
+      content = `// Auto-generated stub for missing hook: ${componentName}
+// Imported from: ${from}
+
 export function ${componentName}() {
-  console.warn('${componentName} is a stub - implement this hook')
+  console.warn('[Stub] ${componentName} is a placeholder - implement this hook')
   return null
 }
+
+export default ${componentName}
 `
     } else if (isUtil) {
-      content = `// Auto-generated stub for missing utility
+      content = `// Auto-generated stub for missing utility: ${componentName}
+// Imported from: ${from}
+
 export function ${componentName.charAt(0).toLowerCase() + componentName.slice(1)}(...args: unknown[]) {
-  console.warn('${componentName} is a stub - implement this utility')
+  console.warn('[Stub] ${componentName} is a placeholder - implement this utility')
   return null
 }
+
+export default ${componentName.charAt(0).toLowerCase() + componentName.slice(1)}
 `
     } else {
-      // Component stub
-      content = `// Auto-generated stub for missing component
+      // Component/Page stub - must be a valid React component
+      const title = isPage ? 'Page Not Generated' : 'Component Not Generated'
+      const description = isPage
+        ? 'This page was imported but not generated by the AI.'
+        : 'This component was imported but not generated by the AI.'
+
+      content = `// Auto-generated stub for missing ${isPage ? 'page' : 'component'}: ${componentName}
+// Imported from: ${from}
+
 export function ${componentName}() {
   return (
-    <div className="p-8 text-center">
-      <div className="text-yellow-500 mb-2">⚠️ Missing Component</div>
-      <p className="text-gray-400 text-sm">
-        ${componentName} was not generated. ${isPage ? 'This page needs to be implemented.' : 'This component needs to be implemented.'}
-      </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="text-center p-8 max-w-md">
+        <div className="text-6xl mb-4">🚧</div>
+        <h1 className="text-2xl font-bold text-white mb-2">${title}</h1>
+        <p className="text-gray-400 mb-4">${description}</p>
+        <p className="text-sm text-gray-500">
+          Component: <code className="bg-gray-800 px-2 py-1 rounded">${componentName}</code>
+        </p>
+        <p className="text-xs text-gray-600 mt-2">
+          Ask the AI to regenerate or implement this ${isPage ? 'page' : 'component'}.
+        </p>
+      </div>
     </div>
   )
 }
@@ -247,7 +359,10 @@ export default ${componentName}
     }
 
     stubFiles.push({ path: filePath, content })
-    console.log(`[Generator] Created stub file: ${filePath}`)
+  }
+
+  if (stubFiles.length > 0) {
+    console.log(`[Generator] Created ${stubFiles.length} stub file(s):`, stubFiles.map(f => f.path))
   }
 
   return stubFiles
@@ -387,7 +502,7 @@ export class Generator {
     }
   }
 
-  // Generate app using AI
+  // Generate app using AI with streaming for real-time file display
   async *generateWithAI(prompt: string, existingFiles?: GeneratorFile[]): AsyncGenerator<GeneratorEvent> {
     yield {
       type: 'start',
@@ -407,74 +522,166 @@ export class Generator {
       if (existingFiles && existingFiles.length > 0) {
         contextMessage = '\n\nExisting files in the project:\n'
         for (const file of existingFiles.slice(0, 10)) {
-          // Limit to 10 files for context
           contextMessage += `\n--- ${file.path} ---\n${file.content.slice(0, 500)}...\n`
         }
       }
 
-      // Use fallback-enabled API call
-      const response = await this.callAPIWithFallback(
-        [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt + contextMessage },
-        ],
-        { maxTokens: 16000 }
-      )
+      // Use streaming API call for real-time file extraction
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+          'HTTP-Referer': OPENROUTER_CONFIG.referer,
+          'X-Title': OPENROUTER_CONFIG.title,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: prompt + contextMessage },
+          ],
+          temperature: DEFAULT_SETTINGS.temperature,
+          max_tokens: 16000,
+          stream: true, // Enable streaming
+        }),
+      })
 
-      const data = await response.json()
-      const content = data.choices?.[0]?.message?.content
-
-      if (!content) {
-        throw new Error('No content in API response')
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`API error: ${response.status} - ${error}`)
       }
 
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('No response body')
+      }
+
+      const decoder = new TextDecoder()
+      const extractor = new StreamingFileExtractor()
+      const yieldedFiles = new Set<string>()
+      let fullContent = ''
+      let fileCount = 0
+
+      // Stream and extract files in real-time
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            if (data === '[DONE]') continue
+
+            try {
+              const parsed = JSON.parse(data)
+              const content = parsed.choices?.[0]?.delta?.content
+              if (content) {
+                fullContent += content
+
+                // Try to extract files from the stream
+                const newFiles = extractor.addChunk(content)
+
+                for (const file of newFiles) {
+                  if (!yieldedFiles.has(file.path)) {
+                    yieldedFiles.add(file.path)
+                    fileCount++
+
+                    // Yield progress
+                    yield {
+                      type: 'progress',
+                      data: { progress: fileCount, total: 0, message: `Creating ${file.path}` },
+                      timestamp: Date.now(),
+                    }
+
+                    // Yield file immediately
+                    yield {
+                      type: 'file',
+                      data: { file },
+                      timestamp: Date.now(),
+                    }
+                  }
+                }
+              }
+            } catch {
+              // Ignore parse errors for streaming chunks
+            }
+          }
+        }
+      }
+
+      // After streaming, parse the complete response for any missed files
       yield {
         type: 'progress',
-        data: { message: 'Parsing generated code...' },
+        data: { message: 'Validating files...' },
         timestamp: Date.now(),
       }
 
-      // Parse the response
-      const parsed = parseAIResponse(content)
+      // Clean and parse complete response
+      const parsed = parseAIResponse(fullContent)
+      let allFiles: GeneratorFile[] = []
 
-      if (!parsed || !parsed.files || !Array.isArray(parsed.files)) {
-        // Log what we received for debugging
-        const preview = content.slice(0, 300).replace(/\n/g, '\\n')
+      if (parsed?.files && Array.isArray(parsed.files)) {
+        // Add any files that weren't extracted during streaming
+        for (const file of parsed.files) {
+          if (!yieldedFiles.has(file.path)) {
+            yieldedFiles.add(file.path)
+            fileCount++
+
+            yield {
+              type: 'progress',
+              data: { progress: fileCount, total: parsed.files.length, message: `Creating ${file.path}` },
+              timestamp: Date.now(),
+            }
+
+            yield {
+              type: 'file',
+              data: { file },
+              timestamp: Date.now(),
+            }
+          }
+        }
+        allFiles = parsed.files
+      } else if (yieldedFiles.size === 0) {
+        // No files extracted at all
+        const preview = fullContent.slice(0, 300).replace(/\n/g, '\\n')
         console.error(`[Generator] AI response preview: ${preview}...`)
-        throw new Error(`Invalid response format from AI. The model did not return valid JSON with a "files" array. Response starts with: "${content.slice(0, 100)}..."`)
+        throw new Error(`Invalid response format from AI. Response starts with: "${fullContent.slice(0, 100)}..."`)
+      } else {
+        // Use files extracted during streaming
+        allFiles = Array.from(yieldedFiles).map(path => ({
+          path,
+          content: '' // Content was already yielded
+        }))
       }
 
-      // Validate files
-      const validation = validateFiles(parsed.files)
-      if (!validation.valid) {
-        console.warn('File validation errors:', validation.errors)
-      }
+      // Validate and generate stubs for missing imports
+      const validation = validateFiles(allFiles.length > 0 ? allFiles : Array.from(yieldedFiles).map(p => ({ path: p, content: '' })))
 
-      // Auto-generate stub files for missing imports
-      let allFiles = parsed.files
       if (validation.missingImports.length > 0) {
         console.warn('Missing imports detected:', validation.warnings)
         const stubFiles = generateStubFiles(validation.missingImports)
-        if (stubFiles.length > 0) {
-          console.log(`[Generator] Generated ${stubFiles.length} stub files for missing imports`)
-          allFiles = [...parsed.files, ...stubFiles]
-        }
-      }
 
-      // Yield each file
-      for (let i = 0; i < allFiles.length; i++) {
-        const file = allFiles[i]
+        for (const stub of stubFiles) {
+          if (!yieldedFiles.has(stub.path)) {
+            yieldedFiles.add(stub.path)
+            fileCount++
 
-        yield {
-          type: 'progress',
-          data: { progress: i + 1, total: allFiles.length, message: `Creating ${file.path}` },
-          timestamp: Date.now(),
-        }
+            yield {
+              type: 'progress',
+              data: { progress: fileCount, total: fileCount, message: `Creating stub: ${stub.path}` },
+              timestamp: Date.now(),
+            }
 
-        yield {
-          type: 'file',
-          data: { file },
-          timestamp: Date.now(),
+            yield {
+              type: 'file',
+              data: { file: stub },
+              timestamp: Date.now(),
+            }
+          }
         }
       }
 
