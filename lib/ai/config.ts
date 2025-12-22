@@ -23,7 +23,7 @@ export interface ModelConfig {
 export const MODEL_DEFAULTS = {
   // Qwen3 Coder - Excellent code generation, follows instructions well
   primary: {
-    id: 'qwen/qwen3-coder-480b-a35b',
+    id: 'qwen/qwen3-coder',
     name: 'Qwen3 Coder 480B',
     provider: 'openrouter' as const,
     costPer1MInput: 0.20,

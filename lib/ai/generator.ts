@@ -51,14 +51,20 @@ interface GeneratorOptions {
   enableFallback?: boolean // Auto-fallback to alternative model on failure
 }
 
-// Parse JSON from AI response (handles markdown code blocks)
+// Parse JSON from AI response (handles markdown code blocks and thinking tags)
 function parseAIResponse(response: string): { files: GeneratorFile[] } | null {
+  // Remove thinking tags if present (some models output thinking before JSON)
+  let cleanedResponse = response
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+    .trim()
+
   try {
     // Try direct JSON parse first
-    return JSON.parse(response)
+    return JSON.parse(cleanedResponse)
   } catch {
     // Try to extract JSON from markdown code block
-    const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/)
+    const jsonMatch = cleanedResponse.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (jsonMatch) {
       try {
         return JSON.parse(jsonMatch[1].trim())
@@ -67,18 +73,53 @@ function parseAIResponse(response: string): { files: GeneratorFile[] } | null {
       }
     }
 
-    // Try to find JSON object in response
-    const objectMatch = response.match(/\{[\s\S]*"files"[\s\S]*\}/)
+    // Try to find JSON object with files array in response
+    const objectMatch = cleanedResponse.match(/\{\s*"files"\s*:\s*\[[\s\S]*?\]\s*\}/)
     if (objectMatch) {
       try {
         return JSON.parse(objectMatch[0])
+      } catch {
+        // Continue to next attempt
+      }
+    }
+
+    // More aggressive: find any JSON object containing "files"
+    const anyJsonMatch = cleanedResponse.match(/\{[\s\S]*"files"[\s\S]*\}/)
+    if (anyJsonMatch) {
+      try {
+        // Try to find the balanced JSON object
+        const jsonStr = findBalancedJson(anyJsonMatch[0])
+        if (jsonStr) {
+          return JSON.parse(jsonStr)
+        }
       } catch {
         // Failed to parse
       }
     }
 
+    console.error('[Generator] Failed to parse AI response. First 500 chars:', cleanedResponse.slice(0, 500))
     return null
   }
+}
+
+// Helper to find balanced JSON object
+function findBalancedJson(str: string): string | null {
+  let depth = 0
+  let start = -1
+
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === '{') {
+      if (start === -1) start = i
+      depth++
+    } else if (str[i] === '}') {
+      depth--
+      if (depth === 0 && start !== -1) {
+        return str.slice(start, i + 1)
+      }
+    }
+  }
+
+  return null
 }
 
 // Validate generated files and check for missing imports
@@ -397,7 +438,10 @@ export class Generator {
       const parsed = parseAIResponse(content)
 
       if (!parsed || !parsed.files || !Array.isArray(parsed.files)) {
-        throw new Error('Invalid response format from AI')
+        // Log what we received for debugging
+        const preview = content.slice(0, 300).replace(/\n/g, '\\n')
+        console.error(`[Generator] AI response preview: ${preview}...`)
+        throw new Error(`Invalid response format from AI. The model did not return valid JSON with a "files" array. Response starts with: "${content.slice(0, 100)}..."`)
       }
 
       // Validate files
