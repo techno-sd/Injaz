@@ -349,9 +349,20 @@ async function handleDualModeChat({
           if (event.type === 'progress') {
             // Send progress updates with file info if available
             const message = event.data?.message || 'Creating files...'
-            const progressData = JSON.stringify({
+
+            // Send as planning event for phase display
+            const planningData = JSON.stringify({
               type: 'planning',
               phase: 'creating',
+              message: message,
+              progress: event.data?.progress,
+              total: event.data?.total,
+            })
+            controller.enqueue(encoder.encode(`data: ${planningData}\n\n`))
+
+            // Also send raw progress event for review/fix phase handling
+            const progressData = JSON.stringify({
+              type: 'progress',
               message: message,
               progress: event.data?.progress,
               total: event.data?.total,
@@ -363,16 +374,7 @@ async function handleDualModeChat({
             const file = event.data.file
             generatedFiles.push({ path: file.path, content: file.content })
 
-            // First, send "writing" status for real-time feedback
-            const writingData = JSON.stringify({
-              type: 'generating',
-              subtask: 'file',
-              file: file.path,
-              status: 'writing',
-            })
-            controller.enqueue(encoder.encode(`data: ${writingData}\n\n`))
-
-            // Then send file action (marks as complete)
+            // Send file action directly (this marks the file as complete)
             const actionData = JSON.stringify({
               type: 'actions',
               actions: [{
@@ -439,6 +441,15 @@ async function handleDualModeChat({
             content: summary,
           })
         }
+
+        // Send completion message with next steps
+        const completionMessage = `✅ Successfully generated ${generatedFiles.length} files for your ${platform} application!\n\n**Next Steps:**\n- Preview your app using the preview panel\n- Click "Run" to start the development server\n- Make changes by chatting with me\n- Deploy when ready using the deploy button`
+        
+        const completionData = JSON.stringify({
+          type: 'content',
+          content: completionMessage,
+        })
+        controller.enqueue(encoder.encode(`data: ${completionData}\n\n`))
 
         // Send done signal
         const doneData = JSON.stringify({ type: 'done' })
