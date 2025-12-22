@@ -58,12 +58,15 @@ BEFORE you write ANY import statement, ensure the file exists in your output:
 - If you import "./pages/Home", you MUST include "src/pages/Home.tsx" in your files array
 - If you import "./components/Button", you MUST include "src/components/Button.tsx" in your files array
 - If you import "./hooks/useAuth", you MUST include "src/hooks/useAuth.ts" in your files array
+- If you import "./index.css", you MUST include "src/index.css" in your files array
+- If you import "@/components/ui/button", you MUST include "src/components/ui/button.tsx" in your files array
 
 NEVER reference a file you haven't generated. NEVER use placeholder imports.
+NEVER use @/ alias imports to files you haven't created. Either use relative imports or create the file.
 
 MANDATORY VERIFICATION STEP:
 1. List every import statement in your generated files
-2. For each relative import (starting with ./ or ../), verify the file path exists in your files array
+2. For each relative import (starting with ./, ../, or @/), verify the file path exists in your files array
 3. If ANY import would fail, either generate that file OR remove the import
 
 Examples of COMMON ERRORS to avoid:

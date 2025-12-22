@@ -655,30 +655,13 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                   } else if (phase === 'generating') {
                     setCurrentPhase('Generating code')
                   } else if (phase === 'creating') {
-                    // File creation progress - show file being written
+                    // File creation progress - just update count, don't add operations
+                    // Operations are added when 'actions' event is received
                     setCurrentPhase('')
 
                     // Capture total expected files if provided
                     if (data.total && data.total > 0) {
                       setTotalExpectedFiles(data.total)
-                    }
-
-                    const message = data.message || ''
-                    // Extract file name from message like "Creating src/App.tsx"
-                    const fileMatch = message.match(/(?:Creating|Writing|Generating)\s+(.+)/i)
-                    if (fileMatch) {
-                      const fileName = fileMatch[1].trim()
-                      setToolOperations(prev => {
-                        // Avoid duplicates
-                        const exists = prev.some(op => op.target === fileName && op.status === 'running')
-                        if (exists) return prev
-                        return [...prev, {
-                          id: crypto.randomUUID(),
-                          type: 'Write',
-                          target: fileName,
-                          status: 'running'
-                        }]
-                      })
                     }
                   } else if (phase === 'template') {
                     setCurrentPhase('Using template')
@@ -698,7 +681,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                   }
                 }
 
-                // Handle generating events
+                // Handle generating events (for templates and validation status only)
                 if (data.type === 'generating') {
                   setCurrentPhase('')
 
@@ -722,41 +705,6 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                       ))
                     }
                   }
-
-                  // Handle file writing status
-                  if (data.subtask === 'file' && data.file) {
-                    const fileName = data.file
-                    const status = data.status === 'writing' ? 'running' : 'complete'
-                    setToolOperations(prev => {
-                      const existingIndex = prev.findIndex(op => op.target === fileName)
-                      if (existingIndex >= 0) {
-                        const updated = [...prev]
-                        updated[existingIndex] = { ...updated[existingIndex], status }
-                        return updated
-                      }
-                      return [...prev, {
-                        id: crypto.randomUUID(),
-                        type: 'Write',
-                        target: fileName,
-                        status
-                      }]
-                    })
-                  } else {
-                    // Fallback for other generating events with file info
-                    const fileName = data.file || data.path
-                    if (fileName) {
-                      setToolOperations(prev => {
-                        const exists = prev.some(op => op.target === fileName)
-                        if (exists) return prev
-                        return [...prev, {
-                          id: crypto.randomUUID(),
-                          type: 'Write',
-                          target: fileName,
-                          status: 'complete'
-                        }]
-                      })
-                    }
-                  }
                 }
 
                 // Handle schema events
@@ -766,6 +714,36 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     content: 'Application schema created',
                     status: 'completed'
                   }])
+                }
+
+                // Handle progress events (validation, review, fixing)
+                if (data.type === 'progress') {
+                  const message = data.message || data.data?.message || ''
+                  if (message) {
+                    // Update phase display for review/fix messages
+                    if (message.includes('Validating') || message.includes('Reviewing')) {
+                      setCurrentPhase('Reviewing code')
+                    } else if (message.includes('Fixing')) {
+                      setCurrentPhase('Fixing issues')
+                    } else if (message.includes('Fixed:')) {
+                      // Show fixed files as tool operations
+                      const fixedFile = message.replace('Fixed: ', '')
+                      setToolOperations(prev => [...prev, {
+                        id: crypto.randomUUID(),
+                        type: 'Edit',
+                        target: fixedFile,
+                        status: 'complete'
+                      }])
+                    } else if (message.includes('Creating stub:')) {
+                      const stubFile = message.replace('Creating stub: ', '')
+                      setToolOperations(prev => [...prev, {
+                        id: crypto.randomUUID(),
+                        type: 'Write',
+                        target: stubFile,
+                        status: 'complete'
+                      }])
+                    }
+                  }
                 }
 
                 if (data.type === 'content') {
@@ -1126,8 +1104,8 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
               >
                 <AIAvatar isAnimating={true} />
                 <div className="flex-1 space-y-3">
-                  {/* Thinking indicator - only show when no file operations yet */}
-                  {currentPhase && toolOperations.length === 0 && (
+                  {/* Thinking indicator - show initial phase or review phases */}
+                  {currentPhase && (toolOperations.length === 0 || currentPhase.includes('Reviewing') || currentPhase.includes('Fixing')) && (
                     <ThinkingSection content={thinkingContent || currentPhase} defaultExpanded={true} />
                   )}
 
@@ -1144,9 +1122,9 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     />
                   )}
 
-                  {/* Processing dots with timer */}
+                  {/* Processing dots with timer - show phase for review/fix even with operations */}
                   <ProcessingIndicator
-                    phase={toolOperations.length > 0 ? '' : currentPhase}
+                    phase={(currentPhase.includes('Reviewing') || currentPhase.includes('Fixing')) ? currentPhase : (toolOperations.length > 0 ? '' : currentPhase)}
                     elapsedTime={elapsedTime}
                   />
                 </div>

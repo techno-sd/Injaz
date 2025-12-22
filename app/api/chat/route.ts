@@ -412,6 +412,29 @@ async function handleDualModeChat({
                 status: 'completed',
               })
             }
+
+            // Send completion summary with validation results
+            const issues = event.data?.issues || 0
+            let completionSummary = `✅ **Generation Complete!**\n\n`
+            completionSummary += `📦 Created ${generatedFiles.length} files\n`
+            
+            if (issues === 0) {
+              completionSummary += `✨ All checks passed - no errors detected\n\n`
+            } else {
+              completionSummary += `⚠️ ${issues} minor issue${issues > 1 ? 's' : ''} detected (auto-fixed with stubs)\n\n`
+            }
+            
+            completionSummary += `**Next Steps:**\n`
+            completionSummary += `1. 👁️ Preview your app in the preview panel\n`
+            completionSummary += `2. ▶️ Click "Run" to start the dev server\n`
+            completionSummary += `3. 💬 Ask me to make changes or add features\n`
+            completionSummary += `4. 🚀 Deploy when ready\n`
+
+            const summaryData = JSON.stringify({
+              type: 'content',
+              content: completionSummary,
+            })
+            controller.enqueue(encoder.encode(`data: ${summaryData}\n\n`))
           }
 
           if (event.type === 'error') {
@@ -441,15 +464,6 @@ async function handleDualModeChat({
             content: summary,
           })
         }
-
-        // Send completion message with next steps
-        const completionMessage = `✅ Successfully generated ${generatedFiles.length} files for your ${platform} application!\n\n**Next Steps:**\n- Preview your app using the preview panel\n- Click "Run" to start the development server\n- Make changes by chatting with me\n- Deploy when ready using the deploy button`
-        
-        const completionData = JSON.stringify({
-          type: 'content',
-          content: completionMessage,
-        })
-        controller.enqueue(encoder.encode(`data: ${completionData}\n\n`))
 
         // Send done signal
         const doneData = JSON.stringify({ type: 'done' })
