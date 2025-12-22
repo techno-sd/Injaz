@@ -18,7 +18,7 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-blue-50/50 via-white to-purple-50/50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-blue-50/50 via-white to-emerald-50/50">
       <Card className="max-w-md w-full shadow-xl">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">

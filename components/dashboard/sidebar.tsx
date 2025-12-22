@@ -51,7 +51,7 @@ export function DashboardSidebar() {
     <div className="w-64 border-r bg-card h-screen sticky top-0 hidden md:flex flex-col">
       <div className="p-6 border-b">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-xl group-hover:shadow-violet-500/30 transition-all duration-300">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-amber-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-xl group-hover:shadow-emerald-500/30 transition-all duration-300">
             <Code2 className="h-5 w-5 text-white" />
           </div>
           <span className="font-bold text-lg tracking-tight">Injaz.ai</span>
@@ -77,15 +77,15 @@ export function DashboardSidebar() {
       </div>
 
       <div className="p-4 border-t space-y-4">
-        <div className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 rounded-xl p-4 border border-violet-500/20">
+        <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-xl p-4 border border-emerald-500/20">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-violet-500" />
-            <span className="font-semibold text-sm text-violet-700 dark:text-violet-300">Pro Plan</span>
+            <Sparkles className="h-4 w-4 text-emerald-500" />
+            <span className="font-semibold text-sm text-emerald-700 dark:text-emerald-300">Pro Plan</span>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             Upgrade for unlimited AI generations and advanced features.
           </p>
-          <Button size="sm" className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white border-0">
+          <Button size="sm" className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white border-0">
             Upgrade Now
           </Button>
         </div>

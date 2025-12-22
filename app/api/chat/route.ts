@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel, isModelAvailable } from '@/lib/ai/providers'
 import { buildContext } from '@/lib/ai/context-manager'
-import { getOrchestrator, formatSSE } from '@/lib/ai/orchestrator'
+import { Generator } from '@/lib/ai/generator'
 import type { Message, File, AIAction, PlatformType, AIMode, UnifiedAppSchema } from '@/types'
 
 export const runtime = 'edge'
@@ -148,7 +148,9 @@ export async function POST(req: Request) {
     }
 
     // Determine if we should use dual-mode AI (Controller + CodeGen)
-    const shouldUseDualMode = useDualMode || detectDualModeIntent(messages)
+    // Auto-detect for app generation OR when explicitly requested
+    const hasGenerationIntent = detectDualModeIntent(messages)
+    const shouldUseDualMode = useDualMode === true || (useDualMode !== false && hasGenerationIntent)
 
     if (shouldUseDualMode) {
       // Use the new dual-mode orchestrator
@@ -188,37 +190,88 @@ export async function POST(req: Request) {
 
 /**
  * Detect if user intent requires dual-mode processing
+ * Trigger for app/feature generation requests
  */
 function detectDualModeIntent(messages: Message[]): boolean {
-  const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || ''
+  const lastMessage = messages[messages.length - 1]?.content?.trim().toLowerCase() || ''
 
-  // Keywords that suggest full app generation
-  const generationKeywords = [
-    'build',
-    'create',
-    'make',
-    'generate',
-    'develop',
-    'design',
-    'build me',
-    'create a',
-    'make a',
-    'new app',
-    'new website',
-    'new project',
-    'landing page',
-    'dashboard',
-    'e-commerce',
-    'portfolio',
-    'saas',
-    'mobile app',
+  // Very short messages are likely conversational
+  if (lastMessage.length < 8) {
+    return false
+  }
+
+  // Conversational patterns that should NOT trigger generation (check first)
+  const conversationalPatterns = [
+    /^(hello|hi|hey|yo|sup|greetings|good morning|good afternoon|good evening)\b/i,
+    /^(what|how|why|when|where|who|which)\s/i, // Questions starting with these words
+    /^(can you|could you|would you|will you|do you|are you|is this|is it|are there)\b/i,
+    /^(help|thanks|thank you|please help|ok|okay|yes|no|sure|got it|understood)\b/i,
+    /^(explain|tell me about|show me how|describe|what is|what are)\b/i,
+    /^(fix|debug|update|modify|change|edit)\s+(the|this|that|my)\s+(bug|error|issue|code|file)/i, // Code editing
   ]
 
-  return generationKeywords.some((keyword) => lastMessage.includes(keyword))
+  // If it matches conversational pattern, don't trigger dual mode
+  for (const pattern of conversationalPatterns) {
+    if (pattern.test(lastMessage)) {
+      console.log('[Chat] Conversational/edit message, using legacy chat:', lastMessage.substring(0, 50))
+      return false
+    }
+  }
+
+  // Strong generation keywords that should trigger dual mode
+  const generationKeywords = [
+    // App creation verbs
+    'build app', 'build an app', 'build a website', 'build me',
+    'create app', 'create an app', 'create a website', 'create new',
+    'make app', 'make an app', 'make a website', 'make me',
+    'generate app', 'generate an app', 'generate a website',
+    // Specific app types
+    'landing page', 'landing site',
+    'dashboard', 'admin panel', 'admin dashboard',
+    'portfolio', 'portfolio site', 'portfolio website',
+    'blog', 'blog site', 'blog website',
+    'ecommerce', 'e-commerce', 'online store', 'online shop',
+    'saas', 'saas app', 'saas application',
+    'web app', 'web application', 'webapp',
+    'startup website', 'company website', 'business website',
+    'login page', 'signup page', 'auth page',
+    'hello world', 'hello world app',
+    // Action-oriented phrases
+    'new project', 'new website', 'new app',
+    'give me a', 'i want a', 'i need a',
+  ]
+
+  // Check for generation keywords
+  for (const keyword of generationKeywords) {
+    if (lastMessage.includes(keyword)) {
+      console.log('[Chat] Generation keyword detected, using dual mode:', lastMessage.substring(0, 50))
+      return true
+    }
+  }
+
+  // Pattern-based detection for more complex requests
+  const generationPatterns = [
+    /\b(build|create|make|generate|develop|implement)\b.*\b(app|website|site|project|page|dashboard|platform)\b/i,
+    /\b(landing|home|portfolio|blog|store|shop|admin)\s*(page|site|website|app|panel|dashboard)?\b/i,
+    /^(build|create|make|generate)\s+/i,  // Starts with action verb
+    /\b(new)\s+(app|website|project|page|dashboard)\b/i,
+    /\bi\s+(want|need)\s+(a|an|to build|to create)\s+/i, // "I want/need a..."
+  ]
+
+  const shouldTrigger = generationPatterns.some((pattern) => pattern.test(lastMessage))
+
+  if (shouldTrigger) {
+    console.log('[Chat] Generation pattern matched, using dual mode:', lastMessage.substring(0, 50))
+  } else {
+    console.log('[Chat] No generation intent, using legacy chat:', lastMessage.substring(0, 50))
+  }
+
+  return shouldTrigger
 }
 
 /**
- * Handle dual-mode chat with Controller + CodeGen orchestration
+ * Handle dual-mode chat with new simplified Generator
+ * Uses templates + AI for custom app generation
  */
 async function handleDualModeChat({
   projectId,
@@ -239,7 +292,15 @@ async function handleDualModeChat({
   supabase: any
   isDemoProject: boolean
 }) {
-  const orchestrator = getOrchestrator()
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: 'API key not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  const generator = new Generator({ apiKey })
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
@@ -254,93 +315,85 @@ async function handleDualModeChat({
         controller.enqueue(encoder.encode(`data: ${modeInfo}\n\n`))
 
         const lastUserMessage = messages[messages.length - 1]?.content || ''
+        console.log('[Chat] Starting app generation with Generator for:', lastUserMessage.substring(0, 50))
 
-        // Convert messages to AI format
-        const conversationHistory = messages.slice(0, -1).map((m) => ({
-          role: m.role as 'user' | 'assistant' | 'system',
-          content: m.content,
-        }))
+        const generatedFiles: { path: string; content: string }[] = []
 
-        // Convert files to simpler format
-        const existingFiles = files.map((f) => ({
-          path: f.path,
-          content: f.content,
-        }))
+        // Use new simplified Generator
+        for await (const event of generator.generate(lastUserMessage, {
+          existingFiles: files?.map(f => ({ path: f.path, content: f.content })),
+          forceGeneration: true,
+        })) {
+          console.log('[Chat] Generator event:', event.type)
 
-        // Run orchestration
-        const orchestrationStream = orchestrator.orchestrate({
-          userPrompt: lastUserMessage,
-          platform,
-          mode,
-          existingSchema: existingSchema || undefined,
-          existingFiles,
-          conversationHistory,
-        })
-
-        let finalSchema: UnifiedAppSchema | null = null
-        let generatedFiles: { path: string; content: string }[] = []
-
-        for await (const event of orchestrationStream) {
-          // Forward events to client
-          controller.enqueue(encoder.encode(formatSSE(event)))
-
-          // Track results
-          if (event.type === 'schema') {
-            finalSchema = event.data.schema
+          if (event.type === 'start' || event.type === 'generating') {
+            // Send planning/status updates
+            const statusData = JSON.stringify({
+              type: 'planning',
+              phase: 'generating',
+              message: event.data?.message || 'Generating...',
+            })
+            controller.enqueue(encoder.encode(`data: ${statusData}\n\n`))
           }
 
-          if (event.type === 'actions') {
-            const actions = event.data.actions
-            generatedFiles.push(
-              ...actions
-                .filter((a: any) => a.type === 'create_or_update_file')
-                .map((a: any) => ({ path: a.path, content: a.content }))
-            )
+          if (event.type === 'template_match') {
+            // Send template match info
+            const templateData = JSON.stringify({
+              type: 'planning',
+              phase: 'template',
+              message: `Using ${event.data?.template} template`,
+            })
+            controller.enqueue(encoder.encode(`data: ${templateData}\n\n`))
+          }
 
-            // Save files to database
+          if (event.type === 'progress') {
+            // Send progress updates
+            const progressData = JSON.stringify({
+              type: 'planning',
+              phase: 'creating',
+              message: event.data?.message || 'Creating files...',
+            })
+            controller.enqueue(encoder.encode(`data: ${progressData}\n\n`))
+          }
+
+          if (event.type === 'file' && event.data?.file) {
+            const file = event.data.file
+            generatedFiles.push({ path: file.path, content: file.content })
+
+            // Send file action
+            const actionData = JSON.stringify({
+              type: 'actions',
+              actions: [{
+                type: 'create_or_update_file',
+                path: file.path,
+                content: file.content,
+              }],
+            })
+            controller.enqueue(encoder.encode(`data: ${actionData}\n\n`))
+
+            // Save file to database
             if (supabase && !isDemoProject) {
-              for (const action of actions) {
-                if (action.type === 'create_or_update_file') {
-                  await supabase
-                    .from('files')
-                    .upsert({
-                      project_id: projectId,
-                      path: action.path,
-                      content: action.content,
-                      language: getLanguageFromPath(action.path),
-                    }, {
-                      onConflict: 'project_id,path',
-                    })
-                } else if (action.type === 'delete_file') {
-                  await supabase
-                    .from('files')
-                    .delete()
-                    .eq('project_id', projectId)
-                    .eq('path', action.path)
-                }
-              }
+              await supabase
+                .from('files')
+                .upsert({
+                  project_id: projectId,
+                  path: file.path,
+                  content: file.content,
+                  language: getLanguageFromPath(file.path),
+                }, {
+                  onConflict: 'project_id,path',
+                })
             }
           }
 
           if (event.type === 'complete') {
-            // Update project with schema
-            if (supabase && !isDemoProject && finalSchema) {
-              await supabase
-                .from('projects')
-                .update({
-                  platform,
-                  app_schema: finalSchema,
-                  last_schema_update: new Date().toISOString(),
-                })
-                .eq('id', projectId)
-
-              // Save generation history
+            // Save generation history
+            if (supabase && !isDemoProject) {
               await supabase.from('generation_history').insert({
                 project_id: projectId,
-                mode: mode === 'auto' ? 'controller' : mode,
-                input_prompt: messages[messages.length - 1]?.content || '',
-                controller_output: finalSchema ? { schema: finalSchema } : null,
-                codegen_output: generatedFiles.length > 0 ? { files: generatedFiles } : null,
+                mode: 'generator',
+                input_prompt: lastUserMessage,
+                codegen_output: { files: generatedFiles },
                 files_generated: generatedFiles.map((f) => f.path),
                 status: 'completed',
               })
@@ -348,7 +401,12 @@ async function handleDualModeChat({
           }
 
           if (event.type === 'error') {
-            console.error('Orchestration error:', event.data)
+            console.error('[Chat] Generator error:', event.data)
+            const errorData = JSON.stringify({
+              type: 'error',
+              error: event.data?.message || 'Generation failed',
+            })
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
           }
         }
 
@@ -358,14 +416,11 @@ async function handleDualModeChat({
           await supabase.from('messages').insert({
             project_id: projectId,
             role: 'user',
-            content: messages[messages.length - 1]?.content || '',
+            content: lastUserMessage,
           })
 
           // Save assistant summary
-          const summary = finalSchema
-            ? `Created ${platform} application schema with ${finalSchema.structure?.pages?.length || 0} pages and ${generatedFiles.length} files.`
-            : `Generated ${generatedFiles.length} files for your ${platform} application.`
-
+          const summary = `Generated ${generatedFiles.length} files for your ${platform} application.`
           await supabase.from('messages').insert({
             project_id: projectId,
             role: 'assistant',
@@ -379,7 +434,7 @@ async function handleDualModeChat({
 
         controller.close()
       } catch (error: any) {
-        console.error('Error in dual-mode stream:', error)
+        console.error('[Chat] Error in generation stream:', error)
 
         // Determine if this was a network/provider error
         const status = error.status || error.statusCode || 0
@@ -496,6 +551,21 @@ async function handleLegacyChat({
           mode: 'legacy',
         })
         controller.enqueue(encoder.encode(`data: ${contextInfo}\n\n`))
+
+        // Send initial activity
+        const initActivity = JSON.stringify({
+          type: 'planning',
+          phase: 'init',
+          message: 'Processing your request...',
+        })
+        controller.enqueue(encoder.encode(`data: ${initActivity}\n\n`))
+
+        // Send generating activity
+        const genActivity = JSON.stringify({
+          type: 'generating',
+          message: 'Generating response...',
+        })
+        controller.enqueue(encoder.encode(`data: ${genActivity}\n\n`))
 
         // Stream from the provider with retry support
         const streamGenerator = withStreamRetry(() => provider.streamChat({

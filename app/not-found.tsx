@@ -23,7 +23,7 @@ export default function NotFound() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go Back
           </Button>
-          <Button asChild className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500">
+          <Button asChild className="bg-gradient-to-r from-emerald-600 to-emerald-600 hover:from-emerald-500 hover:to-emerald-500">
             <Link href="/dashboard">
               <Home className="mr-2 h-4 w-4" />
               Dashboard

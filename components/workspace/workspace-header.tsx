@@ -335,7 +335,7 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-violet-500 to-purple-600 transition-all duration-300 ease-out"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-300 ease-out"
                     style={{ width: `${deployProgress}%` }}
                   />
                 </div>
@@ -359,7 +359,7 @@ export function WorkspaceHeader({ project }: WorkspaceHeaderProps) {
                     {step.done ? (
                       <CheckCircle className="h-4 w-4 text-emerald-400" />
                     ) : deployProgress > i * 25 ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
                     ) : (
                       <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
                     )}

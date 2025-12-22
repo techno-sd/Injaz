@@ -28,7 +28,28 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { File, PlatformType } from '@/types'
-import type { DebugResult, CodeFix } from '@/lib/ai/debugger'
+
+// Simplified debug types (previously from debugger module)
+interface CodeFix {
+  description: string
+  code: string
+  file?: string
+  line?: number
+  oldCode?: string
+  newCode?: string
+  title?: string
+  confidence?: 'high' | 'medium' | 'low'
+  fix?: CodeFix
+}
+
+interface DebugResult {
+  analysis: string
+  suggestions: CodeFix[]
+  fixes?: CodeFix[]
+  error?: string
+  rootCause?: string
+  quickFix?: CodeFix
+}
 
 type DeviceMode = 'desktop' | 'tablet' | 'mobile'
 
@@ -153,7 +174,7 @@ export function LivePreview({
     if (!onFilesChange) return
 
     const updatedFiles = files.map(file => {
-      if (file.path === fix.file) {
+      if (file.path === fix.file && fix.oldCode && fix.newCode) {
         return {
           ...file,
           content: file.content.replace(fix.oldCode, fix.newCode)
@@ -169,8 +190,8 @@ export function LivePreview({
 
   // Copy fix to clipboard
   const copyFix = async (fix: CodeFix) => {
-    await navigator.clipboard.writeText(fix.newCode)
-    setCopiedFix(fix.file)
+    await navigator.clipboard.writeText(fix.newCode || fix.code || '')
+    setCopiedFix(fix.file || null)
     setTimeout(() => setCopiedFix(null), 2000)
   }
 
@@ -498,7 +519,7 @@ export function LivePreview({
               {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/95 backdrop-blur-sm z-20">
                   <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                    <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
                     <span className="text-sm text-gray-500">Loading preview...</span>
                   </div>
                 </div>
@@ -708,7 +729,7 @@ export function LivePreview({
 
               {/* Hot Reload Indicator */}
               {isHotReloading && (
-                <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2 py-1 bg-violet-500/90 text-white text-xs rounded-full shadow-lg">
+                <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2 py-1 bg-emerald-500/90 text-white text-xs rounded-full shadow-lg">
                   <Zap className="h-3 w-3 animate-pulse" />
                   <span>Updating...</span>
                 </div>
@@ -733,7 +754,7 @@ export function LivePreview({
 
               {/* Made with Badge */}
               <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 bg-black/70 backdrop-blur border border-white/10 rounded-full text-[10px] text-white/80 shadow-lg z-10">
-                <Zap className="h-3 w-3 text-violet-400" />
+                <Zap className="h-3 w-3 text-emerald-400" />
                 <span>Injaz.ai</span>
               </div>
             </div>

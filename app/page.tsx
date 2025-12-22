@@ -1,234 +1,407 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Code2, Send, Menu, X, Sparkles, Zap, Layers, ArrowRight, Rocket } from 'lucide-react'
+import { ArrowRight, Sparkles, Code2, Paperclip, Palette, Send } from 'lucide-react'
 
 export default function HomePage() {
+  const router = useRouter()
   const [chatInput, setChatInput] = useState('')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isFocused, setIsFocused] = useState(false)
-
-  const examplePrompts = [
-    { text: "SaaS landing page", icon: "🚀" },
-    { text: "E-commerce store", icon: "🛒" },
-    { text: "Portfolio site", icon: "💼" },
-    { text: "Admin dashboard", icon: "📊" },
-  ]
-
-  const handlePromptClick = (prompt: string) => {
-    setChatInput(prompt)
-  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!chatInput.trim()) return
-
-    sessionStorage.setItem('initialPrompt', chatInput.trim())
-    const projectId = `new-${Date.now()}`
-    window.location.href = `/workspace/${projectId}`
+    if (chatInput.trim()) {
+      // Navigate to workspace with prompt - chatbot will auto-start generation
+      const projectId = `new-${Date.now()}`
+      router.push(`/workspace/${projectId}?prompt=${encodeURIComponent(chatInput)}`)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-[#08080c] flex flex-col overflow-hidden noise">
-      {/* Animated mesh gradient background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none gradient-mesh-dark" />
-
-      {/* Animated orbs */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden relative">
+      {/* Achievement-themed gradient mesh overlay */}
+      <div className="fixed inset-0 bg-gradient-to-tr from-emerald-600/15 via-transparent to-transparent pointer-events-none" />
+      <div className="fixed inset-0 bg-gradient-to-bl from-transparent via-teal-600/10 to-emerald-600/10 pointer-events-none" />
+      <div className="fixed inset-0 bg-gradient-to-t from-amber-600/10 via-transparent to-transparent pointer-events-none" />
+      
+      {/* Animated gradient orbs for depth */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-500/8 rounded-full blur-[100px] animate-float delay-300" />
-        <div className="absolute top-1/2 right-1/3 w-[400px] h-[400px] bg-pink-500/8 rounded-full blur-[80px] animate-float delay-500" />
+        <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-500/8 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-40 right-20 w-[500px] h-[500px] bg-teal-500/8 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/3 w-72 h-72 bg-amber-500/8 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
       </div>
-
+      
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass-dark border-b border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="h-9 w-9 rounded-xl icon-box-brand group-hover:glow-purple transition-all duration-300">
+      <header className="relative z-10 backdrop-blur-md border-b border-white/10 bg-slate-900/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-amber-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 transition-all duration-300">
               <Code2 className="h-5 w-5 text-white" />
             </div>
-            <span className="font-semibold text-lg text-white">Injaz.ai</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-amber-400 bg-clip-text text-transparent">Injaz</span>
           </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden sm:flex items-center gap-1">
-            <Button asChild variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/[0.06] rounded-lg px-4 font-medium">
-              <Link href="/templates">Templates</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/[0.06] rounded-lg px-4 font-medium">
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/templates" className="text-sm text-white/80 hover:text-white transition-colors">
+              Templates
+            </Link>
+            <Link href="/pricing" className="text-sm text-white/80 hover:text-white transition-colors">
+              Pricing
+            </Link>
+            <Link href="/docs" className="text-sm text-white/80 hover:text-white transition-colors">
+              Resources
+            </Link>
+            <Link href="/community" className="text-sm text-white/80 hover:text-white transition-colors">
+              Community
+            </Link>
+          </nav>
+          <div className="flex items-center gap-3">
+            <Button asChild variant="ghost" className="hidden sm:flex text-white hover:bg-white/10 transition-all">
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button asChild size="sm" className="ml-2 btn-primary px-5">
-              <Link href="/dashboard">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+            <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white border-0 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all duration-300 font-medium">
+              <Link href="/dashboard">Get started</Link>
             </Button>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="sm:hidden h-10 w-10 rounded-lg text-white hover:bg-white/[0.06]"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-white/[0.06] bg-[#0a0a0f]/95 backdrop-blur-xl animate-fade-in-down">
-            <div className="px-4 py-4 space-y-2">
-              <Link
-                href="/templates"
-                className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/[0.06] rounded-lg transition-colors font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Templates
-              </Link>
-              <Link
-                href="/login"
-                className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/[0.06] rounded-lg transition-colors font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sign in
-              </Link>
-              <Button asChild className="w-full mt-2 btn-primary">
-                <Link href="/dashboard">Get Started</Link>
-              </Button>
-            </div>
           </div>
-        )}
+        </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 pt-28 pb-16 relative">
-        <div className="w-full max-w-2xl mx-auto text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 badge-primary mb-8 animate-fade-in-down">
-            <Sparkles className="h-4 w-4" />
-            <span className="font-medium">AI-Powered Development</span>
+      {/* Main content - centered */}
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-6">
+        <div className="max-w-4xl mx-auto w-full text-center space-y-8">
+          {/* Announcement badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 backdrop-blur-xl border border-emerald-400/20 hover:border-emerald-400/40 transition-all duration-300 cursor-pointer group">
+            <Sparkles className="h-4 w-4 text-emerald-400" />
+            <span className="text-sm text-white/80">Introducing Injaz Pro</span>
+            <ArrowRight className="h-4 w-4 text-white/60 group-hover:translate-x-1 transition-transform" />
           </div>
 
-          {/* Heading */}
-          <h1 className="heading-xl text-white mb-6 animate-fade-in-up">
-            What do you want
-            <br />
-            <span className="gradient-text-glow">
-              to build today?
-            </span>
+          {/* Main headline */}
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
+            What will you{' '}
+            <span className="italic bg-gradient-to-r from-emerald-400 via-teal-400 to-amber-400 bg-clip-text text-transparent drop-shadow-lg">
+              achieve
+            </span>{' '}
+            today?
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-lg text-white/50 mb-12 max-w-lg mx-auto animate-fade-in-up delay-100 leading-relaxed">
-            Describe your idea in plain English and watch AI transform it into a fully functional application.
+          <p className="text-xl text-white/60 max-w-2xl mx-auto">
+            Create stunning apps & websites by chatting with AI. From idea to deployment in minutes.
           </p>
 
-          {/* Chat Input */}
-          <form onSubmit={handleSubmit} className="relative mb-10 animate-fade-in-up delay-200">
-            <div
-              className={`relative rounded-2xl transition-all duration-300 ${
-                isFocused
-                  ? 'bg-white/[0.06] border border-purple-500/50 glow-purple'
-                  : 'bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.15]'
-              }`}
-            >
-              <textarea
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSubmit(e)
-                  }
-                }}
-                placeholder="Describe your app idea in detail..."
-                rows={3}
-                className="w-full px-6 py-5 pr-16 bg-transparent text-white placeholder:text-white/40 resize-none focus:outline-none text-base rounded-2xl leading-relaxed"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={!chatInput.trim()}
-                className="absolute right-4 bottom-4 h-11 w-11 rounded-xl bg-purple-600 hover:bg-purple-500 text-white disabled:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                <Send className="h-5 w-5" />
-              </Button>
+          {/* Input box - large dark container */}
+          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto pt-8">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-amber-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
+              <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-emerald-500/20">
+              <div className="p-8 bg-gradient-to-br from-slate-900/50 to-slate-800/50 backdrop-blur-sm">
+                <textarea
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Make a software application that..."
+                  className="w-full bg-transparent text-lg text-white/90 placeholder:text-white/40 focus:outline-none resize-none h-32 focus:text-white transition-colors"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSubmit(e)
+                    }
+                  }}
+                />
+              </div>
+              
+              {/* Toolbar */}
+              <div className="px-8 py-4 border-t border-emerald-500/10 bg-gradient-to-r from-slate-900/80 to-slate-800/80 backdrop-blur-sm flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button type="button" className="h-9 w-9 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 transition-colors">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                  <button type="button" className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm text-white/60 hover:bg-white/10 transition-colors">
+                    <Paperclip className="h-4 w-4" />
+                    <span>Attach</span>
+                  </button>
+                  <button type="button" className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm text-white/60 hover:bg-white/10 transition-colors border border-white/10">
+                    <Palette className="h-4 w-4" />
+                    <span>Theme</span>
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button type="button" className="h-9 w-9 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 transition-colors">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  </button>
+                  <Button
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white border-0 px-6 disabled:opacity-40 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all duration-300"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Start Building
+                  </Button>
+                </div>
+              </div>
+              </div>
             </div>
-            <p className="text-xs text-white/40 mt-4">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-white/[0.08] font-mono text-white/60 border border-white/[0.1]">Enter</kbd> to submit
-            </p>
           </form>
 
-          {/* Example Prompts */}
-          <div className="animate-fade-in-up delay-300">
-            <p className="text-sm text-white/50 mb-4 font-medium">Try these examples:</p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {examplePrompts.map((prompt, i) => (
-                <button
-                  key={i}
-                  onClick={() => handlePromptClick(prompt.text)}
-                  className="group inline-flex items-center gap-2 px-4 py-2.5 text-sm rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-purple-500/10 hover:border-purple-500/30 text-white/70 hover:text-white transition-all duration-200 hover:-translate-y-0.5 font-medium"
-                >
-                  <span>{prompt.icon}</span>
-                  <span>{prompt.text}</span>
-                </button>
-              ))}
+          {/* Quick Actions - inspired by v0 and Replit */}
+          <div className="max-w-3xl mx-auto mt-6">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <button
+                onClick={() => setChatInput('Build a modern landing page with hero section and contact form')}
+                className="px-4 py-2 rounded-lg bg-slate-800/50 border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-slate-800/80 text-sm text-white/70 hover:text-white transition-all duration-200 backdrop-blur-sm"
+              >
+                📄 Landing Page
+              </button>
+              <button
+                onClick={() => setChatInput('Create an AI-powered chatbot with conversation history')}
+                className="px-4 py-2 rounded-lg bg-slate-800/50 border border-teal-500/20 hover:border-teal-500/40 hover:bg-slate-800/80 text-sm text-white/70 hover:text-white transition-all duration-200 backdrop-blur-sm"
+              >
+                🤖 AI App
+              </button>
+              <button
+                onClick={() => setChatInput('Build a task management dashboard with drag and drop')}
+                className="px-4 py-2 rounded-lg bg-slate-800/50 border border-amber-500/20 hover:border-amber-500/40 hover:bg-slate-800/80 text-sm text-white/70 hover:text-white transition-all duration-200 backdrop-blur-sm"
+              >
+                📊 Dashboard
+              </button>
+              <button
+                onClick={() => setChatInput('Create an e-commerce store with product catalog and cart')}
+                className="px-4 py-2 rounded-lg bg-slate-800/50 border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-slate-800/80 text-sm text-white/70 hover:text-white transition-all duration-200 backdrop-blur-sm"
+              >
+                🛍️ E-Commerce
+              </button>
+              <button className="px-3 py-2 rounded-lg bg-slate-800/50 border border-white/10 hover:border-white/20 hover:bg-slate-800/80 text-white/50 hover:text-white/70 transition-all duration-200">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Features Section */}
-        <div className="w-full max-w-4xl mx-auto mt-24 grid grid-cols-1 sm:grid-cols-3 gap-5 animate-fade-in-up delay-400">
-          <div className="group p-6 rounded-2xl card-interactive">
-            <div className="h-12 w-12 rounded-xl icon-box mb-5 group-hover:icon-box-brand transition-all duration-300">
-              <Sparkles className="h-6 w-6 text-purple-400 group-hover:text-white transition-colors" />
+        {/* Templates Section */}
+        <div className="max-w-7xl mx-auto px-6 mt-20 pb-20">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-amber-500 rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
+            <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 sm:p-12 border border-emerald-500/20 shadow-2xl">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Start with a template</h2>
+                <p className="text-base sm:text-lg text-white/60">Jump-start your project with pre-built solutions</p>
+              </div>
+              <Link href="/templates" className="group flex items-center gap-2 text-white/80 hover:text-white transition-all">
+                <span className="text-sm font-medium">View all</span>
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
-            <h3 className="font-semibold text-white mb-2">AI-Powered</h3>
-            <p className="text-sm text-white/50 leading-relaxed">Describe your vision and let AI write production-ready code for you.</p>
-          </div>
 
-          <div className="group p-6 rounded-2xl card-interactive">
-            <div className="h-12 w-12 rounded-xl icon-box mb-5 group-hover:icon-box-cyan transition-all duration-300">
-              <Zap className="h-6 w-6 text-cyan-400 group-hover:text-white transition-colors" />
-            </div>
-            <h3 className="font-semibold text-white mb-2">Real-time Preview</h3>
-            <p className="text-sm text-white/50 leading-relaxed">See your changes instantly with live browser preview.</p>
-          </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Template Card 1 */}
+              <Link href="/templates/ecommerce" className="group">
+                <div className="bg-white rounded-xl overflow-hidden shadow-xl shadow-black/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-emerald-500/30">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center">
+                    <div className="text-6xl">🛍️</div>
+                  </div>
+                  <div className="p-4 bg-white">
+                    <h3 className="font-bold text-gray-900 mb-1">Ecommerce store</h3>
+                    <p className="text-sm text-gray-600">Premium design for webstore</p>
+                  </div>
+                </div>
+              </Link>
 
-          <div className="group p-6 rounded-2xl card-interactive">
-            <div className="h-12 w-12 rounded-xl icon-box mb-5 group-hover:icon-box-brand transition-all duration-300">
-              <Rocket className="h-6 w-6 text-purple-400 group-hover:text-white transition-colors" />
+              {/* Template Card 2 */}
+              <Link href="/templates/architecture" className="group">
+                <div className="bg-slate-900 rounded-xl overflow-hidden shadow-xl shadow-black/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-teal-500/30 border border-white/5">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                    <div className="text-white text-xl font-bold">MINIMAL<br/>ARCHITECTURE</div>
+                  </div>
+                  <div className="p-4 bg-black border-t border-white/10">
+                    <h3 className="font-bold text-white mb-1">Architect portfolio</h3>
+                    <p className="text-sm text-gray-400">Firm website & showcase</p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Template Card 3 */}
+              <Link href="/templates/blog" className="group">
+                <div className="bg-white rounded-xl overflow-hidden shadow-xl shadow-black/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-amber-500/30">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                    <div className="text-5xl">📰</div>
+                  </div>
+                  <div className="p-4 bg-white">
+                    <h3 className="font-bold text-gray-900 mb-1">Personal blog</h3>
+                    <p className="text-sm text-gray-600">Muted, intimate design</p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Template Card 4 */}
+              <Link href="/templates/fashion" className="group">
+                <div className="bg-white rounded-xl overflow-hidden shadow-xl shadow-black/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-emerald-500/30">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-emerald-200 to-teal-100 flex items-center justify-center">
+                    <div className="text-5xl font-bold text-emerald-700">VESPER</div>
+                  </div>
+                  <div className="p-4 bg-white">
+                    <h3 className="font-bold text-gray-900 mb-1">Fashion blog</h3>
+                    <p className="text-sm text-gray-600">Minimal, playful design</p>
+                  </div>
+                </div>
+              </Link>
             </div>
-            <h3 className="font-semibold text-white mb-2">One-Click Deploy</h3>
-            <p className="text-sm text-white/50 leading-relaxed">Deploy your app to the cloud with a single click.</p>
+            </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-white/[0.06] bg-[#08080c]/80">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-white/40">
-            <Code2 className="h-4 w-4" />
-            <span className="text-sm font-medium">Injaz.ai</span>
+      <footer className="relative z-10 border-t border-white/10 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
+            {/* Product Column */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Product</h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/templates" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Templates
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/pricing" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Features
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Company Column */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Company</h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/about" className="text-white/60 hover:text-white transition-colors text-sm">
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/blog" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Blog
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/careers" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Careers
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Resources Column */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Resources</h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/docs" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Documentation
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/help" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Help Center
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/community" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Community
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal Column */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Legal</h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/privacy" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Privacy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Terms
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/security" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Security
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Connect Column */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Connect</h3>
+              <ul className="space-y-3">
+                <li>
+                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Twitter
+                  </a>
+                </li>
+                <li>
+                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors text-sm">
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <a href="https://discord.com" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors text-sm">
+                    Discord
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div className="flex items-center gap-8 text-sm text-white/50 font-medium">
-            <Link href="/templates" className="hover:text-purple-400 transition-colors">
-              Templates
-            </Link>
-            <Link href="/dashboard" className="hover:text-purple-400 transition-colors">
-              Dashboard
-            </Link>
-            <Link href="/login" className="hover:text-purple-400 transition-colors">
-              Sign in
-            </Link>
+
+          {/* Bottom Footer */}
+          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-amber-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <Code2 className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-white/60 text-sm">© 2025 Injaz. Ship faster, achieve more.</span>
+            </div>
+            
+            <div className="flex items-center gap-6">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              </a>
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd"/>
+                </svg>
+              </a>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
       </footer>

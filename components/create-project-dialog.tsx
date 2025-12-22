@@ -231,9 +231,9 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
                   className={cn(
                     'w-2 h-2 rounded-full transition-colors',
                     s === stepNumber
-                      ? 'bg-violet-500'
+                      ? 'bg-emerald-500'
                       : s < stepNumber
-                      ? 'bg-violet-500/50'
+                      ? 'bg-emerald-500/50'
                       : 'bg-muted'
                   )}
                 />
@@ -264,13 +264,13 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
                       className={cn(
                         'relative flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all duration-200',
                         isSelected
-                          ? `border-violet-500 ${platform.bgColor}`
-                          : 'border-border hover:border-violet-500/50 hover:bg-accent/50'
+                          ? `border-emerald-500 ${platform.bgColor}`
+                          : 'border-border hover:border-emerald-500/50 hover:bg-accent/50'
                       )}
                     >
                       {isSelected && (
                         <div className="absolute top-2 right-2">
-                          <Check className="h-4 w-4 text-violet-400" />
+                          <Check className="h-4 w-4 text-emerald-400" />
                         </div>
                       )}
                       <div
@@ -326,13 +326,13 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
                       className={cn(
                         'relative flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 text-left',
                         isSelected
-                          ? 'border-violet-500 bg-violet-500/10'
-                          : 'border-border hover:border-violet-500/50 hover:bg-accent/50'
+                          ? 'border-emerald-500 bg-emerald-500/10'
+                          : 'border-border hover:border-emerald-500/50 hover:bg-accent/50'
                       )}
                     >
                       {isSelected && (
                         <div className="absolute top-2 right-2">
-                          <Check className="h-4 w-4 text-violet-400" />
+                          <Check className="h-4 w-4 text-emerald-400" />
                         </div>
                       )}
                       <div
@@ -377,8 +377,8 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
                 className={cn(
                   'w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-left',
                   selectedTemplate === 'blank'
-                    ? 'border-violet-500 bg-violet-500/10'
-                    : 'border-border hover:border-violet-500/50 hover:bg-accent/50'
+                    ? 'border-emerald-500 bg-emerald-500/10'
+                    : 'border-border hover:border-emerald-500/50 hover:bg-accent/50'
                 )}
               >
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
@@ -389,7 +389,7 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
                   <p className="text-xs text-muted-foreground">Start from scratch with AI assistance</p>
                 </div>
                 {selectedTemplate === 'blank' && (
-                  <Check className="h-5 w-5 text-violet-400 ml-auto" />
+                  <Check className="h-5 w-5 text-emerald-400 ml-auto" />
                 )}
               </button>
 
@@ -408,8 +408,8 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
                           className={cn(
                             'flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left',
                             isSelected
-                              ? 'border-violet-500 bg-violet-500/10'
-                              : 'border-border hover:border-violet-500/50 hover:bg-accent/50'
+                              ? 'border-emerald-500 bg-emerald-500/10'
+                              : 'border-border hover:border-emerald-500/50 hover:bg-accent/50'
                           )}
                         >
                           <span className="text-xl shrink-0">{t.icon}</span>
@@ -497,7 +497,7 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
               <Button
                 type="button"
                 onClick={handleNext}
-                className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 gap-2"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 gap-2"
                 disabled={step === 'category' && !selectedCategory}
               >
                 Continue
@@ -506,7 +506,7 @@ export function CreateProjectDialog({ variant, size, className }: CreateProjectD
             ) : (
               <Button
                 type="submit"
-                className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500"
                 disabled={loading || !projectName.trim()}
               >
                 {loading ? (

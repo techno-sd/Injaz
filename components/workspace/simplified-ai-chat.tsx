@@ -32,7 +32,7 @@ const STARTER_PROMPTS = [
     icon: <Palette className="h-5 w-5" />,
     title: 'Change colors',
     prompt: 'Change the color scheme to a modern purple and blue gradient',
-    color: 'bg-purple-500'
+    color: 'bg-emerald-500'
   },
   {
     icon: <Zap className="h-5 w-5" />,

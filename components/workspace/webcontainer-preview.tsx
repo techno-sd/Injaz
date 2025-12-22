@@ -2,126 +2,29 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useWebContainer } from '@/lib/webcontainer-context'
-import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink, Zap, CheckCircle2, Circle, Package, Server, Code2, Cpu, Shield, Download, Play } from 'lucide-react'
+import { Loader2, Terminal as TerminalIcon, Globe, AlertCircle, Monitor, Tablet, Smartphone, RefreshCw, ExternalLink, Zap, Package, Cpu, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { File, PlatformType } from '@/types'
 
-// Enhanced progress step with beautiful animations
-interface ProgressStepProps {
-  icon: React.ReactNode
-  label: string
-  description?: string
-  status: 'pending' | 'active' | 'done'
-  isLast?: boolean
-}
-
-function ProgressStep({ icon, label, description, status, isLast = false }: ProgressStepProps) {
-  const statusLabel = status === 'done' ? 'Completed' : status === 'active' ? 'In progress' : 'Pending'
-
-  return (
-    <div
-      className="flex items-start gap-4"
-      role="listitem"
-      aria-label={`${label}: ${statusLabel}`}
-    >
-      {/* Step indicator with connecting line */}
-      <div className="flex flex-col items-center" aria-hidden="true">
-        <div
-          className={cn(
-            'relative flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-500',
-            status === 'done' && 'border-emerald-500 bg-emerald-500/20',
-            status === 'active' && 'border-primary bg-primary/20 animate-pulse',
-            status === 'pending' && 'border-muted-foreground/30 bg-muted/30'
-          )}
-        >
-          {status === 'done' ? (
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-hidden="true" />
-          ) : status === 'active' ? (
-            <div className="relative">
-              {icon}
-              <span className="absolute -inset-1 rounded-full bg-primary/30 animate-ping" aria-hidden="true" />
-            </div>
-          ) : (
-            <div className="text-muted-foreground/50">{icon}</div>
-          )}
-        </div>
-        {/* Connecting line */}
-        {!isLast && (
-          <div
-            className={cn(
-              'w-0.5 h-8 transition-all duration-500',
-              status === 'done' ? 'bg-emerald-500' : 'bg-muted-foreground/20'
-            )}
-            aria-hidden="true"
-          />
-        )}
-      </div>
-
-      {/* Step content */}
-      <div className="flex-1 pt-2">
-        <p
-          className={cn(
-            'text-sm font-medium transition-colors duration-300',
-            status === 'done' && 'text-emerald-500',
-            status === 'active' && 'text-foreground',
-            status === 'pending' && 'text-muted-foreground/60'
-          )}
-        >
-          {label}
-          <span className="sr-only"> - {statusLabel}</span>
-        </p>
-        {description && status === 'active' && (
-          <p className="text-xs text-muted-foreground mt-0.5 animate-in fade-in slide-in-from-top-1 duration-300">
-            {description}
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // Animated dots for loading states
 function LoadingDots() {
   return (
-    <span className="inline-flex gap-1 ml-1">
-      <span className="h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
-      <span className="h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
-      <span className="h-1 w-1 rounded-full bg-current animate-bounce" />
+    <span className="inline-flex items-center gap-[3px] ml-2">
+      <span
+        className="h-1.5 w-1.5 rounded-full bg-current opacity-40"
+        style={{ animation: 'dotBounce 1.4s ease-in-out infinite' }}
+      />
+      <span
+        className="h-1.5 w-1.5 rounded-full bg-current opacity-40"
+        style={{ animation: 'dotBounce 1.4s ease-in-out 0.2s infinite' }}
+      />
+      <span
+        className="h-1.5 w-1.5 rounded-full bg-current opacity-40"
+        style={{ animation: 'dotBounce 1.4s ease-in-out 0.4s infinite' }}
+      />
     </span>
-  )
-}
-
-// Gradient progress bar with accessibility
-function GradientProgressBar({ progress, className, label = 'Loading progress' }: { progress: number; className?: string; label?: string }) {
-  return (
-    <div
-      className={cn('h-1.5 w-full rounded-full bg-muted/50 overflow-hidden', className)}
-      role="progressbar"
-      aria-valuenow={Math.round(progress)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={label}
-    >
-      <div
-        className="h-full rounded-full bg-gradient-to-r from-violet-500 via-primary to-cyan-500 transition-all duration-700 ease-out relative will-change-[width]"
-        style={{ width: `${progress}%` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" aria-hidden="true" />
-      </div>
-    </div>
-  )
-}
-
-// Floating particles background (purely decorative)
-function FloatingParticles() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-violet-500/10 rounded-full blur-3xl animate-blob" />
-      <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl animate-blob animation-delay-2000" />
-      <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-blob animation-delay-4000" />
-    </div>
   )
 }
 
@@ -230,11 +133,146 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
     }
   }, [platform, deviceMode])
 
-  // Build file tree from files array
+  // Base UI components that should always be available for AI-generated code
+  const getBaseUIComponents = useCallback((): File[] => {
+    const baseComponents: File[] = []
+
+    // Utils helper
+    baseComponents.push({
+      id: 'base-utils',
+      project_id: projectId,
+      path: 'src/lib/utils.ts',
+      content: `import { clsx, type ClassValue } from 'clsx'
+
+export function cn(...inputs: ClassValue[]) {
+  return clsx(inputs)
+}
+`,
+      language: 'typescript',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+
+    // Button component
+    baseComponents.push({
+      id: 'base-button',
+      project_id: projectId,
+      path: 'src/components/ui/button.tsx',
+      content: `import * as React from "react"
+import { cn } from "../../lib/utils"
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  size?: 'default' | 'sm' | 'lg' | 'icon'
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant = 'default', size = 'default', asChild = false, children, ...props }, ref) => {
+    const baseStyles = "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+
+    const variants = {
+      default: "bg-emerald-600 text-white hover:bg-emerald-700",
+      destructive: "bg-red-600 text-white hover:bg-red-700",
+      outline: "border border-white/20 bg-transparent hover:bg-white/10 text-white",
+      secondary: "bg-white/10 text-white hover:bg-white/20",
+      ghost: "hover:bg-white/10 text-white",
+      link: "text-emerald-400 underline-offset-4 hover:underline",
+    }
+
+    const sizes = {
+      default: "h-10 px-4 py-2",
+      sm: "h-9 rounded-md px-3",
+      lg: "h-11 rounded-md px-8",
+      icon: "h-10 w-10",
+    }
+
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement<any>, {
+        className: cn(baseStyles, variants[variant], sizes[size], className, (children as any).props?.className),
+        ref,
+        ...props
+      })
+    }
+
+    return (
+      <button className={cn(baseStyles, variants[variant], sizes[size], className)} ref={ref} {...props}>
+        {children}
+      </button>
+    )
+  }
+)
+Button.displayName = "Button"
+
+export { Button }
+`,
+      language: 'typescript',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+
+    // Card component
+    baseComponents.push({
+      id: 'base-card',
+      project_id: projectId,
+      path: 'src/components/ui/card.tsx',
+      content: `import * as React from "react"
+import { cn } from "../../lib/utils"
+
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("rounded-xl border border-white/10 bg-white/5 text-white shadow-sm", className)} {...props} />
+  )
+)
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
+  )
+)
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h3 ref={ref} className={cn("text-lg font-semibold leading-none tracking-tight", className)} {...props} />
+  )
+)
+CardTitle.displayName = "CardTitle"
+
+const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  )
+)
+CardContent.displayName = "CardContent"
+
+export { Card, CardHeader, CardTitle, CardContent }
+`,
+      language: 'typescript',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+
+    return baseComponents
+  }, [projectId])
+
+  // Build file tree from files array, ensuring base UI components exist
   const buildFileTree = useCallback((fileList: File[]) => {
     const tree: any = {}
 
-    fileList.forEach(file => {
+    // Check if base UI components are missing and add them
+    const paths = new Set(fileList.map(f => f.path))
+    const baseComponents = getBaseUIComponents()
+    const filesToMount = [...fileList]
+
+    for (const baseComponent of baseComponents) {
+      if (!paths.has(baseComponent.path)) {
+        filesToMount.push(baseComponent)
+      }
+    }
+
+    filesToMount.forEach(file => {
       const parts = file.path.split('/')
       let current = tree
 
@@ -259,7 +297,7 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
     })
 
     return tree
-  }, [])
+  }, [getBaseUIComponents])
 
   const addLog = useCallback((message: string) => {
     setLogs(prev => [...prev, message])
@@ -452,38 +490,106 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
     return () => clearTimeout(fallbackTimer)
   }, [webcontainer, isBooting, files.length, isServerRunning, previewUrl, isInstalling, isStarting, error, startDevServer])
 
-  // Debounced file update function
+  // Build partial file tree for changed files only
+  const buildPartialFileTree = useCallback((changedFiles: File[]) => {
+    const tree: any = {}
+
+    changedFiles.forEach(file => {
+      const parts = file.path.split('/')
+      let current = tree
+
+      parts.forEach((part, index) => {
+        if (index === parts.length - 1) {
+          current[part] = {
+            file: {
+              contents: file.content,
+            },
+          }
+        } else {
+          if (!current[part]) {
+            current[part] = {
+              directory: {},
+            }
+          }
+          current = current[part].directory
+        }
+      })
+    })
+
+    return tree
+  }, [])
+
+  // Config files that require a server restart when changed
+  const CONFIG_FILES = [
+    'package.json',
+    'vite.config.ts',
+    'vite.config.js',
+    'tsconfig.json',
+    'tailwind.config.js',
+    'tailwind.config.ts',
+    'postcss.config.js',
+    'postcss.config.cjs',
+  ]
+
+  // Debounced file update function - uses mount() for bulk updates
   const updateChangedFiles = useCallback(
     debounce(async (filesToUpdate: File[]) => {
       if (!webcontainer || !previewUrl) return
 
       try {
         setIsHotReloading(true)
-        const changedFiles: string[] = []
+        const changedFiles: File[] = []
+        const newFiles: File[] = []
 
+        // Collect all changed and new files
         for (const file of filesToUpdate) {
           const previousContent = previousFilesRef.current.get(file.path)
-
-          // Only update files that have actually changed
-          if (previousContent !== file.content) {
-            await webcontainer.fs.writeFile(file.path, file.content)
+          if (previousContent === undefined) {
+            // New file that wasn't in the previous state
+            newFiles.push(file)
+            changedFiles.push(file)
             previousFilesRef.current.set(file.path, file.content)
-            changedFiles.push(file.path)
+          } else if (previousContent !== file.content) {
+            // Existing file with changed content
+            changedFiles.push(file)
+            previousFilesRef.current.set(file.path, file.content)
           }
         }
 
         if (changedFiles.length > 0) {
-          addLog(`Hot reload: Updated ${changedFiles.join(', ')}`)
+          // Use mount() for bulk updates
+          const partialTree = buildPartialFileTree(changedFiles)
+          await webcontainer.mount(partialTree)
 
-          // For static HTML projects, refresh the iframe
-          const hasPackageJson = filesToUpdate.some(f => f.path === 'package.json')
-          if (!hasPackageJson && iframeRef.current) {
-            // Small delay to ensure file is written
+          addLog(`Updated ${changedFiles.length} file(s)${newFiles.length > 0 ? ` (${newFiles.length} new)` : ''}`)
+
+          // Check if any config files changed (requires restart or full refresh)
+          const hasConfigChange = changedFiles.some(f =>
+            CONFIG_FILES.some(cfg => f.path === cfg || f.path.endsWith('/' + cfg))
+          )
+
+          // For config changes or bulk updates (3+ files), do a full page refresh
+          // Give Vite more time to process file changes before refreshing
+          if ((hasConfigChange || changedFiles.length >= 3) && iframeRef.current) {
+            const delay = hasConfigChange ? 1000 : 600 // More time for config changes
             setTimeout(() => {
               if (iframeRef.current) {
+                addLog('Refreshing preview...')
                 iframeRef.current.src = iframeRef.current.src
               }
-            }, 100)
+            }, delay)
+          } else if (changedFiles.length >= 1) {
+            // Even for small changes, give Vite a moment to process
+            setTimeout(() => {
+              // Trigger a soft refresh by touching the iframe
+              if (iframeRef.current?.contentWindow) {
+                try {
+                  iframeRef.current.contentWindow.postMessage({ type: 'vite:invalidate' }, '*')
+                } catch {
+                  // Cross-origin, just let HMR handle it
+                }
+              }
+            }, 200)
           }
         }
       } catch (err) {
@@ -491,24 +597,108 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
       } finally {
         setIsHotReloading(false)
       }
-    }, 300),
-    [webcontainer, previewUrl]
+    }, 500), // Reduced debounce to be more responsive
+    [webcontainer, previewUrl, buildPartialFileTree, addLog]
   )
+
+  // Track if we need to refresh after server starts
+  const pendingRefreshRef = useRef(false)
+  const initialMountDoneRef = useRef(false)
 
   // Update files when they change
   useEffect(() => {
-    if (!webcontainer || !previewUrl) return
+    if (!webcontainer || !previewUrl) {
+      // If files changed but server not ready, mark for refresh
+      if (files.length > 0 && previousFilesRef.current.size > 0) {
+        const hasChanges = files.some(f => {
+          const prev = previousFilesRef.current.get(f.path)
+          return prev === undefined || prev !== f.content
+        })
+        if (hasChanges) {
+          pendingRefreshRef.current = true
+        }
+      }
+      return
+    }
     updateChangedFiles(files)
   }, [files, webcontainer, previewUrl, updateChangedFiles])
 
-  // Initialize previous files map when server starts
+  // Initialize previous files map when server starts or when first files arrive
   useEffect(() => {
     if (previewUrl && files.length > 0) {
+      // Only set files that aren't already tracked (to preserve change detection)
+      files.forEach(file => {
+        if (!previousFilesRef.current.has(file.path)) {
+          previousFilesRef.current.set(file.path, file.content)
+        }
+      })
+
+      // If we have pending changes from before server was ready, refresh now
+      if (pendingRefreshRef.current && !initialMountDoneRef.current) {
+        pendingRefreshRef.current = false
+        initialMountDoneRef.current = true
+
+        // Remount all files and refresh
+        setTimeout(async () => {
+          if (webcontainer && iframeRef.current) {
+            try {
+              const fileTree = buildFileTree(files)
+              await webcontainer.mount(fileTree)
+              addLog('Synced pending file changes')
+              // Force refresh after mount
+              setTimeout(() => {
+                if (iframeRef.current) {
+                  addLog('Refreshing preview with new files...')
+                  iframeRef.current.src = iframeRef.current.src
+                }
+              }, 800)
+            } catch (err) {
+              console.error('Failed to sync pending files:', err)
+            }
+          }
+        }, 100)
+      } else if (!initialMountDoneRef.current) {
+        initialMountDoneRef.current = true
+      }
+    }
+  }, [previewUrl, files, webcontainer, buildFileTree, addLog])
+
+  // Enhanced refresh that syncs files before reloading
+  // NOTE: This hook must be called before any early returns
+  const handleRefresh = useCallback(async () => {
+    if (!webcontainer || !iframeRef.current) return
+
+    setIsHotReloading(true)
+    addLog('Syncing all files...')
+
+    try {
+      // Remount all current files to ensure sync
+      const fileTree = buildFileTree(files)
+      await webcontainer.mount(fileTree)
+
+      // Update previousFilesRef with current state
       files.forEach(file => {
         previousFilesRef.current.set(file.path, file.content)
       })
+
+      addLog('Files synced, refreshing preview...')
+
+      // Wait for mount to complete before refreshing
+      setTimeout(() => {
+        if (iframeRef.current) {
+          iframeRef.current.src = iframeRef.current.src
+        }
+        setIsHotReloading(false)
+      }, 500)
+    } catch (err) {
+      console.error('Failed to sync files:', err)
+      addLog('Sync failed, attempting refresh anyway...')
+      if (iframeRef.current) {
+        iframeRef.current.src = iframeRef.current.src
+      }
+      setIsHotReloading(false)
     }
-  }, [previewUrl])
+  }, [webcontainer, files, buildFileTree, addLog])
 
   if (bootError) {
     return (
@@ -538,122 +728,39 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   const isPreparingToInstall = !isBooting && !isInstalling && !isStarting && !previewUrl && !error && files.length > 0
 
   if (isBooting || isPreparingToInstall) {
-    // Determine progress based on boot stage
-    const getProgress = () => {
-      if (isPreparingToInstall) return 100
-      if (bootStage.includes('Checking')) return 15
-      if (bootStage.includes('Verifying')) return 30
-      if (bootStage.includes('Connecting')) return 50
-      if (bootStage.includes('Downloading')) return 75
-      if (bootStage.includes('ready')) return 100
-      return 5
-    }
-    const progress = getProgress()
-
-    // Step statuses
-    const getStepStatus = (stepProgress: number): 'pending' | 'active' | 'done' => {
-      if (progress > stepProgress) return 'done'
-      if (progress >= stepProgress - 20) return 'active'
-      return 'pending'
-    }
-
     return (
-      <div className="h-full relative flex flex-col items-center justify-center bg-gradient-to-b from-background via-background to-muted/20 p-8">
-        <FloatingParticles />
-
-        <div className="relative z-10 w-full max-w-md">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-primary shadow-lg shadow-primary/25 mb-4">
-              <Cpu className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              {isPreparingToInstall ? 'Preparing Your Environment' : 'Starting WebContainer'}
-              <LoadingDots />
-            </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              Setting up a full Node.js environment in your browser
-            </p>
+      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/10 p-8">
+        <div className="text-center">
+          {/* Animated icon */}
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-primary shadow-lg shadow-primary/25 mb-4">
+            <Cpu className="h-8 w-8 text-white" />
           </div>
 
-          {/* Progress bar */}
-          <div className="mb-8">
-            <div className="flex justify-between text-xs text-muted-foreground mb-2">
-              <span>Progress</span>
-              <span className="font-medium text-foreground">{progress}%</span>
-            </div>
-            <GradientProgressBar progress={progress} />
+          {/* Status text */}
+          <h2 className="text-lg font-semibold text-foreground mb-1">
+            {isPreparingToInstall ? 'Preparing environment' : 'Starting WebContainer'}
+            <LoadingDots />
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Setting up Node.js in your browser
+          </p>
+
+          {/* Simple spinner */}
+          <div className="mt-6">
+            <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
           </div>
 
-          {/* Progress steps */}
-          <div
-            className="bg-card/50 backdrop-blur-sm rounded-xl border p-6 shadow-lg"
-            role="list"
-            aria-label="WebContainer boot progress steps"
-          >
-            <ProgressStep
-              icon={<Shield className="h-5 w-5 text-primary" />}
-              label="Checking browser compatibility"
-              description="Verifying WebContainer requirements"
-              status={bootStage.includes('Checking') ? 'active' : getStepStatus(15)}
-            />
-            <ProgressStep
-              icon={<Globe className="h-5 w-5 text-primary" />}
-              label="Verifying security isolation"
-              description="Ensuring cross-origin isolation is enabled"
-              status={bootStage.includes('Verifying') ? 'active' : getStepStatus(30)}
-            />
-            <ProgressStep
-              icon={<Download className="h-5 w-5 text-primary" />}
-              label="Downloading runtime"
-              description="Fetching WebContainer assets (~20MB, cached)"
-              status={bootStage.includes('Downloading') ? 'active' : getStepStatus(75)}
-            />
-            <ProgressStep
-              icon={<Server className="h-5 w-5 text-primary" />}
-              label="Initializing environment"
-              description="Setting up Node.js runtime"
-              status={bootStage.includes('ready') || isPreparingToInstall ? 'done' : getStepStatus(100)}
-            />
-            <ProgressStep
-              icon={<Package className="h-5 w-5 text-primary" />}
-              label="Mounting project files"
-              description="Preparing to install dependencies"
-              status={isPreparingToInstall ? 'active' : 'pending'}
-              isLast
-            />
-          </div>
-
-          {/* Help section */}
-          {showDownloadHelp ? (
-            <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                    Download taking longer than expected
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 mb-3">
-                    This could be due to network issues or browser extensions blocking requests.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                      Retry
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={runNetworkDiagnostic}>
-                      Run Diagnostics
-                    </Button>
-                  </div>
-                </div>
-              </div>
+          {/* Help section for slow downloads */}
+          {showDownloadHelp && (
+            <div className="mt-6 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 max-w-xs mx-auto">
+              <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                Taking longer than expected
+              </p>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                <RefreshCw className="h-3 w-3 mr-1.5" />
+                Retry
+              </Button>
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center mt-6">
-              {isPreparingToInstall
-                ? 'Mounting project files and preparing npm install...'
-                : 'First boot downloads ~20MB. Assets are cached for faster future loads.'}
-            </p>
           )}
         </div>
       </div>
@@ -683,183 +790,39 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   }
 
   if (isInstalling || isStarting) {
-    // Parse logs to extract package info
-    const getPackageProgress = () => {
-      const lastLogs = logs.slice(-30)
-      let packagesAdded = 0
-      let currentPackage = ''
-      let currentAction = ''
-
-      for (const log of lastLogs) {
-        if (log.includes('added') && log.includes('packages')) {
-          const match = log.match(/added (\d+) packages/)
-          if (match) packagesAdded = parseInt(match[1])
-        }
-        if (log.includes('npm') && log.includes('install')) {
-          currentAction = 'Resolving dependencies'
-        }
-        if (log.includes('reify:')) {
-          const match = log.match(/reify:([^\s]+)/)
-          if (match) {
-            currentPackage = match[1].split('/').pop() || ''
-            currentAction = `Installing ${currentPackage}`
-          }
-        }
-        if (log.includes('WARN') || log.includes('warn')) {
-          // Skip warnings
-        }
-      }
-      return { packagesAdded, currentPackage, currentAction }
-    }
-
-    const { packagesAdded, currentAction } = getPackageProgress()
-    const estimatedTotal = 20
-    const progress = isInstalling
-      ? Math.min(85, 10 + (packagesAdded / estimatedTotal) * 75)
-      : 92
-
     return (
-      <div className="h-full relative flex flex-col items-center justify-center bg-gradient-to-b from-background via-background to-muted/20 p-8">
-        <FloatingParticles />
-
-        <div className="relative z-10 w-full max-w-md">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className={cn(
-              'inline-flex items-center justify-center w-20 h-20 rounded-2xl shadow-lg mb-4 transition-all duration-500',
-              isInstalling
-                ? 'bg-gradient-to-br from-violet-500 to-indigo-600 shadow-violet-500/30'
-                : 'bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-emerald-500/30'
-            )}>
-              {isInstalling ? (
-                <Package className="h-10 w-10 text-white animate-pulse" />
-              ) : (
-                <Play className="h-10 w-10 text-white" />
-              )}
-            </div>
-            <h2 className="text-2xl font-bold">
-              {isInstalling ? (
-                <>Installing Dependencies<LoadingDots /></>
-              ) : (
-                <>Starting Dev Server<LoadingDots /></>
-              )}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              {isInstalling
-                ? 'Running npm install to set up your project'
-                : 'Launching Vite development server'}
-            </p>
+      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/10 p-8">
+        <div className="text-center">
+          {/* Animated icon */}
+          <div className={cn(
+            'inline-flex items-center justify-center w-16 h-16 rounded-2xl shadow-lg mb-4',
+            isInstalling
+              ? 'bg-gradient-to-br from-emerald-500 to-indigo-600 shadow-emerald-500/25'
+              : 'bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-emerald-500/25'
+          )}>
+            {isInstalling ? (
+              <Package className="h-8 w-8 text-white animate-pulse" />
+            ) : (
+              <Play className="h-8 w-8 text-white" />
+            )}
           </div>
 
-          {/* Large progress indicator */}
-          <div className="mb-8">
-            <div className="flex justify-between items-end mb-3">
-              <div>
-                <span className="text-4xl font-bold bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent">
-                  {Math.round(progress)}%
-                </span>
-                <span className="text-muted-foreground text-sm ml-2">complete</span>
-              </div>
-              {packagesAdded > 0 && (
-                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  {packagesAdded} packages
-                </Badge>
-              )}
-            </div>
-            <GradientProgressBar progress={progress} className="h-2" />
+          {/* Status text */}
+          <h2 className="text-lg font-semibold text-foreground mb-1">
+            {isInstalling ? 'Installing dependencies' : 'Starting server'}
+            <LoadingDots />
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {isInstalling ? 'This may take a moment' : 'Almost ready'}
+          </p>
+
+          {/* Simple spinner */}
+          <div className="mt-6">
+            <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
           </div>
-
-          {/* Current action indicator */}
-          {currentAction && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-xl border mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="relative">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{currentAction}</p>
-                <p className="text-xs text-muted-foreground">Processing...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Progress steps */}
-          <div
-            className="bg-card/50 backdrop-blur-sm rounded-xl border p-6 shadow-lg"
-            role="list"
-            aria-label="Installation progress steps"
-          >
-            <ProgressStep
-              icon={<Code2 className="h-5 w-5 text-primary" />}
-              label="Mount project files"
-              description="Project files ready"
-              status="done"
-            />
-            <ProgressStep
-              icon={<Package className="h-5 w-5 text-primary" />}
-              label="Install npm packages"
-              description={packagesAdded > 0 ? `${packagesAdded} packages installed` : 'Resolving dependencies...'}
-              status={isInstalling ? 'active' : 'done'}
-            />
-            <ProgressStep
-              icon={<Server className="h-5 w-5 text-primary" />}
-              label="Start development server"
-              description="Launching Vite..."
-              status={isStarting ? 'active' : isInstalling ? 'pending' : 'done'}
-            />
-            <ProgressStep
-              icon={<Globe className="h-5 w-5 text-primary" />}
-              label="Preview ready"
-              description="Your app will appear shortly"
-              status="pending"
-              isLast
-            />
-          </div>
-
-          {/* Terminal toggle */}
-          <div className="mt-6 flex justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowTerminal(!showTerminal)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <TerminalIcon className="h-4 w-4 mr-2" />
-              {showTerminal ? 'Hide' : 'Show'} Terminal Output
-            </Button>
-          </div>
-
-          {/* Terminal logs */}
-          {showTerminal && (
-            <div className="mt-4 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                </div>
-                <span className="text-xs text-zinc-500 font-mono">terminal</span>
-              </div>
-              <div className="p-4 font-mono text-xs max-h-48 overflow-y-auto">
-                {logs.slice(-15).map((log, i) => (
-                  <div key={i} className="text-emerald-400/80 leading-relaxed py-0.5">
-                    <span className="text-zinc-600 mr-2 select-none">$</span>
-                    {log}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     )
-  }
-
-  const handleRefresh = () => {
-    if (iframeRef.current) {
-      iframeRef.current.src = iframeRef.current.src
-    }
   }
 
   return (
@@ -987,14 +950,14 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
           <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
             {/* Subtle animated background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-violet-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
               <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
             </div>
 
             {/* Content */}
             <div className="relative z-10 text-center px-6">
               <div className="relative inline-flex items-center justify-center mb-5">
-                <div className="absolute w-16 h-16 rounded-2xl bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
+                <div className="absolute w-16 h-16 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
                 <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.08] flex items-center justify-center backdrop-blur-sm">
                   <Monitor className="h-5 w-5 text-muted-foreground/40" />
                 </div>
@@ -1004,9 +967,9 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
               <p className="text-xs text-muted-foreground/40 max-w-[200px] mx-auto">Start a conversation with AI to build your application</p>
 
               <div className="flex items-center justify-center gap-1 mt-4">
-                <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
-                <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
-                <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
+                <span className="w-1 h-1 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
+                <span className="w-1 h-1 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <span className="w-1 h-1 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
               </div>
             </div>
           </div>

@@ -156,7 +156,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-11 h-12 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/40 shadow-sm transition-all focus:bg-white/[0.06] focus:border-violet-500/50"
+            className="pl-11 h-12 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/40 shadow-sm transition-all focus:bg-white/[0.06] focus:border-emerald-500/50"
           />
         </div>
 
@@ -216,7 +216,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                 onClick={() => handleSelect(template)}
               >
                 {/* Gradient top border on hover */}
-                <div className="h-1 w-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 <CardHeader className="pb-3 pt-5">
                   <div className="flex items-start justify-between gap-3">
@@ -242,7 +242,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                     </Button>
                   </div>
                   <div className="mt-4">
-                    <h3 className="font-semibold text-white text-lg group-hover:text-violet-400 transition-colors duration-200">
+                    <h3 className="font-semibold text-white text-lg group-hover:text-emerald-400 transition-colors duration-200">
                       {template.name}
                     </h3>
                     <p className="text-sm text-white/60 line-clamp-2 mt-1.5 leading-relaxed">
@@ -258,7 +258,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                       <Badge
                         key={tag}
                         variant="secondary"
-                        className="text-xs font-normal rounded-full px-2.5 py-0.5 bg-white/[0.04] text-white/70 border border-white/[0.05] hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-500/30 transition-all"
+                        className="text-xs font-normal rounded-full px-2.5 py-0.5 bg-white/[0.04] text-white/70 border border-white/[0.05] hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-all"
                       >
                         {tag}
                       </Badge>
@@ -289,7 +289,7 @@ export function TemplateBrowser({ templates, onSelectTemplate, favoriteIds = [],
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full rounded-xl border-white/[0.08] bg-transparent text-white hover:bg-violet-600 hover:text-white hover:border-transparent hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-300"
+                    className="w-full rounded-xl border-white/[0.08] bg-transparent text-white hover:bg-emerald-600 hover:text-white hover:border-transparent hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300"
                     disabled={isCreating}
                   >
                     {isCreating ? (

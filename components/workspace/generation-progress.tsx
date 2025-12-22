@@ -94,10 +94,10 @@ export const STAGES: StageInfo[] = [
     label: 'Planning',
     description: 'Designing architecture',
     icon: Braces,
-    color: 'text-violet-400',
-    bgColor: 'bg-violet-500/10',
-    borderColor: 'border-violet-500/30',
-    glowColor: 'shadow-violet-500/20'
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/10',
+    borderColor: 'border-emerald-500/30',
+    glowColor: 'shadow-emerald-500/20'
   },
   {
     id: 'schema',
@@ -232,7 +232,7 @@ function SubStepItem({ step, isLast }: { step: SubStep; isLast: boolean }) {
       case 'completed':
         return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
       case 'active':
-        return <Loader2 className="h-3.5 w-3.5 text-violet-400 animate-spin" />
+        return <Loader2 className="h-3.5 w-3.5 text-emerald-400 animate-spin" />
       default:
         return <Circle className="h-3.5 w-3.5 text-white/20" />
     }
@@ -371,7 +371,7 @@ function ActivityLogEntry({ item, isLatest }: { item: ActivityLogItem; isLatest:
       case 'file':
         return <FileCode className="h-3 w-3 text-cyan-400" />
       case 'stage':
-        return <Sparkles className="h-3 w-3 text-violet-400" />
+        return <Sparkles className="h-3 w-3 text-emerald-400" />
       case 'substep':
         return <ChevronRight className="h-3 w-3 text-white/40" />
       default:
@@ -489,8 +489,8 @@ export function GenerationProgress({
                   </span>
                   {isActive && (
                     <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
                   )}
                 </div>
@@ -692,14 +692,14 @@ export function GenerationProgress({
 export function ThinkingIndicator({ message, stage }: { message: string; stage?: AIStage }) {
   const stageInfo = stage ? STAGES.find(s => s.id === stage) : null
   const IconComponent = stageInfo?.icon || Wand2
-  const iconColor = stageInfo?.color || 'text-violet-400'
+  const iconColor = stageInfo?.color || 'text-emerald-400'
 
   return (
     <div className="flex items-center gap-3">
       <div className="relative">
         <div className={cn(
           'h-9 w-9 rounded-xl flex items-center justify-center ring-1 ring-white/[0.08]',
-          stageInfo?.bgColor || 'bg-gradient-to-br from-violet-500/20 to-cyan-500/20'
+          stageInfo?.bgColor || 'bg-gradient-to-br from-emerald-500/20 to-cyan-500/20'
         )}>
           <IconComponent className={cn('h-4 w-4', iconColor)} />
         </div>
@@ -707,11 +707,11 @@ export function ThinkingIndicator({ message, stage }: { message: string; stage?:
           <span className="relative flex h-2.5 w-2.5">
             <span className={cn(
               'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
-              stageInfo?.color?.replace('text-', 'bg-') || 'bg-violet-400'
+              stageInfo?.color?.replace('text-', 'bg-') || 'bg-emerald-400'
             )}></span>
             <span className={cn(
               'relative inline-flex rounded-full h-2.5 w-2.5',
-              stageInfo?.color?.replace('text-', 'bg-') || 'bg-violet-500'
+              stageInfo?.color?.replace('text-', 'bg-') || 'bg-emerald-500'
             )}></span>
           </span>
         </div>
@@ -721,7 +721,7 @@ export function ThinkingIndicator({ message, stage }: { message: string; stage?:
           <TypewriterText text={message} speed={25} />
         </p>
         <div className="flex items-center gap-1.5 mt-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>

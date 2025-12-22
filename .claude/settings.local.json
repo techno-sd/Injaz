@@ -12,7 +12,8 @@
       "Bash(npm test:*)",
       "Bash(npm run build:*)",
       "Bash(node -e:*)",
-      "Bash(node fix-templates.js:*)"
+      "Bash(node fix-templates.js:*)",
+      "Bash(grep:*)"
     ]
   }
 }

@@ -36,7 +36,7 @@ export function EmptyState({
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="h-24 w-24 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center mb-6 shadow-lg"
+        className="h-24 w-24 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center mb-6 shadow-lg"
       >
         <Icon className="h-12 w-12 text-primary" />
       </motion.div>

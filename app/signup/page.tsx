@@ -26,27 +26,27 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const prompt = searchParams.prompt
 
   return (
-    <div className="flex min-h-screen bg-[#08080c] overflow-hidden noise">
-      {/* Animated mesh gradient background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none gradient-mesh-dark opacity-50" />
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+      {/* Achievement-themed gradient mesh overlay */}
+      <div className="fixed inset-0 bg-gradient-to-tr from-emerald-600/15 via-transparent to-transparent pointer-events-none" />
+      <div className="fixed inset-0 bg-gradient-to-bl from-transparent via-teal-600/10 to-emerald-600/10 pointer-events-none" />
 
       {/* Left Side - Branding & Benefits */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Background decoration */}
-        <div className="absolute inset-0 gradient-primary opacity-20"></div>
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-20 right-20 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-violet-500/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 right-20 w-72 h-72 bg-emerald-500/8 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 left-20 w-96 h-96 bg-teal-500/8 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-500/8 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
         </div>
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-16 text-white animate-fade-in">
           <Link href="/" className="inline-flex items-center gap-3 mb-16 group">
-            <div className="h-12 w-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform border border-white/10">
+            <div className="h-12 w-12 bg-gradient-to-br from-emerald-500 via-teal-500 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 group-hover:scale-105 transition-all">
               <Code2 className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold">Injaz.ai</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-amber-400 bg-clip-text text-transparent">Injaz</span>
           </Link>
 
           <h1 className="text-5xl font-bold mb-6 leading-tight animate-slide-in">
@@ -153,7 +153,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                   <div className="w-full border-t border-white/[0.1]"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-[#08080c] text-white/40 font-medium">
+                  <span className="px-4 bg-slate-900 text-white/40 font-medium">
                     Or create your account
                   </span>
                 </div>
@@ -187,7 +187,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                     type="text"
                     placeholder="John Doe"
                     required
-                    className="h-12 text-base bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 transition-colors"
+                    className="h-12 text-base bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-emerald-500/50 transition-colors"
                     autoComplete="name"
                   />
                 </div>
@@ -199,7 +199,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                     type="email"
                     placeholder="you@example.com"
                     required
-                    className="h-12 text-base bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 transition-colors"
+                    className="h-12 text-base bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-emerald-500/50 transition-colors"
                     autoComplete="email"
                   />
                 </div>
@@ -212,7 +212,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                     placeholder="••••••••"
                     required
                     minLength={6}
-                    className="h-12 text-base bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 transition-colors"
+                    className="h-12 text-base bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-emerald-500/50 transition-colors"
                     autoComplete="new-password"
                   />
                   <p className="text-xs text-white/40">Minimum 6 characters</p>
@@ -241,7 +241,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                   Already have an account?{' '}
                   <Link
                     href="/login"
-                    className="text-violet-400 hover:text-violet-300 hover:underline font-semibold inline-flex items-center gap-1"
+                    className="text-emerald-400 hover:text-emerald-300 hover:underline font-semibold inline-flex items-center gap-1"
                   >
                     Sign in
                     <ArrowRight className="h-3 w-3" />

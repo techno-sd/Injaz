@@ -9,6 +9,7 @@ interface WorkspacePageProps {
   }
   searchParams: {
     template?: string
+    prompt?: string
   }
 }
 
@@ -471,7 +472,7 @@ export { Button, buttonVariants }`,
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
       {/* Subtle animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
       </div>
 
@@ -487,7 +488,7 @@ export { Button, buttonVariants }`,
       {/* Content */}
       <div className="relative z-10 text-center px-6">
         <div className="relative inline-flex items-center justify-center mb-6">
-          <div className="absolute w-20 h-20 rounded-2xl bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
+          <div className="absolute w-20 h-20 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
           <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.08] flex items-center justify-center backdrop-blur-sm">
             <svg className="w-7 h-7 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -499,9 +500,9 @@ export { Button, buttonVariants }`,
         <p className="text-sm text-white/25 max-w-xs mx-auto">Start a conversation with AI to build your application</p>
 
         <div className="flex items-center justify-center gap-1.5 mt-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
         </div>
       </div>
     </div>
@@ -523,7 +524,7 @@ import { Home } from "lucide-react"
 
 const NotFound = () => {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
       <div className="text-center space-y-6">
         <h1 className="text-6xl font-bold text-white">404</h1>
         <p className="text-xl text-gray-300">Page not found</p>
@@ -588,6 +589,7 @@ export default NotFound`,
         initialMessages={[]}
         isVercelConnected={false}
         isGuestMode={!user}
+        initialPrompt={searchParams.prompt}
       />
     )
   }

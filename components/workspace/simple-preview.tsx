@@ -48,7 +48,7 @@ interface SimplePreviewProps {
 
 const PLATFORM_COLORS: Record<PlatformType, string> = {
   website: 'text-emerald-400',
-  webapp: 'text-violet-400',
+  webapp: 'text-emerald-400',
 }
 
 export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps) {
@@ -193,7 +193,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
                 className={cn(
                   'h-5 text-[10px] border',
                   platform === 'website' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                  platform === 'webapp' && 'bg-violet-500/10 text-violet-400 border-violet-500/20'
+                  platform === 'webapp' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 )}
               >
                 {platform === 'website' ? 'Static' : 'Vite + React'}
@@ -258,7 +258,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
               size="icon"
               className={cn(
                 'h-7 w-7 hover:bg-white/[0.06]',
-                showSettings ? 'text-violet-400' : 'text-white/60 hover:text-white'
+                showSettings ? 'text-emerald-400' : 'text-white/60 hover:text-white'
               )}
               onClick={() => setShowSettings(!showSettings)}
               title="Preview Settings"
@@ -272,7 +272,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
               size="icon"
               className={cn(
                 'h-7 w-7 hover:bg-white/[0.06]',
-                showFrame ? 'text-violet-400' : 'text-white/60 hover:text-white'
+                showFrame ? 'text-emerald-400' : 'text-white/60 hover:text-white'
               )}
               onClick={() => setShowFrame(!showFrame)}
               title={showFrame ? 'Hide device frame' : 'Show device frame'}
@@ -286,7 +286,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
               size="icon"
               className={cn(
                 'h-7 w-7 hover:bg-white/[0.06]',
-                isFullscreen ? 'text-violet-400' : 'text-white/60 hover:text-white'
+                isFullscreen ? 'text-emerald-400' : 'text-white/60 hover:text-white'
               )}
               onClick={toggleFullscreen}
               title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
@@ -335,7 +335,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
               step="0.05"
               value={scale}
               onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="w-20 h-1 accent-violet-500"
+              className="w-20 h-1 accent-emerald-500"
             />
             <span className="text-xs text-white/70 font-mono w-10">
               {Math.round(scale * 100)}%
@@ -373,7 +373,7 @@ export function SimplePreview({ files, platform = 'webapp' }: SimplePreviewProps
 
               {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-                  <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
+                  <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
                 </div>
               )}
               <iframe

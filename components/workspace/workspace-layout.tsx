@@ -229,7 +229,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                   />
                 </div>
               </ResizablePanel>
-              <ResizableHandle className="w-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
+              <ResizableHandle className="w-1 bg-gray-100 hover:bg-emerald-300 transition-colors" />
             </>
           )}
 
@@ -241,7 +241,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    className="h-9 w-9 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                     onClick={() => setIsFileTreeCollapsed(false)}
                   >
                     <PanelLeftOpen className="h-5 w-5" />
@@ -265,7 +265,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       {/* Editor Header */}
                       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50/50">
                         <div className="flex items-center gap-2">
-                          <Code2 className="h-4 w-4 text-violet-600" />
+                          <Code2 className="h-4 w-4 text-emerald-600" />
                           <span className="text-sm font-medium text-gray-700">
                             {activeFile?.path || 'No file selected'}
                           </span>
@@ -297,7 +297,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       </div>
                     </div>
                   </ResizablePanel>
-                  <ResizableHandle className="h-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
+                  <ResizableHandle className="h-1 bg-gray-100 hover:bg-emerald-300 transition-colors" />
                 </>
               )}
 
@@ -313,7 +313,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                        className="h-7 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                         onClick={() => setIsEditorCollapsed(false)}
                       >
                         <ChevronDown className="h-4 w-4 mr-1" />
@@ -337,7 +337,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       size="sm"
                       onClick={() => setBottomView('preview')}
                       className={bottomView === 'preview'
-                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        ? 'h-8 bg-gradient-to-r from-emerald-600 via-emerald-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
                         : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
                       }
                     >
@@ -349,7 +349,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       size="sm"
                       onClick={() => setBottomView('terminal')}
                       className={bottomView === 'terminal'
-                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        ? 'h-8 bg-gradient-to-r from-emerald-600 via-emerald-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
                         : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
                       }
                     >
@@ -379,7 +379,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
           {/* Right Sidebar - AI Chat / Git Panel / Deploy */}
           {!isRightPanelCollapsed && (
             <>
-              <ResizableHandle className="w-1 bg-gray-100 hover:bg-violet-300 transition-colors" />
+              <ResizableHandle className="w-1 bg-gray-100 hover:bg-emerald-300 transition-colors" />
               <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
                 <div className="h-full flex flex-col bg-white">
                   {/* Tabs */}
@@ -389,7 +389,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       size="sm"
                       onClick={() => setRightView('chat')}
                       className={rightView === 'chat'
-                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        ? 'h-8 bg-gradient-to-r from-emerald-600 via-emerald-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
                         : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
                       }
                     >
@@ -401,7 +401,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       size="sm"
                       onClick={() => setRightView('git')}
                       className={rightView === 'git'
-                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        ? 'h-8 bg-gradient-to-r from-emerald-600 via-emerald-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
                         : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
                       }
                     >
@@ -413,7 +413,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                       size="sm"
                       onClick={() => setRightView('deploy')}
                       className={rightView === 'deploy'
-                        ? 'h-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
+                        ? 'h-8 bg-gradient-to-r from-emerald-600 via-emerald-600 to-indigo-600 text-white border-0 shadow-sm rounded-lg'
                         : 'h-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg'
                       }
                     >
@@ -479,7 +479,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    className="h-9 w-9 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                     onClick={() => setIsRightPanelCollapsed(false)}
                   >
                     <PanelRightOpen className="h-5 w-5" />
@@ -494,7 +494,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    className="h-9 w-9 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                     onClick={() => { setIsRightPanelCollapsed(false); setRightView('chat'); }}
                   >
                     <MessageSquare className="h-5 w-5" />
@@ -509,7 +509,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    className="h-9 w-9 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                     onClick={() => { setIsRightPanelCollapsed(false); setRightView('git'); }}
                   >
                     <GitBranch className="h-5 w-5" />
@@ -524,7 +524,7 @@ export function WorkspaceLayout({ project, initialFiles, initialMessages, isVerc
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                    className="h-9 w-9 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                     onClick={() => { setIsRightPanelCollapsed(false); setRightView('deploy'); }}
                   >
                     <Rocket className="h-5 w-5" />

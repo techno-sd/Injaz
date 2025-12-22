@@ -32,10 +32,15 @@ import {
   LogIn,
   PanelLeftClose,
   PanelLeftOpen,
+  Keyboard,
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { saveGuestProject, checkAuth } from '@/app/actions/projects'
 import { EditorSkeleton } from './loading-skeleton'
+import { KeyboardShortcutsModal } from './keyboard-shortcuts-modal'
+import { CommandPalette } from './command-palette'
+import { useWorkspacePanelConfig } from '@/lib/hooks/use-persisted-state'
+import { useWorkspaceShortcuts } from '@/lib/hooks/use-workspace-shortcuts'
 import type { Project, File, Message } from '@/types'
 
 // Lazy load heavy components
@@ -47,7 +52,7 @@ const CodeEditor = dynamic(() => import('./code-editor').then(mod => ({ default:
 const LivePreview = dynamic(() => import('./live-preview').then(mod => ({ default: mod.LivePreview })), {
   loading: () => (
     <div className="h-full flex items-center justify-center bg-[#0d0d12]">
-      <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+      <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
     </div>
   ),
   ssr: false,
@@ -57,7 +62,7 @@ const WebContainerPreview = dynamic(() => import('./webcontainer-preview').then(
   loading: () => (
     <div className="h-full flex items-center justify-center bg-[#0d0d12]">
       <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
         <span className="text-sm text-white/60">Starting WebContainer...</span>
       </div>
     </div>
@@ -74,6 +79,7 @@ interface LovableWorkspaceLayoutProps {
   initialMessages: Message[]
   isVercelConnected: boolean
   isGuestMode?: boolean
+  initialPrompt?: string
 }
 
 // File icon helper
@@ -86,7 +92,7 @@ function getFileIcon(path: string) {
     case 'ts': case 'tsx': return <FileCode className="h-4 w-4 text-blue-500" />
     case 'json': return <FileCode className="h-4 w-4 text-green-400" />
     case 'md': return <FileText className="h-4 w-4 text-white/50" />
-    case 'png': case 'jpg': case 'svg': return <Image className="h-4 w-4 text-purple-400" />
+    case 'png': case 'jpg': case 'svg': return <Image className="h-4 w-4 text-emerald-400" />
     default: return <FileText className="h-4 w-4 text-white/40" />
   }
 }
@@ -136,6 +142,7 @@ export function LovableWorkspaceLayout({
   initialMessages,
   isVercelConnected,
   isGuestMode = false,
+  initialPrompt,
 }: LovableWorkspaceLayoutProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -147,12 +154,25 @@ export function LovableWorkspaceLayout({
     initialFiles.length > 0 ? [initialFiles[0].id] : []
   )
   const [showFileDrawer, setShowFileDrawer] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('preview')
   const [mobileView, setMobileView] = useState<MobileView>('chat')
   const [isMobile, setIsMobile] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
-  const [showChatPanel, setShowChatPanel] = useState(true)
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
+  // Persistent workspace panel configuration
+  const {
+    config,
+    setViewMode,
+    setShowChat: setShowChatPanel,
+    setShowFileExplorer,
+  } = useWorkspacePanelConfig()
+
+  // Extract values from config for easier use
+  const viewMode = config.viewMode
+  const showChatPanel = config.showChat
+  const showFileExplorer = config.showFileExplorer
+
 
   // Check if this is a temporary/unsaved project
   const isTemporaryProject = project.id.startsWith('new-') || project.id === 'demo' || project.id === 'new'
@@ -336,25 +356,70 @@ export function LovableWorkspaceLayout({
     })
   }, [])
 
-  
+  // Command palette handler
+  const handleCommand = useCallback((command: string) => {
+    switch (command) {
+      case 'file.save':
+        handleSaveProject()
+        break
+      case 'view.terminal':
+        // TODO: Implement terminal toggle
+        break
+      case 'view.preview':
+        setViewMode(viewMode === 'preview' ? 'code' : 'preview')
+        break
+      case 'preview.refresh':
+        // Trigger preview refresh by incrementing a key
+        break
+      case 'settings.open':
+        // TODO: Open settings modal
+        break
+      default:
+        console.log('Command not implemented:', command)
+    }
+  }, [viewMode, setViewMode])
+
+  // Keyboard shortcuts - defined after handlers are available
+  useWorkspaceShortcuts({
+    toggleFileExplorer: () => setShowFileExplorer(!showFileExplorer),
+    toggleChat: () => setShowChatPanel(!showChatPanel),
+    togglePreview: () => setViewMode(viewMode === 'preview' ? 'code' : 'preview'),
+    save: handleSaveProject,
+    openCommandPalette: () => {/* Command palette opens itself via its own listener */},
+    setCodeView: () => setViewMode('code'),
+    setPreviewView: () => setViewMode('preview'),
+    setSplitView: () => setViewMode('split'),
+    focusChat: () => setShowChatPanel(true),
+    focusEditor: () => setViewMode('code'),
+    openKeyboardShortcuts: () => setShowShortcutsModal(true),
+  })
+
   // Mobile bottom navigation
   const MobileNav = () => (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/[0.06] safe-area-bottom">
-      <div className="flex items-center justify-around py-2 px-4">
+    <nav
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/[0.06] safe-area-bottom"
+      role="navigation"
+      aria-label="Mobile navigation"
+    >
+      <div className="flex items-center justify-around py-2 px-4" role="group">
         <button
           onClick={() => setMobileView('chat')}
+          aria-pressed={mobileView === 'chat'}
+          aria-label="AI Chat"
           className={cn(
             'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all',
             mobileView === 'chat'
-              ? 'text-purple-400 bg-purple-500/15'
+              ? 'text-emerald-400 bg-emerald-500/15'
               : 'text-white/50 hover:text-white/70'
           )}
         >
-          <MessageSquare className="h-5 w-5" />
+          <MessageSquare className="h-5 w-5" aria-hidden="true" />
           <span className="text-[10px] font-medium">AI Chat</span>
         </button>
         <button
           onClick={() => setMobileView('code')}
+          aria-pressed={mobileView === 'code'}
+          aria-label="Code editor"
           className={cn(
             'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all',
             mobileView === 'code'
@@ -362,11 +427,13 @@ export function LovableWorkspaceLayout({
               : 'text-white/50 hover:text-white/70'
           )}
         >
-          <Code2 className="h-5 w-5" />
+          <Code2 className="h-5 w-5" aria-hidden="true" />
           <span className="text-[10px] font-medium">Code</span>
         </button>
         <button
           onClick={() => setMobileView('preview')}
+          aria-pressed={mobileView === 'preview'}
+          aria-label="Preview"
           className={cn(
             'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all',
             mobileView === 'preview'
@@ -374,11 +441,11 @@ export function LovableWorkspaceLayout({
               : 'text-white/50 hover:text-white/70'
           )}
         >
-          <Eye className="h-5 w-5" />
+          <Eye className="h-5 w-5" aria-hidden="true" />
           <span className="text-[10px] font-medium">Preview</span>
         </button>
       </div>
-    </div>
+    </nav>
   )
 
   // Get platform from project
@@ -404,7 +471,7 @@ export function LovableWorkspaceLayout({
             </Button>
 
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div className="flex items-center gap-2">
@@ -419,11 +486,17 @@ export function LovableWorkspaceLayout({
           </div>
 
           {/* Center - View Toggle Toolbar */}
-          <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1 border border-border/50">
+          <div
+            className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1 border border-border/50"
+            role="group"
+            aria-label="View mode"
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setViewMode('preview')}
+                  aria-label="Preview only"
+                  aria-pressed={viewMode === 'preview'}
                   className={cn(
                     'p-2 rounded-md transition-all',
                     viewMode === 'preview'
@@ -434,13 +507,15 @@ export function LovableWorkspaceLayout({
                   <Eye className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Preview Only</TooltipContent>
+              <TooltipContent>Preview Only (Ctrl+1)</TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setViewMode('code')}
+                  aria-label="Code only"
+                  aria-pressed={viewMode === 'code'}
                   className={cn(
                     'p-2 rounded-md transition-all',
                     viewMode === 'code'
@@ -451,13 +526,15 @@ export function LovableWorkspaceLayout({
                   <Code2 className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Code Only</TooltipContent>
+              <TooltipContent>Code Only (Ctrl+2)</TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setViewMode('split')}
+                  aria-label="Split view"
+                  aria-pressed={viewMode === 'split'}
                   className={cn(
                     'p-2 rounded-md transition-all',
                     viewMode === 'split'
@@ -478,30 +555,64 @@ export function LovableWorkspaceLayout({
 
           {/* Right - Actions */}
           <div className="flex items-center gap-2">
+            {/* Keyboard Shortcuts Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                  onClick={() => setShowShortcutsModal(true)}
+                  aria-label="Keyboard shortcuts"
+                >
+                  <Keyboard className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Keyboard Shortcuts (Ctrl+Shift+/)</TooltipContent>
+            </Tooltip>
+
             {!isTemporaryProject && (
               <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
-                >
-                  <Github className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
-                <Button className="h-8 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg border-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                      aria-label="Refresh preview"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Refresh</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                      aria-label="GitHub repository"
+                    >
+                      <Github className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>GitHub</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.06]"
+                      aria-label="Share project"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Share</TooltipContent>
+                </Tooltip>
+                <Button className="h-8 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg border-0">
                   Publish
                 </Button>
               </>
@@ -511,6 +622,7 @@ export function LovableWorkspaceLayout({
                 onClick={handleSaveProject}
                 disabled={isSaving}
                 className="h-8 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg border-0 gap-2"
+                aria-label={isSaving ? 'Saving project' : isAuthenticated ? 'Save project' : 'Sign in to save'}
               >
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -551,7 +663,10 @@ export function LovableWorkspaceLayout({
           <div className="hidden md:flex flex-1">
             {/* AI Chat Panel - Collapsible */}
             {showChatPanel ? (
-              <div className="w-[420px] border-r border-white/[0.06] flex flex-col bg-[#0a0a0f] relative">
+              <aside
+                className="w-[420px] border-r border-white/[0.06] flex flex-col bg-[#0a0a0f] relative"
+                aria-label="AI Chat panel"
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -559,41 +674,50 @@ export function LovableWorkspaceLayout({
                       size="icon"
                       className="absolute top-2 right-2 h-7 w-7 z-10 text-white/50 hover:text-white hover:bg-white/[0.06]"
                       onClick={() => setShowChatPanel(false)}
+                      aria-label="Hide chat panel"
+                      aria-expanded="true"
                     >
                       <PanelLeftClose className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">Hide Chat</TooltipContent>
+                  <TooltipContent side="right">Hide Chat (Ctrl+J)</TooltipContent>
                 </Tooltip>
                 <AIChatbot
                   projectId={project.id}
                   files={files}
                   onFilesChange={handleFilesChange}
                   platform={(project as any).platform || 'webapp'}
+                  initialPrompt={initialPrompt}
                 />
-              </div>
+              </aside>
             ) : (
-              <div className="w-12 border-r border-white/[0.06] flex flex-col items-center py-3 gap-2 bg-[#0a0a0f]">
+              <aside
+                className="w-12 border-r border-white/[0.06] flex flex-col items-center py-3 gap-2 bg-[#0a0a0f]"
+                aria-label="Collapsed chat panel"
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 text-white/50 hover:text-purple-400 hover:bg-purple-500/10"
+                      className="h-9 w-9 text-white/50 hover:text-emerald-400 hover:bg-emerald-500/10"
                       onClick={() => setShowChatPanel(true)}
+                      aria-label="Show chat panel"
+                      aria-expanded="false"
                     >
                       <PanelLeftOpen className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">Show Chat</TooltipContent>
+                  <TooltipContent side="right">Show Chat (Ctrl+J)</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 text-white/50 hover:text-purple-400 hover:bg-purple-500/10"
+                      className="h-9 w-9 text-white/50 hover:text-emerald-400 hover:bg-emerald-500/10"
                       onClick={() => setShowChatPanel(true)}
+                      aria-label="AI Chat"
                     >
                       <MessageSquare className="h-5 w-5" />
                     </Button>
@@ -605,15 +729,16 @@ export function LovableWorkspaceLayout({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 text-white/50 hover:text-purple-400 hover:bg-purple-500/10"
+                      className="h-9 w-9 text-white/50 hover:text-emerald-400 hover:bg-emerald-500/10"
                       onClick={() => setShowChatPanel(true)}
+                      aria-label="Ask AI"
                     >
                       <Sparkles className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">Ask AI</TooltipContent>
                 </Tooltip>
-              </div>
+              </aside>
             )}
 
             {/* Main Content Area - Code + Preview */}
@@ -639,7 +764,7 @@ export function LovableWorkspaceLayout({
                   {/* File Tree Sidebar */}
                   <div className="w-56 border-r border-white/[0.06] flex flex-col bg-[#0a0a0f]">
                     <div className="h-10 border-b border-white/[0.06] flex items-center px-3 bg-white/[0.02]">
-                      <FolderOpen className="h-4 w-4 text-purple-400 mr-2" />
+                      <FolderOpen className="h-4 w-4 text-emerald-400 mr-2" />
                       <span className="text-sm font-medium text-white/80">Files</span>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
@@ -650,7 +775,7 @@ export function LovableWorkspaceLayout({
                           className={cn(
                             'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
                             activeFileId === file.id
-                              ? 'bg-purple-500/15 text-purple-300'
+                              ? 'bg-emerald-500/15 text-emerald-300'
                               : 'text-white/60 hover:bg-white/[0.04] hover:text-white/80'
                           )}
                         >
@@ -721,7 +846,7 @@ export function LovableWorkspaceLayout({
                   {/* File Tree Sidebar */}
                   <div className="w-48 border-r border-white/[0.06] flex flex-col bg-[#0a0a0f]">
                     <div className="h-10 border-b border-white/[0.06] flex items-center px-3 bg-white/[0.02]">
-                      <FolderOpen className="h-4 w-4 text-purple-400 mr-2" />
+                      <FolderOpen className="h-4 w-4 text-emerald-400 mr-2" />
                       <span className="text-sm font-medium text-white/80">Files</span>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
@@ -732,7 +857,7 @@ export function LovableWorkspaceLayout({
                           className={cn(
                             'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
                             activeFileId === file.id
-                              ? 'bg-purple-500/15 text-purple-300'
+                              ? 'bg-emerald-500/15 text-emerald-300'
                               : 'text-white/60 hover:bg-white/[0.04] hover:text-white/80'
                           )}
                         >
@@ -800,7 +925,7 @@ export function LovableWorkspaceLayout({
                       </div>
                     </ResizablePanel>
 
-                    <ResizableHandle className="w-px bg-white/[0.06] hover:bg-purple-500/50 transition-colors" />
+                    <ResizableHandle className="w-px bg-white/[0.06] hover:bg-emerald-500/50 transition-colors" />
 
                     {/* Preview Panel */}
                     <ResizablePanel defaultSize={50} minSize={25}>
@@ -834,6 +959,7 @@ export function LovableWorkspaceLayout({
                   files={files}
                   onFilesChange={handleFilesChange}
                   platform={(project as any).platform || 'webapp'}
+                  initialPrompt={initialPrompt}
                 />
               </div>
             )}
@@ -932,7 +1058,7 @@ export function LovableWorkspaceLayout({
               >
                 <div className="h-14 border-b border-white/[0.06] flex items-center justify-between px-4">
                   <div className="flex items-center gap-2 text-white">
-                    <FolderOpen className="h-4 w-4 text-purple-400" />
+                    <FolderOpen className="h-4 w-4 text-emerald-400" />
                     <span className="font-medium">Files</span>
                   </div>
                   <Button
@@ -953,7 +1079,7 @@ export function LovableWorkspaceLayout({
                       className={cn(
                         'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
                         activeFileId === file.id
-                          ? 'bg-purple-500/15 text-purple-300'
+                          ? 'bg-emerald-500/15 text-emerald-300'
                           : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
                       )}
                     >
@@ -973,6 +1099,15 @@ export function LovableWorkspaceLayout({
             </>
           )}
         </AnimatePresence>
+
+        {/* Keyboard Shortcuts Modal */}
+        <KeyboardShortcutsModal
+          open={showShortcutsModal}
+          onOpenChange={setShowShortcutsModal}
+        />
+
+        {/* Command Palette */}
+        <CommandPalette onCommand={handleCommand} />
       </div>
     </TooltipProvider>
   )

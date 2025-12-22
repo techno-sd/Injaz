@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Send, Loader2, CheckCircle2, Sparkles, FileCode, Lightbulb, Zap, Code2, Paintbrush, Database, Shield, Bug, Rocket } from 'lucide-react'
+import { Send, Loader2, CheckCircle2, Sparkles, FileCode, Lightbulb, Zap, Code2, Paintbrush, Database, Shield, Bug, Rocket, ChevronDown, ChevronRight, FileEdit } from 'lucide-react'
 import type { File, Message } from '@/types'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
@@ -26,6 +26,8 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
   const [isLoading, setIsLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
   const [contextFiles, setContextFiles] = useState<string[]>([])
+  const [expandedCode, setExpandedCode] = useState<Record<string, boolean>>({})
+  const [generationStatus, setGenerationStatus] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { toast } = useToast()
@@ -94,11 +96,14 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
         role: 'assistant',
         content: '',
         created_at: new Date().toISOString(),
+        metadata: { filesChanged: [] }, // Track file changes
       }
 
       onMessagesChange([...messages, userMessage, assistantMessage])
 
       if (reader) {
+        let filesChanged: string[] = []
+        
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -111,16 +116,40 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
               try {
                 const data = JSON.parse(line.slice(6))
 
-                if (data.type === 'content') {
-                  assistantContent += data.content
-                  assistantMessage.content = assistantContent
+                if (data.type === 'planning') {
+                  // Show generation progress
+                  setGenerationStatus(data.message || 'Processing...')
+                  assistantMessage.content = `⏳ ${data.message || 'Processing...'}`
                   onMessagesChange([...messages, userMessage, { ...assistantMessage }])
+                } else if (data.type === 'content') {
+                  assistantContent += data.content
+
+                  // Extract only explanation text - NO CODE BLOCKS
+                  let displayText = assistantContent
+
+                  // Remove everything from first code block onwards
+                  if (displayText.includes('```')) {
+                    displayText = displayText.split('```')[0].trim()
+                  }
+
+                  // Remove any JSON objects
+                  if (displayText.includes('{') && displayText.includes('"actions"')) {
+                    displayText = displayText.substring(0, displayText.indexOf('{')).trim()
+                  }
+
+                  // Only update if we have meaningful text
+                  if (displayText && displayText.length > 3) {
+                    assistantMessage.content = displayText
+                    onMessagesChange([...messages, userMessage, { ...assistantMessage }])
+                  }
                 } else if (data.type === 'actions') {
                   // Apply file changes
                   const updatedFiles = [...files]
 
                   for (const action of data.actions) {
                     if (action.type === 'create_or_update_file') {
+                      filesChanged.push(action.path)
+                      
                       const existingFileIndex = updatedFiles.findIndex(
                         f => f.path === action.path
                       )
@@ -148,10 +177,30 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
 
                   onFilesChange(updatedFiles)
 
+                  // Update message with file changes
+                  assistantMessage.metadata = { filesChanged }
+                  
+                  // Show concise summary instead of full response
+                  const filesList = filesChanged.map(f => `\`${f}\``).join(', ')
+                  assistantMessage.content = `✓ Updated ${filesChanged.length} file${filesChanged.length !== 1 ? 's' : ''}: ${filesList}`
+                  onMessagesChange([...messages, userMessage, { ...assistantMessage }])
+
                   toast({
-                    title: 'Files Updated',
+                    title: '✓ Files Updated',
                     description: `${data.actions.length} file(s) modified`,
                   })
+                } else if (data.type === 'error') {
+                  // Handle error events
+                  assistantMessage.content = `❌ Error: ${data.error || 'Something went wrong'}`
+                  onMessagesChange([...messages, userMessage, { ...assistantMessage }])
+                  toast({
+                    title: 'Generation Error',
+                    description: data.error || 'Failed to generate files',
+                    variant: 'destructive',
+                  })
+                } else if (data.type === 'done') {
+                  // Clear generation status
+                  setGenerationStatus('')
                 }
               } catch (error) {
                 console.error('Error parsing SSE data:', error)
@@ -160,6 +209,8 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
           }
         }
       }
+      // Clear status after stream ends
+      setGenerationStatus('')
     } catch (error: any) {
       console.error('Chat error:', error)
       toast({
@@ -177,7 +228,7 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
       {/* Header */}
       <div className="border-b p-4 bg-background/80 backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-emerald-600 flex items-center justify-center">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
           <div>
@@ -232,7 +283,7 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
                       className="text-left p-3 rounded-xl border-2 glass-card hover:border-primary transition-all group hover:scale-105 hover:shadow-lg"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center group-hover:from-blue-500/20 group-hover:to-purple-500/20 transition-all">
+                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/10 to-emerald-500/10 flex items-center justify-center group-hover:from-blue-500/20 group-hover:to-emerald-500/20 transition-all">
                           <prompt.icon className="h-4 w-4 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -266,7 +317,7 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
               )}
             >
               {message.role === 'assistant' && (
-                <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-600 to-emerald-600 flex items-center justify-center flex-shrink-0 mt-1">
                   <Sparkles className="h-3.5 w-3.5 text-white" />
                 </div>
               )}
@@ -277,8 +328,67 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
                     ? 'bg-primary text-primary-foreground rounded-tr-sm'
                     : 'bg-background border rounded-tl-sm'
                 )}
-              >
+              >{/* Parse message to separate text and code */}
+                {(() => {
+                  const content = message.content
+                  const codeBlockMatch = content.match(/([\s\S]*?)(```[\s\S]*?```)/)
+                  
+                  if (codeBlockMatch && message.role === 'assistant') {
+                    const textBefore = codeBlockMatch[1].trim()
+                    const codeBlock = codeBlockMatch[2]
+                    const isExpanded = expandedCode[message.id] || false
+                    
+                    return (
+                      <>
+                        {textBefore && (
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed mb-3">{textBefore}</p>
+                        )}
+                        
+                        {/* Collapsible code block */}
+                        <div className="border rounded-lg overflow-hidden bg-muted/30">
+                          <button
+                            onClick={() => setExpandedCode(prev => ({ ...prev, [message.id]: !prev[message.id] }))}
+                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors text-xs font-medium text-muted-foreground"
+                          >
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronDown className="h-3 w-3" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3" />
+                              )}
+                              <Code2 className="h-3 w-3" />
+                              <span>Generated Code</span>
+                            </div>
+                            <span className="text-xs">{isExpanded ? 'Hide' : 'Show'}</span>
+                          </button>
+                          
+                          {isExpanded && (
+                            <div className="px-3 py-2 bg-black/50 overflow-x-auto">
+                              <pre className="text-xs text-gray-300 font-mono">
+                                {codeBlock.replace(/```json\n?|```\n?/g, '')}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )
+                  }
+                  
+                  return <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
+                })()}
                 <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                
+                {/* Show file badges if files were changed (Claude/Cursor style) */}
+                {message.role === 'assistant' && message.metadata?.filesChanged && message.metadata.filesChanged.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/50">
+                    {message.metadata.filesChanged.map((file, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs font-mono gap-1">
+                        <FileEdit className="h-3 w-3" />
+                        {file}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
@@ -290,27 +400,34 @@ export function ChatPanel({ projectId, files, messages, onMessagesChange, onFile
             animate={{ opacity: 1 }}
             className="flex gap-2 justify-start"
           >
-            <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 mt-1">
-              <Sparkles className="h-3.5 w-3.5 text-white" />
+            <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-600 to-emerald-600 flex items-center justify-center flex-shrink-0 mt-1">
+              <Sparkles className="h-3.5 w-3.5 text-white animate-pulse" />
             </div>
             <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-background border shadow-sm">
-              <div className="flex gap-1.5">
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: 0 }}
-                  className="h-2 w-2 rounded-full bg-muted-foreground/40"
-                />
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                  className="h-2 w-2 rounded-full bg-muted-foreground/40"
-                />
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                  className="h-2 w-2 rounded-full bg-muted-foreground/40"
-                />
-              </div>
+              {generationStatus ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">{generationStatus}</span>
+                </div>
+              ) : (
+                <div className="flex gap-1.5">
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                    className="h-2 w-2 rounded-full bg-muted-foreground/40"
+                  />
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                    className="h-2 w-2 rounded-full bg-muted-foreground/40"
+                  />
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                    className="h-2 w-2 rounded-full bg-muted-foreground/40"
+                  />
+                </div>
+              )}
             </div>
           </motion.div>
         )}

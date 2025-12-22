@@ -305,7 +305,7 @@ export function FileTree({ files, projectId, activeFileId, onFileSelect, onFiles
           {isGenerating ? (
             <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
           ) : (
-            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse"></div>
+            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 animate-pulse"></div>
           )}
           Explorer
           {isGenerating && (

@@ -40,7 +40,7 @@ function getFileIcon(filename: string) {
       return <FileCode className="h-4 w-4 text-yellow-600" />
     case 'css':
     case 'scss':
-      return <FileType className="h-4 w-4 text-purple-500" />
+      return <FileType className="h-4 w-4 text-emerald-500" />
     case 'png':
     case 'jpg':
     case 'jpeg':

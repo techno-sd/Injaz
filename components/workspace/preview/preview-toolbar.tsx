@@ -110,7 +110,7 @@ export function ZoomControls({ scale, onScaleChange, onFitToScreen, className }:
               >
                 <span>{preset.label}</span>
                 {typeof preset.value === 'number' && scale === preset.value && (
-                  <Check className="h-3.5 w-3.5 text-violet-400" />
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
                 )}
               </DropdownMenuItem>
               {index === 0 && <DropdownMenuSeparator />}
@@ -286,28 +286,28 @@ export function GridOverlay({ show, gridSize = 8, showRulers = false }: GridOver
       {showRulers && (
         <>
           {/* Top ruler */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-[#1a1a24]/90 border-b border-violet-500/20 flex">
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#1a1a24]/90 border-b border-emerald-500/20 flex">
             {Array.from({ length: 50 }).map((_, i) => (
               <div
                 key={i}
-                className="flex-shrink-0 border-r border-violet-500/30 relative"
+                className="flex-shrink-0 border-r border-emerald-500/30 relative"
                 style={{ width: gridSize * 8 }}
               >
-                <span className="absolute left-1 top-0.5 text-[8px] text-violet-400/60 font-mono">
+                <span className="absolute left-1 top-0.5 text-[8px] text-emerald-400/60 font-mono">
                   {i * gridSize * 8}
                 </span>
               </div>
             ))}
           </div>
           {/* Left ruler */}
-          <div className="absolute top-4 left-0 bottom-0 w-4 bg-[#1a1a24]/90 border-r border-violet-500/20 flex flex-col">
+          <div className="absolute top-4 left-0 bottom-0 w-4 bg-[#1a1a24]/90 border-r border-emerald-500/20 flex flex-col">
             {Array.from({ length: 50 }).map((_, i) => (
               <div
                 key={i}
-                className="flex-shrink-0 border-b border-violet-500/30 relative"
+                className="flex-shrink-0 border-b border-emerald-500/30 relative"
                 style={{ height: gridSize * 8 }}
               >
-                <span className="absolute left-0.5 top-1 text-[8px] text-violet-400/60 font-mono writing-mode-vertical">
+                <span className="absolute left-0.5 top-1 text-[8px] text-emerald-400/60 font-mono writing-mode-vertical">
                   {i * gridSize * 8}
                 </span>
               </div>
@@ -341,7 +341,7 @@ export function GridToggle({ showGrid, showRulers, onGridChange, onRulersChange,
             size="icon"
             className={cn(
               'h-7 w-7 hover:bg-white/[0.06]',
-              showGrid ? 'text-violet-400' : 'text-white/60 hover:text-white'
+              showGrid ? 'text-emerald-400' : 'text-white/60 hover:text-white'
             )}
             onClick={() => onGridChange(!showGrid)}
           >
@@ -360,7 +360,7 @@ export function GridToggle({ showGrid, showRulers, onGridChange, onRulersChange,
             size="icon"
             className={cn(
               'h-7 w-7 hover:bg-white/[0.06]',
-              showRulers ? 'text-violet-400' : 'text-white/60 hover:text-white'
+              showRulers ? 'text-emerald-400' : 'text-white/60 hover:text-white'
             )}
             onClick={() => onRulersChange(!showRulers)}
           >
@@ -399,7 +399,7 @@ export function ThemeToggle({ theme, onThemeChange, className }: ThemeToggleProp
           size="icon"
           className={cn(
             'h-7 w-7 hover:bg-white/[0.06]',
-            theme === 'dark' ? 'text-violet-400' : 'text-white/60 hover:text-white',
+            theme === 'dark' ? 'text-emerald-400' : 'text-white/60 hover:text-white',
             className
           )}
           onClick={cycleTheme}

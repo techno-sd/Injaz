@@ -67,8 +67,8 @@ export function KeyboardShortcuts() {
     {
       category: 'Editor',
       icon: Code2,
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-500/10',
+      color: 'text-teal-500',
+      bgColor: 'bg-teal-500/10',
       items: [
         { keys: ['⌘', 'F'], description: 'Find in file' },
         { keys: ['⌘', 'H'], description: 'Replace in file' },
@@ -83,8 +83,8 @@ export function KeyboardShortcuts() {
     {
       category: 'AI Assistant',
       icon: MessageSquare,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10',
+      color: 'text-emerald-500',
+      bgColor: 'bg-emerald-500/10',
       items: [
         { keys: ['⌘', 'I'], description: 'Focus AI chat' },
         { keys: ['⌘', 'Enter'], description: 'Send message to AI' },
@@ -149,7 +149,7 @@ export function KeyboardShortcuts() {
           className="group glass-card backdrop-blur-lg shadow-2xl hover:shadow-3xl transition-all duration-300 gap-2.5 px-4 py-6 rounded-2xl border-2 hover:scale-105"
           size="lg"
         >
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Keyboard className="h-5 w-5 text-primary" />
           </div>
           <div className="hidden lg:flex flex-col items-start">
@@ -176,7 +176,7 @@ export function KeyboardShortcuts() {
           <div className="glass-card border-b backdrop-blur-xl p-6 pb-4">
             <DialogHeader className="space-y-3">
               <DialogTitle className="flex items-center gap-3 text-2xl">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
                   <Keyboard className="h-6 w-6 text-primary" />
                 </div>
                 <span>Keyboard Shortcuts</span>

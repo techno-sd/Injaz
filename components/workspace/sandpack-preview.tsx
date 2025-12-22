@@ -138,7 +138,7 @@ export default function App() {
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
       {/* Subtle animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
       </div>
 
@@ -154,7 +154,7 @@ export default function App() {
       {/* Content */}
       <div className="relative z-10 text-center px-6">
         <div className="relative inline-flex items-center justify-center mb-6">
-          <div className="absolute w-20 h-20 rounded-2xl bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
+          <div className="absolute w-20 h-20 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
           <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.08] flex items-center justify-center backdrop-blur-sm">
             <svg className="w-7 h-7 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -166,9 +166,9 @@ export default function App() {
         <p className="text-sm text-white/25 max-w-xs mx-auto">Start a conversation with AI to build your application</p>
 
         <div className="flex items-center justify-center gap-1.5 mt-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
         </div>
       </div>
     </div>
@@ -240,14 +240,14 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
         <div className="flex-1 flex items-center justify-center bg-[#0a0a0f] relative overflow-hidden">
           {/* Subtle animated background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-violet-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
             <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/[0.03] rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
           </div>
 
           {/* Content */}
           <div className="relative z-10 text-center px-6">
             <div className="relative inline-flex items-center justify-center mb-5">
-              <div className="absolute w-16 h-16 rounded-2xl bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
+              <div className="absolute w-16 h-16 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
               <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.08] flex items-center justify-center backdrop-blur-sm">
                 <Monitor className="h-5 w-5 text-white/30" />
               </div>
@@ -257,9 +257,9 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
             <p className="text-xs text-white/25 max-w-[200px] mx-auto">Start a conversation with AI to build your application</p>
 
             <div className="flex items-center justify-center gap-1 mt-4">
-              <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
-              <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
-              <span className="w-1 h-1 rounded-full bg-violet-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
+              <span className="w-1 h-1 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0s' }} />
+              <span className="w-1 h-1 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
+              <span className="w-1 h-1 rounded-full bg-emerald-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
             </div>
           </div>
         </div>
@@ -272,7 +272,7 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
       {/* Header */}
       <div className="h-10 border-b border-white/10 px-4 flex items-center justify-between shrink-0 bg-[#0d0d12]">
         <div className="flex items-center gap-2">
-          <Monitor className="h-4 w-4 text-purple-400" />
+          <Monitor className="h-4 w-4 text-emerald-400" />
           <span className="text-sm font-medium text-white/80">Preview</span>
           <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-400 border-green-500/20">
             Live
@@ -299,7 +299,7 @@ export function SandpackPreview({ files }: SandpackPreviewProps) {
                 variant={deviceMode === mode ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setDeviceMode(mode)}
-                className={cn('h-7 w-7 p-0', deviceMode === mode && 'bg-purple-600')}
+                className={cn('h-7 w-7 p-0', deviceMode === mode && 'bg-emerald-600')}
                 title={mode}
               >
                 <Icon className="h-3.5 w-3.5" />

@@ -11,7 +11,12 @@ export type Project = Database['public']['Tables']['projects']['Row'] & {
   github_last_sync?: string | null
 }
 export type File = Database['public']['Tables']['files']['Row']
-export type Message = Database['public']['Tables']['messages']['Row']
+export type Message = Database['public']['Tables']['messages']['Row'] & {
+  metadata?: {
+    filesChanged?: string[]
+    [key: string]: any
+  }
+}
 export type Deployment = Database['public']['Tables']['deployments']['Row']
 
 export type ProjectWithFiles = Project & {

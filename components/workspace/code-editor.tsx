@@ -81,7 +81,7 @@ export function CodeEditor({ file, projectId, onFileUpdate }: CodeEditorProps) {
       typescript: 'bg-blue-500',
       javascript: 'bg-yellow-500',
       python: 'bg-green-500',
-      css: 'bg-purple-500',
+      css: 'bg-emerald-500',
       html: 'bg-orange-500',
       json: 'bg-gray-500',
     }
@@ -203,7 +203,7 @@ export function CodeEditor({ file, projectId, onFileUpdate }: CodeEditorProps) {
           loading={
             <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
               <div className="flex flex-col items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500/20 to-emerald-500/20 flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
                 <div className="text-center space-y-1">
