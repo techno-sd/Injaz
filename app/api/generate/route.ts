@@ -1,7 +1,7 @@
 // Simple API endpoint for app generation
 // Following Bolt.new / V0 patterns - streaming SSE response
 
-import { Generator, type GeneratorEvent } from '@/lib/ai/generator'
+import { generate, type GeneratorEvent } from '@/lib/ai/simple-generator'
 
 export const runtime = 'edge'
 export const maxDuration = 60
@@ -9,7 +9,7 @@ export const maxDuration = 60
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { prompt, existingFiles, forceGeneration } = body
+    const { prompt, forceGeneration } = body
 
     if (!prompt || typeof prompt !== 'string') {
       return new Response(
@@ -27,15 +27,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create generator
-    const generator = new Generator({ apiKey })
-
     // Create streaming response
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of generator.generate(prompt, { existingFiles, forceGeneration })) {
+          for await (const event of generate(prompt, apiKey, { forceGeneration })) {
             const data = `data: ${JSON.stringify(event)}\n\n`
             controller.enqueue(encoder.encode(data))
           }

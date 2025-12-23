@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel, isModelAvailable } from '@/lib/ai/providers'
 import { buildContext } from '@/lib/ai/context-manager'
-import { Generator } from '@/lib/ai/generator'
+import { generate as simpleGenerate } from '@/lib/ai/simple-generator'
 import type { Message, File, AIAction, PlatformType, AIMode, UnifiedAppSchema } from '@/types'
 
 export const runtime = 'edge'
@@ -270,8 +270,8 @@ function detectDualModeIntent(messages: Message[]): boolean {
 }
 
 /**
- * Handle dual-mode chat with new simplified Generator
- * Uses templates + AI for custom app generation
+ * Handle dual-mode chat with new simplified generator
+ * Uses fixed base template + AI for src/ files only
  */
 async function handleDualModeChat({
   projectId,
@@ -300,7 +300,6 @@ async function handleDualModeChat({
     })
   }
 
-  const generator = new Generator({ apiKey })
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
@@ -309,63 +308,34 @@ async function handleDualModeChat({
         // Send initial mode info
         const modeInfo = JSON.stringify({
           type: 'mode',
-          mode: 'dual',
+          mode: 'simple',
           platform,
         })
         controller.enqueue(encoder.encode(`data: ${modeInfo}\n\n`))
 
         const lastUserMessage = messages[messages.length - 1]?.content || ''
-        console.log('[Chat] Starting app generation with Generator for:', lastUserMessage.substring(0, 50))
+        console.log('[Chat] Starting simple generation for:', lastUserMessage.substring(0, 50))
 
         const generatedFiles: { path: string; content: string }[] = []
 
-        // Use new simplified Generator
-        for await (const event of generator.generate(lastUserMessage, {
-          existingFiles: files?.map(f => ({ path: f.path, content: f.content })),
-          forceGeneration: true,
-        })) {
+        // Use new simple generator - base files + AI src/ files
+        for await (const event of simpleGenerate(lastUserMessage, apiKey, { forceGeneration: true })) {
           console.log('[Chat] Generator event:', event.type)
 
-          if (event.type === 'start' || event.type === 'generating') {
-            // Send planning/status updates
+          if (event.type === 'start') {
             const statusData = JSON.stringify({
               type: 'planning',
               phase: 'generating',
-              message: event.data?.message || 'Generating...',
+              message: event.data?.message || 'Starting generation...',
             })
             controller.enqueue(encoder.encode(`data: ${statusData}\n\n`))
           }
 
-          if (event.type === 'template_match') {
-            // Send template match info
-            const templateData = JSON.stringify({
-              type: 'planning',
-              phase: 'template',
-              message: `Using ${event.data?.template} template`,
-            })
-            controller.enqueue(encoder.encode(`data: ${templateData}\n\n`))
-          }
-
           if (event.type === 'progress') {
-            // Send progress updates with file info if available
-            const message = event.data?.message || 'Creating files...'
-
-            // Send as planning event for phase display
-            const planningData = JSON.stringify({
+            const progressData = JSON.stringify({
               type: 'planning',
               phase: 'creating',
-              message: message,
-              progress: event.data?.progress,
-              total: event.data?.total,
-            })
-            controller.enqueue(encoder.encode(`data: ${planningData}\n\n`))
-
-            // Also send raw progress event for review/fix phase handling
-            const progressData = JSON.stringify({
-              type: 'progress',
-              message: message,
-              progress: event.data?.progress,
-              total: event.data?.total,
+              message: event.data?.message || 'Creating files...',
             })
             controller.enqueue(encoder.encode(`data: ${progressData}\n\n`))
           }
@@ -374,7 +344,7 @@ async function handleDualModeChat({
             const file = event.data.file
             generatedFiles.push({ path: file.path, content: file.content })
 
-            // Send file action directly (this marks the file as complete)
+            // Send file action
             const actionData = JSON.stringify({
               type: 'actions',
               actions: [{
@@ -400,12 +370,21 @@ async function handleDualModeChat({
             }
           }
 
+          if (event.type === 'chat' && event.data?.content) {
+            // Chat response (non-generation)
+            const chatData = JSON.stringify({
+              type: 'content',
+              content: event.data.content,
+            })
+            controller.enqueue(encoder.encode(`data: ${chatData}\n\n`))
+          }
+
           if (event.type === 'complete') {
             // Save generation history
-            if (supabase && !isDemoProject) {
+            if (supabase && !isDemoProject && generatedFiles.length > 0) {
               await supabase.from('generation_history').insert({
                 project_id: projectId,
-                mode: 'generator',
+                mode: 'simple',
                 input_prompt: lastUserMessage,
                 codegen_output: { files: generatedFiles },
                 files_generated: generatedFiles.map((f) => f.path),
@@ -413,28 +392,15 @@ async function handleDualModeChat({
               })
             }
 
-            // Send completion summary with validation results
-            const issues = event.data?.issues || 0
-            let completionSummary = `✅ **Generation Complete!**\n\n`
-            completionSummary += `📦 Created ${generatedFiles.length} files\n`
-            
-            if (issues === 0) {
-              completionSummary += `✨ All checks passed - no errors detected\n\n`
-            } else {
-              completionSummary += `⚠️ ${issues} minor issue${issues > 1 ? 's' : ''} detected (auto-fixed with stubs)\n\n`
+            // Send completion summary
+            if (generatedFiles.length > 0) {
+              const completionSummary = `Generated ${generatedFiles.length} files. Your app is ready - click Run to start!`
+              const summaryData = JSON.stringify({
+                type: 'content',
+                content: completionSummary,
+              })
+              controller.enqueue(encoder.encode(`data: ${summaryData}\n\n`))
             }
-            
-            completionSummary += `**Next Steps:**\n`
-            completionSummary += `1. 👁️ Preview your app in the preview panel\n`
-            completionSummary += `2. ▶️ Click "Run" to start the dev server\n`
-            completionSummary += `3. 💬 Ask me to make changes or add features\n`
-            completionSummary += `4. 🚀 Deploy when ready\n`
-
-            const summaryData = JSON.stringify({
-              type: 'content',
-              content: completionSummary,
-            })
-            controller.enqueue(encoder.encode(`data: ${summaryData}\n\n`))
           }
 
           if (event.type === 'error') {
@@ -449,20 +415,20 @@ async function handleDualModeChat({
 
         // Save messages to database
         if (supabase && !isDemoProject) {
-          // Save user message
           await supabase.from('messages').insert({
             project_id: projectId,
             role: 'user',
             content: lastUserMessage,
           })
 
-          // Save assistant summary
-          const summary = `Generated ${generatedFiles.length} files for your ${platform} application.`
-          await supabase.from('messages').insert({
-            project_id: projectId,
-            role: 'assistant',
-            content: summary,
-          })
+          if (generatedFiles.length > 0) {
+            const summary = `Generated ${generatedFiles.length} files for your ${platform} application.`
+            await supabase.from('messages').insert({
+              project_id: projectId,
+              role: 'assistant',
+              content: summary,
+            })
+          }
         }
 
         // Send done signal
@@ -473,7 +439,6 @@ async function handleDualModeChat({
       } catch (error: any) {
         console.error('[Chat] Error in generation stream:', error)
 
-        // Determine if this was a network/provider error
         const status = error.status || error.statusCode || 0
         const isProviderError = [502, 503, 504, 429].includes(status) ||
           error.message?.includes('Network') ||
@@ -481,7 +446,7 @@ async function handleDualModeChat({
 
         let errorMessage = error.message || 'An error occurred during generation'
         if (isProviderError) {
-          errorMessage = `AI provider temporarily unavailable (${status || 'network error'}). Please try again.`
+          errorMessage = `AI provider temporarily unavailable. Please try again.`
         }
 
         const errorData = JSON.stringify({

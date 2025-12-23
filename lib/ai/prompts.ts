@@ -24,20 +24,43 @@ The JSON must have a "files" array. Each file has "path" and "content" propertie
 - Tailwind CSS for styling
 - React Router DOM for routing
 - Lucide React for icons
-- Framer Motion for animations
+- Framer Motion for animations (ALWAYS include this)
 
-## CRITICAL: PACKAGE.JSON DEPENDENCIES
-Your package.json MUST include ALL these dependencies:
+## CRITICAL: USE THIS EXACT PACKAGE.JSON
+Copy this EXACTLY for your package.json file - do not modify dependencies:
 {
+  "name": "vite-react-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
     "lucide-react": "^0.294.0",
     "framer-motion": "^10.16.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0"
   }
 }
-NEVER import a package that is not in package.json.
+
+IMPORTANT RULES:
+1. ALWAYS include framer-motion in dependencies - it's required for animations
+2. NEVER import a package that is not in package.json
+3. If you use any OTHER npm package, add it to dependencies first
 
 ## BASE FILES REQUIRED
 Every app MUST include these files:

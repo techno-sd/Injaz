@@ -1,10 +1,11 @@
 // AI Module - Simplified Architecture
-// Following Bolt.new / Replit / V0 patterns
+// Fixed base template + AI generates only src/ files
 
-export { Generator, getGenerator } from './generator'
-export type { GeneratorEvent, GeneratorFile, GeneratorEventType } from './generator'
+export { generate, isGenerationRequest, BASE_FILES } from './simple-generator'
+export type { GeneratorEvent, GeneratorFile, EventType } from './simple-generator'
 
-export { templates, matchTemplate, getTemplates } from './templates'
-export type { Template, TemplateFile } from './templates'
+export { BASE_FILES as baseTemplate, getBaseFilesMap, isBaseFile } from './base-template'
+export type { TemplateFile } from './base-template'
 
-export { SYSTEM_PROMPT, CHAT_SYSTEM_PROMPT, MODIFY_SYSTEM_PROMPT, isGenerationRequest } from './prompts'
+export { AI_MODELS, MODEL_IDS, OPENROUTER_CONFIG, DEFAULT_SETTINGS } from './config'
+export type { ModelConfig } from './config'

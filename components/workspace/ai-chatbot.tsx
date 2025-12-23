@@ -179,12 +179,17 @@ function ToolBadge({ type, target, status }: { type: ToolType; target: string; s
 }
 
 // File operations progress component
-function FileOperationsProgress({ operations, totalExpected }: { operations: ToolOperation[]; totalExpected?: number }) {
+function FileOperationsProgress({ operations, totalExpected, reviewStatus }: { operations: ToolOperation[]; totalExpected?: number; reviewStatus?: string }) {
   const completed = operations.filter(op => op.status === 'complete').length
   const hasRunning = operations.some(op => op.status === 'running')
   const total = totalExpected || operations.length
 
   if (operations.length === 0) return null
+
+  // Determine current phase for display
+  const isReviewing = reviewStatus?.includes('Reviewing') || reviewStatus?.includes('🔍')
+  const isFixing = reviewStatus?.includes('Fixing') || reviewStatus?.includes('🔧') || reviewStatus?.includes('Auto-fixing')
+  const isComplete = reviewStatus?.includes('✅') || reviewStatus?.includes('All checks')
 
   return (
     <div className="space-y-2">
@@ -225,6 +230,27 @@ function FileOperationsProgress({ operations, totalExpected }: { operations: Too
             transition={{ duration: 0.3 }}
           />
         </div>
+      )}
+
+      {/* Review status - shown below progress */}
+      {reviewStatus && !hasRunning && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn(
+            "flex items-center gap-2 text-xs py-2 px-3 rounded-lg border",
+            isReviewing && "bg-blue-500/10 border-blue-500/20 text-blue-400",
+            isFixing && "bg-amber-500/10 border-amber-500/20 text-amber-400",
+            isComplete && "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+            !isReviewing && !isFixing && !isComplete && "bg-slate-500/10 border-slate-500/20 text-slate-400"
+          )}
+        >
+          {isReviewing && <Loader2 className="h-3 w-3 animate-spin" />}
+          {isFixing && <Loader2 className="h-3 w-3 animate-spin" />}
+          {isComplete && <Check className="h-3 w-3" />}
+          {!isReviewing && !isFixing && !isComplete && <Loader2 className="h-3 w-3 animate-spin" />}
+          <span>{reviewStatus}</span>
+        </motion.div>
       )}
     </div>
   )
@@ -480,6 +506,7 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
   const [generatedFiles, setGeneratedFiles] = useState<string[]>([])
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
   const [currentPhase, setCurrentPhase] = useState<string>('')
+  const [finalReviewStatus, setFinalReviewStatus] = useState<string>('')
   const [thinkingContent, setThinkingContent] = useState<string>('')
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [toolOperations, setToolOperations] = useState<ToolOperation[]>([])
@@ -594,10 +621,16 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
     generatedFilesRef.current = []
     setLastFailedMessage(null)
     setThinkingContent('')
-    setTodos([])
+    // Initialize todos with "Create files" task
+    setTodos([{
+      id: crypto.randomUUID(),
+      content: '📁 Create files',
+      status: 'in_progress'
+    }])
     setToolOperations([])
     setTotalExpectedFiles(0)
     setCurrentPhase('Thinking')
+    setFinalReviewStatus('')
 
     try {
       const response = await fetch('/api/chat', {
@@ -663,6 +696,57 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     if (data.total && data.total > 0) {
                       setTotalExpectedFiles(data.total)
                     }
+                  } else if (phase === 'reviewing') {
+                    // Review phase - show as a distinct todo item
+                    const reviewMsg = data.message || '🔍 Reviewing generated code'
+                    setCurrentPhase(reviewMsg)
+                    setFinalReviewStatus(reviewMsg)
+                    // Mark "Create files" as complete, add review as a todo item
+                    setTodos(prev => {
+                      // Mark create files as complete
+                      let updated = prev.map(t =>
+                        (t.content.includes('Create files') || t.content.includes('📁'))
+                          ? { ...t, status: 'completed' as const }
+                          : t
+                      )
+                      // Check if review todo already exists
+                      const hasReviewTodo = updated.some(t => t.content.includes('Review') || t.content.includes('🔍'))
+                      if (!hasReviewTodo) {
+                        updated = [...updated, {
+                          id: crypto.randomUUID(),
+                          content: '🔍 Review generated code',
+                          status: 'in_progress'
+                        }]
+                      }
+                      return updated
+                    })
+                  } else if (phase === 'fixing') {
+                    // Fixing phase - mark create files and review complete, add fixing todo
+                    const fixMsg = data.message || '🔧 Fixing issues'
+                    setCurrentPhase(fixMsg)
+                    setFinalReviewStatus(fixMsg)
+                    // Mark create files and review as complete, add fixing todo
+                    setTodos(prev => {
+                      let updated = prev.map(t => {
+                        if (t.content.includes('Create files') || t.content.includes('📁')) {
+                          return { ...t, status: 'completed' as const }
+                        }
+                        if (t.content.includes('Review') || t.content.includes('🔍')) {
+                          return { ...t, status: 'completed' as const }
+                        }
+                        return t
+                      })
+                      // Add fixing todo if not already present
+                      const hasFixingTodo = updated.some(t => t.content.includes('Fix') || t.content.includes('🔧'))
+                      if (!hasFixingTodo) {
+                        updated = [...updated, {
+                          id: crypto.randomUUID(),
+                          content: '🔧 Fix detected issues',
+                          status: 'in_progress'
+                        }]
+                      }
+                      return updated
+                    })
                   } else if (phase === 'template') {
                     setCurrentPhase('Using template')
                     setTodos(prev => [...prev, {
@@ -722,26 +806,99 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                   if (message) {
                     // Update phase display for review/fix messages
                     if (message.includes('Validating') || message.includes('Reviewing')) {
-                      setCurrentPhase('Reviewing code')
-                    } else if (message.includes('Fixing')) {
-                      setCurrentPhase('Fixing issues')
-                    } else if (message.includes('Fixed:')) {
-                      // Show fixed files as tool operations
-                      const fixedFile = message.replace('Fixed: ', '')
-                      setToolOperations(prev => [...prev, {
-                        id: crypto.randomUUID(),
-                        type: 'Edit',
-                        target: fixedFile,
-                        status: 'complete'
-                      }])
-                    } else if (message.includes('Creating stub:')) {
-                      const stubFile = message.replace('Creating stub: ', '')
+                      setCurrentPhase(message)
+                      setFinalReviewStatus(message)
+                      // Mark "Create files" complete, add review todo if not exists
+                      setTodos(prev => {
+                        // Mark create files as complete
+                        let updated = prev.map(t =>
+                          (t.content.includes('Create files') || t.content.includes('📁'))
+                            ? { ...t, status: 'completed' as const }
+                            : t
+                        )
+                        const hasReviewTodo = updated.some(t => t.content.includes('Review') || t.content.includes('🔍'))
+                        if (!hasReviewTodo) {
+                          updated = [...updated, {
+                            id: crypto.randomUUID(),
+                            content: '🔍 Review generated code',
+                            status: 'in_progress'
+                          }]
+                        }
+                        return updated
+                      })
+                    } else if (message.includes('AI reviewing') || message.includes('🤖')) {
+                      // AI review phase with DeepSeek V3
+                      setCurrentPhase(message)
+                      setFinalReviewStatus(message)
+                      // Mark review as complete, add AI review todo
+                      setTodos(prev => {
+                        let updated = prev.map(t => {
+                          if (t.content.includes('Create files') || t.content.includes('📁')) {
+                            return { ...t, status: 'completed' as const }
+                          }
+                          if (t.content.includes('Review') || t.content.includes('🔍')) {
+                            return { ...t, status: 'completed' as const }
+                          }
+                          return t
+                        })
+                        const hasAIReviewTodo = updated.some(t => t.content.includes('AI') || t.content.includes('🤖'))
+                        if (!hasAIReviewTodo) {
+                          updated = [...updated, {
+                            id: crypto.randomUUID(),
+                            content: '🤖 AI fixing issues (DeepSeek V3)',
+                            status: 'in_progress'
+                          }]
+                        }
+                        return updated
+                      })
+                    } else if (message.includes('Fixing') || message.includes('Auto-fixing')) {
+                      setCurrentPhase(message)
+                      setFinalReviewStatus(message)
+                      // Mark create files and review complete, add fixing todo
+                      setTodos(prev => {
+                        let updated = prev.map(t => {
+                          if (t.content.includes('Create files') || t.content.includes('📁')) {
+                            return { ...t, status: 'completed' as const }
+                          }
+                          if (t.content.includes('Review') || t.content.includes('🔍')) {
+                            return { ...t, status: 'completed' as const }
+                          }
+                          return t
+                        })
+                        const hasFixingTodo = updated.some(t => t.content.includes('Fix') || t.content.includes('🔧'))
+                        if (!hasFixingTodo) {
+                          updated = [...updated, {
+                            id: crypto.randomUUID(),
+                            content: '🔧 Fix detected issues',
+                            status: 'in_progress'
+                          }]
+                        }
+                        return updated
+                      })
+                    } else if (message.includes('✅') || message.includes('Fixed') || message.includes('All checks') || message.includes('✨')) {
+                      // Completion message - mark all todos complete
+                      setFinalReviewStatus(message)
+                      setTodos(prev => prev.map(t =>
+                        (t.content.includes('Create files') || t.content.includes('📁') ||
+                         t.content.includes('Review') || t.content.includes('🔍') ||
+                         t.content.includes('Fix') || t.content.includes('🔧') ||
+                         t.content.includes('AI') || t.content.includes('🤖'))
+                          ? { ...t, status: 'completed' as const }
+                          : t
+                      ))
+                    } else if (message.includes('Created stub:') || message.includes('Creating stub:')) {
+                      // Stub creation - show as tool operation
+                      const stubFile = message.replace('Creating stub: ', '').replace('✨ Created stub: ', '').replace('Created stub: ', '')
                       setToolOperations(prev => [...prev, {
                         id: crypto.randomUUID(),
                         type: 'Write',
                         target: stubFile,
                         status: 'complete'
                       }])
+                      setFinalReviewStatus(message)
+                    } else if (message.includes('ℹ️')) {
+                      // Info message
+                      setFinalReviewStatus(message)
                     }
                   }
                 }
@@ -837,6 +994,27 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                   onFilesChange(updatedFiles)
                 } else if (data.type === 'complete' || data.type === 'done') {
                   setCurrentPhase('')
+                  // Mark all todos as complete on generation done
+                  setTodos(prev => {
+                    let updated = [...prev]
+                    // Add review todo if not already present
+                    const hasReviewTodo = updated.some(t => t.content.includes('Review') || t.content.includes('🔍'))
+                    if (!hasReviewTodo) {
+                      updated.push({
+                        id: crypto.randomUUID(),
+                        content: '🔍 Review generated code',
+                        status: 'completed' as const
+                      })
+                    }
+                    // Mark all todos as complete
+                    return updated.map(t => ({ ...t, status: 'completed' as const }))
+                  })
+                  // Set final review status with completion message
+                  if (data.message) {
+                    setFinalReviewStatus(data.message.includes('passed') ? '✅ ' + data.message : data.message)
+                  } else {
+                    setFinalReviewStatus('✅ Generation complete')
+                  }
                 } else if (data.type === 'error') {
                   const error = new Error(data.error || data.message || 'Generation failed') as any
                   error.retryable = data.retryable || false
@@ -1040,16 +1218,17 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                         <ThinkingSection content={thinkingContent} defaultExpanded={false} />
                       )}
 
-                      {/* Todos if present */}
+                      {/* Todos if present - shows task progress */}
                       {idx === messages.length - 1 && todos.length > 0 && (
-                        <TodoList items={todos} />
+                        <TodoList items={todos} title="Task Progress" />
                       )}
 
-                      {/* Tool operations - show completed file operations */}
+                      {/* Tool operations - show completed file operations with review status */}
                       {idx === messages.length - 1 && toolOperations.length > 0 && !isLoading && (
                         <FileOperationsProgress
                           operations={toolOperations}
                           totalExpected={toolOperations.length}
+                          reviewStatus={finalReviewStatus}
                         />
                       )}
 
@@ -1104,14 +1283,14 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
               >
                 <AIAvatar isAnimating={true} />
                 <div className="flex-1 space-y-3">
-                  {/* Thinking indicator - show initial phase or review phases */}
-                  {currentPhase && (toolOperations.length === 0 || currentPhase.includes('Reviewing') || currentPhase.includes('Fixing')) && (
+                  {/* Thinking indicator - show only initial phases before file operations */}
+                  {currentPhase && toolOperations.length === 0 && (
                     <ThinkingSection content={thinkingContent || currentPhase} defaultExpanded={true} />
                   )}
 
-                  {/* Todos during loading */}
+                  {/* Todos during loading - shows task progress */}
                   {todos.length > 0 && (
-                    <TodoList items={todos} />
+                    <TodoList items={todos} title="Task Progress" />
                   )}
 
                   {/* File operations progress - Claude/Cursor style */}
@@ -1119,14 +1298,17 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                     <FileOperationsProgress
                       operations={toolOperations}
                       totalExpected={totalExpectedFiles}
+                      reviewStatus={currentPhase}
                     />
                   )}
 
-                  {/* Processing dots with timer - show phase for review/fix even with operations */}
-                  <ProcessingIndicator
-                    phase={(currentPhase.includes('Reviewing') || currentPhase.includes('Fixing')) ? currentPhase : (toolOperations.length > 0 ? '' : currentPhase)}
-                    elapsedTime={elapsedTime}
-                  />
+                  {/* Processing dots with timer - only show when no file operations */}
+                  {toolOperations.length === 0 && (
+                    <ProcessingIndicator
+                      phase={currentPhase}
+                      elapsedTime={elapsedTime}
+                    />
+                  )}
                 </div>
               </motion.div>
             )}

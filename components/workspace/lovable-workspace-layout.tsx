@@ -347,6 +347,12 @@ export function LovableWorkspaceLayout({
           if (fileToActivate) {
             setActiveFileId(fileToActivate.id)
           }
+
+          // Auto-switch to preview/split mode when files are generated
+          // This helps users see the result immediately
+          if (newlyAddedFiles.length >= 3 && viewMode === 'code') {
+            setViewMode('split')
+          }
         }
 
         // Preview refresh is handled automatically by LivePreview component

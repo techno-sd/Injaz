@@ -21,26 +21,38 @@ export interface ModelConfig {
 // These are used if .env doesn't specify overrides
 // ============================================
 export const MODEL_DEFAULTS = {
-  // Grok Code Fast 1 - Optimized for code generation
+  // DeepSeek Chat - Best value for code generation
+  // Using standard OpenRouter model ID
   primary: {
-    id: 'x-ai/grok-code-fast-1',
-    name: 'Grok Code Fast 1',
+    id: 'deepseek/deepseek-chat',
+    name: 'DeepSeek Chat',
     provider: 'openrouter' as const,
-    costPer1MInput: 0.20,
-    costPer1MOutput: 1.50,
-    maxTokens: 256000,
-    strengths: ['code generation', 'fast', 'follows JSON format'] as const,
+    costPer1MInput: 0.14,
+    costPer1MOutput: 0.28,
+    maxTokens: 128000,
+    strengths: ['code generation', 'excellent quality', 'best value'] as const,
   },
 
-  // Claude Haiku as fallback (fast, cheap)
+  // Claude 3.5 Sonnet as fallback (reliable, good quality)
   fallback: {
-    id: 'anthropic/claude-3-haiku',
-    name: 'Claude 3 Haiku',
+    id: 'anthropic/claude-3.5-sonnet',
+    name: 'Claude 3.5 Sonnet',
     provider: 'openrouter' as const,
-    costPer1MInput: 0.25,
-    costPer1MOutput: 1.25,
+    costPer1MInput: 3.0,
+    costPer1MOutput: 15.0,
     maxTokens: 200000,
-    strengths: ['fast', 'cheap', 'good code quality'] as const,
+    strengths: ['reliable', 'high quality', 'good code'] as const,
+  },
+
+  // DeepSeek Chat for code review
+  reviewer: {
+    id: 'deepseek/deepseek-chat',
+    name: 'DeepSeek Chat',
+    provider: 'openrouter' as const,
+    costPer1MInput: 0.14,
+    costPer1MOutput: 0.28,
+    maxTokens: 128000,
+    strengths: ['code review', 'bug detection', 'fix suggestions'] as const,
   },
 } as const
 
@@ -68,6 +80,10 @@ export const AI_MODELS = {
   // Fallback when primary fails
   // Env: FALLBACK_MODEL
   fallback: getEnvModel('FALLBACK_MODEL', MODEL_DEFAULTS.fallback),
+
+  // Reviewer model for code review and fixing
+  // Env: REVIEWER_MODEL
+  reviewer: getEnvModel('REVIEWER_MODEL', MODEL_DEFAULTS.reviewer),
 }
 
 // ============================================
@@ -114,5 +130,6 @@ if (process.env.NODE_ENV === 'development') {
   console.log('[AI Config] Active models:', {
     primary: AI_MODELS.primary.id,
     fallback: AI_MODELS.fallback.id,
+    reviewer: AI_MODELS.reviewer.id,
   })
 }
