@@ -49,6 +49,7 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
             'react-router-dom': '^6.22.0',
             '@tanstack/react-query': '^5.17.0',
             'lucide-react': '^0.312.0',
+            'framer-motion': '^11.0.0',
             'clsx': '^2.1.0',
             'tailwind-merge': '^2.2.0',
             'class-variance-authority': '^0.7.0',

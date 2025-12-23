@@ -79,6 +79,10 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   const [showDownloadHelp, setShowDownloadHelp] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const hasStarted = useRef(false)
+  const devProcessRef = useRef<any>(null)
+  const serverReadyListenerRegisteredRef = useRef(false)
+  const autoInstallInFlightRef = useRef(false)
+  const attemptedAutoInstallsRef = useRef<Set<string>>(new Set())
   const previousFilesRef = useRef<Map<string, string>>(new Map())
   const downloadTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -303,6 +307,103 @@ export { Card, CardHeader, CardTitle, CardContent }
     setLogs(prev => [...prev, message])
   }, [])
 
+  const chunkToText = useCallback((chunk: any) => {
+    if (typeof chunk === 'string') return chunk
+    try {
+      // WebContainer outputs Uint8Array chunks
+      return new TextDecoder().decode(chunk)
+    } catch {
+      return String(chunk)
+    }
+  }, [])
+
+  const extractMissingDependency = useCallback((text: string): string | null => {
+    // Vite overlay / import-analysis
+    // Example: Failed to resolve import "framer-motion" from "src/pages/Home.tsx".
+    const m1 = text.match(/Failed to resolve import\s+"([^"]+)"\s+from\s+"/)
+    if (m1?.[1]) return m1[1]
+
+    // Node-style resolution error
+    // Example: Cannot find module 'framer-motion'
+    const m2 = text.match(/Cannot find module\s+'([^']+)'/)
+    if (m2?.[1]) return m2[1]
+
+    return null
+  }, [])
+
+  // NOTE: restartDevServer must be defined BEFORE maybeAutoInstallDependency
+  // to avoid "Cannot access before initialization" error
+  const restartDevServerRef = useRef<((reason: string) => Promise<void>) | null>(null)
+
+  const restartDevServer = useCallback(async (reason: string) => {
+    if (!webcontainer) return
+
+    addLog(`Restarting dev server (${reason})...`)
+
+    try {
+      if (devProcessRef.current?.kill) {
+        devProcessRef.current.kill()
+      }
+    } catch {
+      // ignore
+    }
+
+    devProcessRef.current = null
+    hasStarted.current = false
+    setIsServerRunning(false)
+    setPreviewUrl('')
+    setIsInstalling(false)
+    setIsStarting(false)
+
+    // Give the container a moment to settle before restarting
+    setTimeout(() => {
+      startDevServer()
+    }, 250)
+  }, [webcontainer, addLog, setIsServerRunning, setPreviewUrl])
+
+  // Update ref so maybeAutoInstallDependency can access it
+  restartDevServerRef.current = restartDevServer
+
+  const maybeAutoInstallDependency = useCallback(async (dep: string) => {
+    if (!webcontainer) return
+    if (!dep || dep.startsWith('.') || dep.startsWith('/')) return
+    if (autoInstallInFlightRef.current) return
+    if (attemptedAutoInstallsRef.current.has(dep)) return
+
+    attemptedAutoInstallsRef.current.add(dep)
+    autoInstallInFlightRef.current = true
+
+    try {
+      addLog(`Detected missing dependency "${dep}" — auto-installing...`)
+      setIsInstalling(true)
+
+      const installProcess = await webcontainer.spawn('npm', ['install', dep])
+      installProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            addLog(chunkToText(data))
+          },
+        })
+      )
+
+      const exitCode = await installProcess.exit
+      setIsInstalling(false)
+
+      if (exitCode !== 0) {
+        addLog(`Auto-install failed for ${dep} (exit ${exitCode})`)
+        return
+      }
+
+      addLog(`Installed ${dep}. Restarting dev server...`)
+      if (restartDevServerRef.current) {
+        await restartDevServerRef.current(`installed ${dep}`)
+      }
+    } finally {
+      autoInstallInFlightRef.current = false
+      setIsInstalling(false)
+    }
+  }, [webcontainer, addLog, chunkToText])
+
   // Start the WebContainer dev server
   const startDevServer = useCallback(async () => {
     if (!webcontainer) {
@@ -330,13 +431,16 @@ export { Card, CardHeader, CardTitle, CardContent }
       const packageJsonFile = files.find(f => f.path === 'package.json')
       const hasPackageJson = !!packageJsonFile
 
-      // Listen for server ready event
-      webcontainer.on('server-ready', (port, url) => {
-        addLog(`Server ready at ${url}`)
-        setPreviewUrl(url)
-        setIsServerRunning(true)
-        setIsStarting(false)
-      })
+      // Listen for server ready event (register once to avoid duplicate listeners on restarts)
+      if (!serverReadyListenerRegisteredRef.current) {
+        serverReadyListenerRegisteredRef.current = true
+        webcontainer.on('server-ready', (port, url) => {
+          addLog(`Server ready at ${url}`)
+          setPreviewUrl(url)
+          setIsServerRunning(true)
+          setIsStarting(false)
+        })
+      }
 
       if (hasPackageJson) {
         // npm-based project: Install dependencies and run dev server
@@ -348,7 +452,8 @@ export { Card, CardHeader, CardTitle, CardContent }
         installProcess.output.pipeTo(
           new WritableStream({
             write(data) {
-              addLog(data)
+              const text = chunkToText(data)
+              addLog(text)
             },
           })
         )
@@ -382,11 +487,20 @@ export { Card, CardHeader, CardTitle, CardContent }
         }
 
         const devProcess = await webcontainer.spawn('npm', ['run', devCommand])
+        devProcessRef.current = devProcess
 
         devProcess.output.pipeTo(
           new WritableStream({
             write(data) {
-              addLog(data)
+              const text = chunkToText(data)
+              addLog(text)
+
+              // Self-heal missing dependencies reported by Vite
+              const missingDep = extractMissingDependency(text)
+              if (missingDep) {
+                // fire-and-forget, but guarded by refs
+                void maybeAutoInstallDependency(missingDep)
+              }
             },
           })
         )
@@ -431,7 +545,7 @@ export { Card, CardHeader, CardTitle, CardContent }
         serveProcess.output.pipeTo(
           new WritableStream({
             write(data) {
-              addLog(data)
+              addLog(chunkToText(data))
             },
           })
         )
@@ -443,7 +557,7 @@ export { Card, CardHeader, CardTitle, CardContent }
       setIsStarting(false)
       hasStarted.current = false
     }
-  }, [webcontainer, files, buildFileTree, addLog, setPreviewUrl, setIsServerRunning])
+  }, [webcontainer, files, buildFileTree, addLog, setPreviewUrl, setIsServerRunning, chunkToText, extractMissingDependency, maybeAutoInstallDependency])
 
   // Start dev server when WebContainer is ready and all conditions are met
   useEffect(() => {
@@ -462,16 +576,44 @@ export { Card, CardHeader, CardTitle, CardContent }
       return
     }
 
+    // CRITICAL: Wait for package.json to be present before starting
+    // This prevents race conditions where npm install runs before all dependencies are defined
+    const hasPackageJson = files.some(f => f.path === 'package.json')
+    if (!hasPackageJson) {
+      console.log('[Preview] Waiting for package.json before starting...')
+      return
+    }
+
+    // Also ensure we have at least a main entry file (App.tsx or index.tsx)
+    const hasMainFile = files.some(f =>
+      f.path === 'src/App.tsx' ||
+      f.path === 'src/main.tsx' ||
+      f.path === 'index.html'
+    )
+    if (!hasMainFile) {
+      console.log('[Preview] Waiting for main entry file...')
+      return
+    }
+
     // All conditions met - start the dev server
-    console.log('[Preview] Starting dev server - all conditions met')
+    console.log('[Preview] Starting dev server - all conditions met, files:', files.length)
     startDevServer()
-  }, [webcontainer, isBooting, files.length, isServerRunning, previewUrl, isInstalling, isStarting, startDevServer])
+  }, [webcontainer, isBooting, files, isServerRunning, previewUrl, isInstalling, isStarting, startDevServer])
 
   // Fallback: Auto-retry if we're in the waiting state for too long
   // This handles edge cases where the main effect doesn't trigger properly
   useEffect(() => {
-    // Only run if we're in the "waiting" state (ready but not started)
+    // Check for required files
+    const hasPackageJson = files.some(f => f.path === 'package.json')
+    const hasMainFile = files.some(f =>
+      f.path === 'src/App.tsx' ||
+      f.path === 'src/main.tsx' ||
+      f.path === 'index.html'
+    )
+
+    // Only run if we're in the "waiting" state (ready but not started) AND have required files
     const shouldBeStarting = webcontainer && !isBooting && files.length > 0 &&
+                             hasPackageJson && hasMainFile &&
                              !hasStarted.current && !isServerRunning && !previewUrl &&
                              !isInstalling && !isStarting && !error
 
@@ -482,13 +624,13 @@ export { Card, CardHeader, CardTitle, CardContent }
     // Set a fallback timer to auto-start after 500ms if nothing else triggered it
     const fallbackTimer = setTimeout(() => {
       if (!hasStarted.current && !previewUrl && !isInstalling && !isStarting) {
-        console.log('[Preview] Fallback timer triggering startDevServer')
+        console.log('[Preview] Fallback timer triggering startDevServer with', files.length, 'files')
         startDevServer()
       }
     }, 500)
 
     return () => clearTimeout(fallbackTimer)
-  }, [webcontainer, isBooting, files.length, isServerRunning, previewUrl, isInstalling, isStarting, error, startDevServer])
+  }, [webcontainer, isBooting, files, isServerRunning, previewUrl, isInstalling, isStarting, error, startDevServer])
 
   // Build partial file tree for changed files only
   const buildPartialFileTree = useCallback((changedFiles: File[]) => {
@@ -568,6 +710,36 @@ export { Card, CardHeader, CardTitle, CardContent }
             CONFIG_FILES.some(cfg => f.path === cfg || f.path.endsWith('/' + cfg))
           )
 
+          // If package.json changed, dependencies may have changed. Reinstall + restart.
+          const packageJsonChanged = changedFiles.some(f => f.path === 'package.json' || f.path.endsWith('/package.json'))
+          if (packageJsonChanged) {
+            addLog('Detected package.json change - reinstalling dependencies...')
+            try {
+              setIsInstalling(true)
+              const installProcess = await webcontainer.spawn('npm', ['install'])
+              installProcess.output.pipeTo(
+                new WritableStream({
+                  write(data) {
+                    addLog(chunkToText(data))
+                  },
+                })
+              )
+              const exitCode = await installProcess.exit
+              setIsInstalling(false)
+              if (exitCode !== 0) {
+                throw new Error(`npm install failed with exit code ${exitCode}`)
+              }
+              addLog('Dependencies updated successfully')
+              // Restart server so Vite can resolve new deps
+              await restartDevServer('dependencies updated')
+              return
+            } catch (e) {
+              setIsInstalling(false)
+              addLog(`Failed to reinstall deps: ${e instanceof Error ? e.message : String(e)}`)
+              // Fall through to refresh behavior
+            }
+          }
+
           // For config changes or bulk updates (3+ files), do a full page refresh
           // Give Vite more time to process file changes before refreshing
           if ((hasConfigChange || changedFiles.length >= 3) && iframeRef.current) {
@@ -598,7 +770,7 @@ export { Card, CardHeader, CardTitle, CardContent }
         setIsHotReloading(false)
       }
     }, 500), // Reduced debounce to be more responsive
-    [webcontainer, previewUrl, buildPartialFileTree, addLog]
+    [webcontainer, previewUrl, buildPartialFileTree, addLog, restartDevServer]
   )
 
   // Track if we need to refresh after server starts
