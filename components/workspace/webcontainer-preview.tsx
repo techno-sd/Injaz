@@ -28,12 +28,81 @@ function LoadingDots() {
   )
 }
 
+// Building overlay - shows while app is being generated
+function BuildingOverlay({ message, progress, filesCount }: { message: string; progress: number; filesCount: number }) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Animated background pattern */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                           radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)`,
+        }} />
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10 text-center px-8">
+        {/* Animated logo/icon */}
+        <div className="relative inline-flex items-center justify-center mb-6">
+          <div className="absolute w-20 h-20 rounded-full bg-emerald-500/20 animate-ping" style={{ animationDuration: '2s' }} />
+          <div className="absolute w-16 h-16 rounded-full bg-emerald-500/30 animate-pulse" />
+          <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+            <Cpu className="h-7 w-7 text-white animate-pulse" />
+          </div>
+        </div>
+
+        {/* Title */}
+        <h2 className="text-xl font-semibold text-white mb-2">
+          Building Your App
+          <LoadingDots />
+        </h2>
+
+        {/* Status message */}
+        <p className="text-sm text-white/60 mb-6 max-w-xs mx-auto">
+          {message}
+        </p>
+
+        {/* Progress bar */}
+        <div className="w-64 mx-auto mb-4">
+          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 rounded-full transition-all duration-500 ease-out relative"
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            >
+              {/* Pulse overlay for shimmer effect */}
+              <div
+                className="absolute inset-0 bg-white/20 animate-pulse"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Files count */}
+        {filesCount > 0 && (
+          <p className="text-xs text-white/40 font-mono">
+            {filesCount} file{filesCount !== 1 ? 's' : ''} ready
+          </p>
+        )}
+
+        {/* Tip */}
+        <div className="mt-8 px-4 py-2 rounded-lg bg-white/5 border border-white/10 max-w-sm mx-auto">
+          <p className="text-xs text-white/40">
+            <span className="text-emerald-400">Tip:</span> Your app will appear automatically when ready
+          </p>
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
 type DeviceMode = 'desktop' | 'tablet' | 'mobile'
 
 interface WebContainerPreviewProps {
   projectId: string
   files: File[]
   platform?: PlatformType
+  onError?: (error: { message: string; stack?: string }) => void
 }
 
 const deviceModes = {
@@ -57,7 +126,7 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   }
 }
 
-export function WebContainerPreview({ projectId, files, platform = 'webapp' }: WebContainerPreviewProps) {
+export function WebContainerPreview({ projectId, files, platform = 'webapp', onError }: WebContainerPreviewProps) {
   const {
     webcontainer,
     isBooting,
@@ -77,6 +146,9 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
   const [isHotReloading, setIsHotReloading] = useState(false)
   const [showDownloadHelp, setShowDownloadHelp] = useState(false)
+  const [isBuildingApp, setIsBuildingApp] = useState(true) // Show loading overlay during initial build
+  const [buildProgress, setBuildProgress] = useState(0)
+  const [buildMessage, setBuildMessage] = useState('Preparing your app...')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const hasStarted = useRef(false)
   const devProcessRef = useRef<any>(null)
@@ -85,6 +157,12 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
   const attemptedAutoInstallsRef = useRef<Set<string>>(new Set())
   const previousFilesRef = useRef<Map<string, string>>(new Map())
   const downloadTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const serverStartTimeRef = useRef<number>(0)
+  const initialFilesBufferRef = useRef<File[]>([])
+  const lastFileReceiveTimeRef = useRef<number>(0)
+  const initialRefreshScheduledRef = useRef<boolean>(false)
+  const batchMountTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const initialGenerationCompleteRef = useRef<boolean>(false)
 
   // Show download help after 15 seconds of being stuck on download stage
   useEffect(() => {
@@ -106,6 +184,79 @@ export function WebContainerPreview({ projectId, files, platform = 'webapp' }: W
       }
     }
   }, [bootStage])
+
+  // Cleanup batch mount timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (batchMountTimeoutRef.current) {
+        clearTimeout(batchMountTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Propagate errors to parent component for AI Fix feature
+  useEffect(() => {
+    if (error && onError) {
+      onError({ message: error })
+    }
+  }, [error, onError])
+
+  // Also propagate boot errors
+  useEffect(() => {
+    if (bootError && onError) {
+      onError({ message: bootError })
+    }
+  }, [bootError, onError])
+
+  // Hide building overlay when server is ready and running
+  // This ensures the overlay hides even if batch mount didn't trigger
+  useEffect(() => {
+    if (previewUrl && isServerRunning && isBuildingApp) {
+      // Give a short delay to allow initial content to load
+      const timer = setTimeout(() => {
+        setIsBuildingApp(false)
+        initialGenerationCompleteRef.current = true
+      }, 1000) // Reduced from 2s to 1s
+      return () => clearTimeout(timer)
+    }
+  }, [previewUrl, isServerRunning, isBuildingApp])
+
+  // Maximum timeout for building overlay - prevent infinite loading
+  useEffect(() => {
+    if (isBuildingApp) {
+      const maxTimeout = setTimeout(() => {
+        console.log('[Preview] Max overlay timeout reached, hiding overlay')
+        setIsBuildingApp(false)
+        initialGenerationCompleteRef.current = true
+      }, 30000) // 30 second max
+      return () => clearTimeout(maxTimeout)
+    }
+  }, [isBuildingApp])
+
+  // Reset building state when projectId changes (new project)
+  useEffect(() => {
+    setIsBuildingApp(true)
+    setBuildProgress(0)
+    setBuildMessage('Preparing your app...')
+    initialGenerationCompleteRef.current = false
+    initialFilesBufferRef.current = []
+    previousFilesRef.current.clear()
+  }, [projectId])
+
+  // Detect new generation starting (when files are replaced with new content)
+  // This helps reset the overlay if user starts a new generation
+  const prevFileCountRef = useRef(files.length)
+  useEffect(() => {
+    // If files dropped to near zero or very few base files, likely a new generation starting
+    if (prevFileCountRef.current > 5 && files.length <= 3) {
+      setIsBuildingApp(true)
+      setBuildProgress(0)
+      setBuildMessage('Starting new generation...')
+      initialGenerationCompleteRef.current = false
+      initialFilesBufferRef.current = []
+    }
+    prevFileCountRef.current = files.length
+  }, [files.length])
 
   // Network diagnostic function
   const runNetworkDiagnostic = async () => {
@@ -377,7 +528,13 @@ export { Card, CardHeader, CardTitle, CardContent }
       addLog(`Detected missing dependency "${dep}" — auto-installing...`)
       setIsInstalling(true)
 
-      const installProcess = await webcontainer.spawn('npm', ['install', dep])
+      const installProcess = await webcontainer.spawn('npm', [
+        'install',
+        dep,
+        '--prefer-offline',
+        '--no-audit',
+        '--no-fund'
+      ])
       installProcess.output.pipeTo(
         new WritableStream({
           write(data) {
@@ -439,15 +596,28 @@ export { Card, CardHeader, CardTitle, CardContent }
           setPreviewUrl(url)
           setIsServerRunning(true)
           setIsStarting(false)
+          // Track when server started to avoid unnecessary restarts during initial generation
+          serverStartTimeRef.current = Date.now()
         })
       }
 
       if (hasPackageJson) {
         // npm-based project: Install dependencies and run dev server
         setIsInstalling(true)
-        addLog('Installing dependencies...')
+        addLog('Installing dependencies (this may take a moment)...')
 
-        const installProcess = await webcontainer.spawn('npm', ['install'])
+        // Use optimization flags to speed up npm install:
+        // --prefer-offline: Use cached packages when possible
+        // --no-audit: Skip security audit (saves time)
+        // --no-fund: Skip funding messages
+        // --loglevel=error: Reduce output noise
+        const installProcess = await webcontainer.spawn('npm', [
+          'install',
+          '--prefer-offline',
+          '--no-audit',
+          '--no-fund',
+          '--loglevel=error'
+        ])
 
         installProcess.output.pipeTo(
           new WritableStream({
@@ -673,11 +843,124 @@ export { Card, CardHeader, CardTitle, CardContent }
     'postcss.config.cjs',
   ]
 
+  // Batch mount all buffered files at once - called after initial generation settles
+  const performBatchMount = useCallback(async () => {
+    if (!webcontainer || !previewUrl) return
+    if (initialFilesBufferRef.current.length === 0) return
+
+    const filesToMount = [...initialFilesBufferRef.current]
+    initialFilesBufferRef.current = []
+    initialGenerationCompleteRef.current = true
+
+    try {
+      setIsHotReloading(true)
+      setBuildProgress(90)
+      setBuildMessage('Mounting files...')
+      addLog(`Batch mounting ${filesToMount.length} files...`)
+
+      // Update tracking
+      for (const file of filesToMount) {
+        previousFilesRef.current.set(file.path, file.content)
+      }
+
+      // Mount all files at once
+      const partialTree = buildPartialFileTree(filesToMount)
+      await webcontainer.mount(partialTree)
+
+      addLog(`Mounted ${filesToMount.length} files successfully`)
+      setBuildProgress(100)
+      setBuildMessage('Launching preview...')
+
+      // Single refresh after all files are mounted, then hide overlay
+      setTimeout(() => {
+        if (iframeRef.current) {
+          addLog('Refreshing preview after batch mount...')
+          iframeRef.current.src = iframeRef.current.src
+        }
+        setIsHotReloading(false)
+        // Hide building overlay after a short delay for smooth transition
+        setTimeout(() => {
+          setIsBuildingApp(false)
+        }, 500)
+      }, 800)
+    } catch (err) {
+      console.error('Failed to batch mount files:', err)
+      setIsHotReloading(false)
+      setIsBuildingApp(false) // Hide overlay even on error to show the actual error
+    }
+  }, [webcontainer, previewUrl, buildPartialFileTree, addLog])
+
   // Debounced file update function - uses mount() for bulk updates
   const updateChangedFiles = useCallback(
     debounce(async (filesToUpdate: File[]) => {
       if (!webcontainer || !previewUrl) return
 
+      // Check if we're in initial generation phase
+      // Reduced to 30s - overlay now auto-hides when server is ready
+      const timeSinceServerStart = Date.now() - (serverStartTimeRef.current || 0)
+      const isInitialPhase = timeSinceServerStart < 30000 && !initialGenerationCompleteRef.current
+
+      // During initial generation, buffer files instead of mounting immediately
+      if (isInitialPhase) {
+        const changedFiles: File[] = []
+
+        for (const file of filesToUpdate) {
+          const previousContent = previousFilesRef.current.get(file.path)
+          if (previousContent === undefined || previousContent !== file.content) {
+            changedFiles.push(file)
+          }
+        }
+
+        if (changedFiles.length > 0) {
+          // Add to buffer
+          for (const file of changedFiles) {
+            // Remove old version if exists
+            const existingIdx = initialFilesBufferRef.current.findIndex(f => f.path === file.path)
+            if (existingIdx >= 0) {
+              initialFilesBufferRef.current.splice(existingIdx, 1)
+            }
+            initialFilesBufferRef.current.push(file)
+          }
+
+          lastFileReceiveTimeRef.current = Date.now()
+          addLog(`Buffered ${changedFiles.length} file(s) (${initialFilesBufferRef.current.length} total)`)
+
+          // Update building overlay progress
+          const totalBuffered = initialFilesBufferRef.current.length
+          // Estimate progress based on typical app size (15-25 files)
+          const estimatedProgress = Math.min((totalBuffered / 20) * 80, 80) // Cap at 80% until fully mounted
+          setBuildProgress(estimatedProgress)
+
+          // Update message based on file types being received
+          const lastFile = changedFiles[changedFiles.length - 1]
+          if (lastFile.path.includes('App.tsx') || lastFile.path.includes('App.jsx')) {
+            setBuildMessage('Creating main application...')
+          } else if (lastFile.path.includes('components/')) {
+            setBuildMessage('Generating components...')
+          } else if (lastFile.path.includes('pages/') || lastFile.path.includes('routes/')) {
+            setBuildMessage('Setting up routes...')
+          } else if (lastFile.path.endsWith('.css')) {
+            setBuildMessage('Applying styles...')
+          } else if (lastFile.path.includes('package.json')) {
+            setBuildMessage('Configuring dependencies...')
+          } else {
+            setBuildMessage(`Creating ${lastFile.path.split('/').pop()}...`)
+          }
+
+          // Clear existing timeout and set new one
+          if (batchMountTimeoutRef.current) {
+            clearTimeout(batchMountTimeoutRef.current)
+          }
+
+          // Wait 2s after last file before batch mounting
+          batchMountTimeoutRef.current = setTimeout(() => {
+            performBatchMount()
+          }, 2000)
+        }
+        return
+      }
+
+      // Normal update flow (after initial generation)
       try {
         setIsHotReloading(true)
         const changedFiles: File[] = []
@@ -712,11 +995,17 @@ export { Card, CardHeader, CardTitle, CardContent }
 
           // If package.json changed, dependencies may have changed. Reinstall + restart.
           const packageJsonChanged = changedFiles.some(f => f.path === 'package.json' || f.path.endsWith('/package.json'))
+
           if (packageJsonChanged) {
             addLog('Detected package.json change - reinstalling dependencies...')
             try {
               setIsInstalling(true)
-              const installProcess = await webcontainer.spawn('npm', ['install'])
+              const installProcess = await webcontainer.spawn('npm', [
+                'install',
+                '--prefer-offline',
+                '--no-audit',
+                '--no-fund'
+              ])
               installProcess.output.pipeTo(
                 new WritableStream({
                   write(data) {
@@ -741,7 +1030,6 @@ export { Card, CardHeader, CardTitle, CardContent }
           }
 
           // For config changes or bulk updates (3+ files), do a full page refresh
-          // Give Vite more time to process file changes before refreshing
           if ((hasConfigChange || changedFiles.length >= 3) && iframeRef.current) {
             const delay = hasConfigChange ? 1000 : 600 // More time for config changes
             setTimeout(() => {
@@ -770,7 +1058,7 @@ export { Card, CardHeader, CardTitle, CardContent }
         setIsHotReloading(false)
       }
     }, 500), // Reduced debounce to be more responsive
-    [webcontainer, previewUrl, buildPartialFileTree, addLog, restartDevServer]
+    [webcontainer, previewUrl, buildPartialFileTree, addLog, restartDevServer, performBatchMount]
   )
 
   // Track if we need to refresh after server starts
@@ -1088,13 +1376,21 @@ export { Card, CardHeader, CardTitle, CardContent }
         {previewUrl && !showTerminal && (
           <div
             className={cn(
-              'h-full transition-all duration-300 ease-out bg-background shadow-2xl rounded-lg overflow-hidden',
+              'h-full transition-all duration-300 ease-out bg-background shadow-2xl rounded-lg overflow-hidden relative',
               deviceMode === 'mobile' && 'max-w-[375px]',
               deviceMode === 'tablet' && 'max-w-[768px]',
               deviceMode === 'desktop' && 'w-full'
             )}
             style={{ width: deviceModes[deviceMode].width }}
           >
+            {/* Building overlay - shows during initial generation to prevent error display */}
+            {isBuildingApp && (
+              <BuildingOverlay
+                message={buildMessage}
+                progress={buildProgress}
+                filesCount={initialFilesBufferRef.current.length}
+              />
+            )}
             <iframe
               ref={iframeRef}
               src={previewUrl}

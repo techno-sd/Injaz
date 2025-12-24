@@ -121,12 +121,148 @@ src/
 - If you import "./pages/Home", generate "src/pages/Home.tsx"
 - No placeholder comments like "// TODO"`
 
+// ============================================
+// AI CODE REVIEWER - Check for issues and fix
+// Uses the reviewer model to validate generated code
+// ============================================
+const REVIEW_PROMPT = `You are an expert React/TypeScript code reviewer.
+
+## YOUR TASK
+Review the provided files for bugs, TypeScript errors, and React issues. Fix any problems you find.
+
+## WHAT TO CHECK FOR
+1. TypeScript errors (type mismatches, missing types, incorrect generics)
+2. React bugs (missing dependencies in useEffect, incorrect hooks usage, memory leaks)
+3. Import errors (missing imports, incorrect paths, circular dependencies)
+4. Logic bugs (null checks, array bounds, async/await issues)
+5. Syntax errors (missing brackets, semicolons, typos)
+
+## OUTPUT FORMAT
+Return ONLY a valid JSON object with the fixed files:
+{
+  "files": [
+    { "path": "src/App.tsx", "content": "...fixed content..." }
+  ],
+  "fixes": ["Description of fix 1", "Description of fix 2"]
+}
+
+## RULES
+- Only include files that needed fixes
+- If no fixes needed, return: {"files": [], "fixes": []}
+- Start response with { and end with }
+- No markdown code blocks, no explanations outside JSON
+- Preserve all existing functionality
+- Use direct CDN URLs for npm imports (https://esm.sh/...)`
+
+// AI Review function - checks generated code for issues
+async function reviewCode(
+  files: GeneratorFile[],
+  apiKey: string
+): Promise<{ files: GeneratorFile[], fixes: string[] }> {
+  console.log('[Reviewer] Starting AI review of', files.length, 'files')
+
+  // Only review src/ files (skip base files)
+  const srcFiles = files.filter(f => f.path.startsWith('src/') && f.path.match(/\.(tsx?|jsx?)$/))
+
+  if (srcFiles.length === 0) {
+    console.log('[Reviewer] No src files to review')
+    return { files: [], fixes: [] }
+  }
+
+  // Prepare files for review (limit to avoid token overflow)
+  const filesToReview = srcFiles.slice(0, 15) // Max 15 files
+  const filesJson = JSON.stringify(filesToReview, null, 2)
+
+  // Check if content is too large (rough token estimate)
+  if (filesJson.length > 100000) {
+    console.log('[Reviewer] Files too large for review, skipping')
+    return { files: [], fixes: [] }
+  }
+
+  const prompt = `Review these React/TypeScript files and fix any issues:\n\n${filesJson}`
+
+  try {
+    const response = await callAI(
+      prompt,
+      apiKey,
+      AI_MODELS.reviewer.id,
+      REVIEW_PROMPT,
+      45000 // 45 second timeout for review
+    )
+
+    if (!response.ok) {
+      console.error('[Reviewer] API error:', response.status)
+      return { files: [], fixes: [] }
+    }
+
+    // Read the response (non-streaming for simplicity)
+    const reader = response.body?.getReader()
+    if (!reader) return { files: [], fixes: [] }
+
+    const decoder = new TextDecoder()
+    let fullContent = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value, { stream: true })
+
+      for (const line of chunk.split('\n')) {
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6)
+        if (data === '[DONE]') continue
+
+        try {
+          const parsed = JSON.parse(data)
+          const content = parsed.choices?.[0]?.delta?.content
+          if (content) fullContent += content
+        } catch {}
+      }
+    }
+
+    // Parse response
+    const cleaned = fullContent
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+      .trim()
+
+    try {
+      const result = JSON.parse(cleaned)
+      const fixedFiles = result.files || []
+      const fixes = result.fixes || []
+
+      console.log('[Reviewer] Found', fixes.length, 'fixes')
+      if (fixes.length > 0) {
+        console.log('[Reviewer] Fixes:', fixes)
+      }
+
+      return { files: fixedFiles, fixes }
+    } catch (e) {
+      // Try extracting JSON from markdown
+      const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (jsonMatch) {
+        try {
+          const result = JSON.parse(jsonMatch[1].trim())
+          return { files: result.files || [], fixes: result.fixes || [] }
+        } catch {}
+      }
+
+      console.log('[Reviewer] Failed to parse response')
+      return { files: [], fixes: [] }
+    }
+  } catch (error) {
+    console.error('[Reviewer] Error:', error)
+    return { files: [], fixes: [] }
+  }
+}
+
 export interface GeneratorFile {
   path: string
   content: string
 }
 
-export type EventType = 'start' | 'file' | 'progress' | 'complete' | 'error' | 'chat'
+export type EventType = 'start' | 'file' | 'progress' | 'complete' | 'error' | 'chat' | 'review' | 'debug'
 
 export interface GeneratorEvent {
   type: EventType
@@ -135,8 +271,277 @@ export interface GeneratorEvent {
     file?: GeneratorFile
     files?: GeneratorFile[]
     content?: string
+    fixes?: string[] // List of fixes applied by AI reviewer
+    debugSteps?: string[] // Steps taken during debugging
   }
   timestamp: number
+}
+
+// ============================================
+// DEBUG/FIX PROMPT - For fixing runtime errors
+// ============================================
+const DEBUG_PROMPT = `You are an expert React/TypeScript debugger and fixer.
+
+## YOUR TASK
+Analyze the error and the provided code files, then fix the issue.
+
+## ERROR ANALYSIS STEPS
+1. Read the error message carefully
+2. Identify the root cause (import error, type error, runtime error, etc.)
+3. Find the file(s) that need to be fixed
+4. Apply the minimal fix to resolve the error
+
+## OUTPUT FORMAT
+Return ONLY a valid JSON object:
+{
+  "analysis": "Brief explanation of what caused the error",
+  "files": [
+    { "path": "src/App.tsx", "content": "...fixed content..." }
+  ],
+  "fixes": ["Description of fix 1", "Description of fix 2"]
+}
+
+## COMMON FIXES
+1. Import errors: Fix import paths, add missing imports
+2. Type errors: Add proper types, fix type mismatches
+3. Runtime errors: Fix null checks, array bounds, async issues
+4. Module not found: Update import to use CDN URL or remove unused import
+5. Component errors: Fix JSX syntax, props, hooks usage
+
+## RULES
+- Only include files that need fixes
+- Preserve ALL existing functionality
+- Use direct CDN URLs for npm imports (https://esm.sh/...)
+- Start response with { and end with }
+- No markdown code blocks, no explanations outside JSON`
+
+// Debug/Fix function - analyzes errors and fixes code
+export async function* debugAndFix(
+  errorMessage: string,
+  errorStack: string | undefined,
+  currentFiles: GeneratorFile[],
+  apiKey: string
+): AsyncGenerator<GeneratorEvent> {
+  console.log('[Debugger] Starting debug for error:', errorMessage)
+
+  yield {
+    type: 'debug',
+    data: {
+      message: 'Analyzing error...',
+      debugSteps: ['Analyzing error message'],
+    },
+    timestamp: Date.now(),
+  }
+
+  // Filter to only src/ files for debugging (skip base files)
+  const srcFiles = currentFiles.filter(f =>
+    f.path.startsWith('src/') && f.path.match(/\.(tsx?|jsx?|css)$/)
+  )
+
+  if (srcFiles.length === 0) {
+    yield {
+      type: 'error',
+      data: { message: 'No source files found to debug' },
+      timestamp: Date.now(),
+    }
+    return
+  }
+
+  yield {
+    type: 'debug',
+    data: {
+      message: 'Reading source files...',
+      debugSteps: ['Analyzing error message', 'Reading source files'],
+    },
+    timestamp: Date.now(),
+  }
+
+  // Prepare debug prompt
+  const filesContext = srcFiles
+    .slice(0, 10) // Limit to 10 files to avoid token overflow
+    .map(f => `--- ${f.path} ---\n${f.content}`)
+    .join('\n\n')
+
+  const prompt = `## ERROR
+${errorMessage}
+
+${errorStack ? `## STACK TRACE\n${errorStack}` : ''}
+
+## CURRENT FILES
+${filesContext}
+
+Analyze the error and fix the affected files.`
+
+  yield {
+    type: 'debug',
+    data: {
+      message: 'AI is analyzing the issue...',
+      debugSteps: ['Analyzing error message', 'Reading source files', 'AI analyzing issue'],
+    },
+    timestamp: Date.now(),
+  }
+
+  try {
+    const response = await callAI(
+      prompt,
+      apiKey,
+      AI_MODELS.reviewer.id,
+      DEBUG_PROMPT,
+      60000 // 60 second timeout for debugging
+    )
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`)
+    }
+
+    // Read the response
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('No response body')
+    }
+
+    const decoder = new TextDecoder()
+    let fullContent = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value, { stream: true })
+
+      for (const line of chunk.split('\n')) {
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6)
+        if (data === '[DONE]') continue
+
+        try {
+          const parsed = JSON.parse(data)
+          const content = parsed.choices?.[0]?.delta?.content
+          if (content) fullContent += content
+        } catch {}
+      }
+    }
+
+    yield {
+      type: 'debug',
+      data: {
+        message: 'Applying fixes...',
+        debugSteps: ['Analyzing error message', 'Reading source files', 'AI analyzing issue', 'Applying fixes'],
+      },
+      timestamp: Date.now(),
+    }
+
+    // Parse response
+    const cleaned = fullContent
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+      .trim()
+
+    let result: { analysis?: string; files?: GeneratorFile[]; fixes?: string[] }
+
+    try {
+      result = JSON.parse(cleaned)
+    } catch {
+      // Try extracting from markdown
+      const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[1].trim())
+      } else {
+        throw new Error('Failed to parse debug response')
+      }
+    }
+
+    const fixedFiles = result.files || []
+    const fixes = result.fixes || []
+    const analysis = result.analysis || 'Unknown issue'
+
+    if (fixedFiles.length === 0) {
+      yield {
+        type: 'debug',
+        data: {
+          message: 'Could not determine fix. Please try describing the issue.',
+          debugSteps: ['Analyzing error message', 'Reading source files', 'AI analyzing issue', 'No automatic fix found'],
+        },
+        timestamp: Date.now(),
+      }
+      return
+    }
+
+    // Rewrite npm imports to CDN for fixed files
+    const cdnFixedFiles = fixedFiles.map(f => ({
+      ...f,
+      content: rewriteNpmImportsToCDNSingle(f.content),
+    }))
+
+    console.log('[Debugger] Applied', fixes.length, 'fixes:', fixes)
+
+    // Yield each fixed file
+    for (const file of cdnFixedFiles) {
+      yield {
+        type: 'file',
+        data: { file },
+        timestamp: Date.now(),
+      }
+    }
+
+    yield {
+      type: 'complete',
+      data: {
+        message: `Fixed ${fixes.length} issue${fixes.length !== 1 ? 's' : ''}: ${analysis}`,
+        fixes,
+        debugSteps: ['Analyzing error message', 'Reading source files', 'AI analyzing issue', 'Applying fixes', 'Fix complete'],
+      },
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    console.error('[Debugger] Error:', error)
+    yield {
+      type: 'error',
+      data: { message: error instanceof Error ? error.message : 'Debug failed' },
+      timestamp: Date.now(),
+    }
+  }
+}
+
+// Helper to rewrite a single file's imports
+function rewriteNpmImportsToCDNSingle(content: string): string {
+  // Map of npm packages to CDN URLs
+  const packageToCDN: Record<string, string> = {
+    'react': 'https://esm.sh/react@18.2.0',
+    'react-dom': 'https://esm.sh/react-dom@18.2.0',
+    'react-dom/client': 'https://esm.sh/react-dom@18.2.0/client',
+    'react/jsx-runtime': 'https://esm.sh/react@18.2.0/jsx-runtime',
+    'react-router-dom': 'https://esm.sh/react-router-dom@6.20.0?external=react',
+    'framer-motion': 'https://esm.sh/framer-motion@10.16.0?external=react',
+    'lucide-react': 'https://esm.sh/lucide-react@0.294.0?external=react',
+    'react-hot-toast': 'https://esm.sh/react-hot-toast@2.4.1?external=react,react-dom',
+    'sonner': 'https://esm.sh/sonner@1.3.1?external=react,react-dom',
+    'zustand': 'https://esm.sh/zustand@4.4.7?external=react',
+    'clsx': 'https://esm.sh/clsx@2.0.0',
+    'tailwind-merge': 'https://esm.sh/tailwind-merge@2.0.0',
+    'class-variance-authority': 'https://esm.sh/class-variance-authority@0.7.0',
+    '@radix-ui/react-slot': 'https://esm.sh/@radix-ui/react-slot@1.0.2?external=react,react-dom',
+    '@radix-ui/react-dialog': 'https://esm.sh/@radix-ui/react-dialog@1.0.5?external=react,react-dom',
+    '@radix-ui/react-dropdown-menu': 'https://esm.sh/@radix-ui/react-dropdown-menu@2.0.6?external=react,react-dom',
+    '@radix-ui/react-tabs': 'https://esm.sh/@radix-ui/react-tabs@1.0.4?external=react,react-dom',
+    '@radix-ui/react-toast': 'https://esm.sh/@radix-ui/react-toast@1.1.5?external=react,react-dom',
+    '@radix-ui/react-tooltip': 'https://esm.sh/@radix-ui/react-tooltip@1.0.7?external=react,react-dom',
+  }
+
+  let result = content
+
+  // Replace import statements
+  for (const [pkg, cdn] of Object.entries(packageToCDN)) {
+    // Match: import ... from 'package' or import ... from "package"
+    const escapedPkg = pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(
+      `(import\\s+(?:[\\w{},\\s*]+)\\s+from\\s+)(['"])${escapedPkg}\\2`,
+      'g'
+    )
+    result = result.replace(regex, `$1$2${cdn}$2`)
+  }
+
+  return result
 }
 
 // Parse AI response - handles various formats
@@ -926,6 +1331,57 @@ export async function* generate(
     // This bypasses Vite's resolution - packages load directly from esm.sh
     allFiles = rewriteNpmImportsToCDN(allFiles)
     console.log('[Generator] Rewrote npm imports to CDN URLs')
+
+    // ============================================
+    // AI REVIEW STEP: Check for bugs and fix them
+    // ============================================
+    yield {
+      type: 'progress',
+      data: { message: 'Reviewing code for issues...' },
+      timestamp: Date.now(),
+    }
+
+    try {
+      const reviewResult = await reviewCode(allFiles, apiKey)
+
+      if (reviewResult.fixes.length > 0) {
+        console.log('[Generator] AI review found', reviewResult.fixes.length, 'issues to fix')
+
+        // Emit review event with fixes
+        yield {
+          type: 'review',
+          data: {
+            message: `AI review fixed ${reviewResult.fixes.length} issue${reviewResult.fixes.length > 1 ? 's' : ''}`,
+            fixes: reviewResult.fixes,
+          },
+          timestamp: Date.now(),
+        }
+
+        // Apply fixed files
+        for (const fixedFile of reviewResult.files) {
+          const index = allFiles.findIndex(f => f.path === fixedFile.path)
+          if (index >= 0) {
+            allFiles[index] = fixedFile
+            console.log('[Generator] Applied fix to:', fixedFile.path)
+          }
+        }
+      } else {
+        console.log('[Generator] AI review: no issues found')
+        yield {
+          type: 'review',
+          data: { message: 'Code review passed - no issues found', fixes: [] },
+          timestamp: Date.now(),
+        }
+      }
+    } catch (reviewError) {
+      console.error('[Generator] Review failed (non-critical):', reviewError)
+      // Review failure is non-critical, continue with generation
+      yield {
+        type: 'review',
+        data: { message: 'Code review skipped', fixes: [] },
+        timestamp: Date.now(),
+      }
+    }
 
     // NOW yield all files (base + AI + stubs) - all validated and CDN-ready
     yield {

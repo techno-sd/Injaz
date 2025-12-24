@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import {
@@ -23,6 +23,8 @@ import {
   User,
   ArrowDownCircle,
   Zap,
+  AlertCircle,
+  X,
 } from 'lucide-react'
 import type { Message, File, PlatformType } from '@/types'
 import { cn } from '@/lib/utils'
@@ -35,6 +37,7 @@ interface AIChatbotProps {
   onFilesChange: (files: File[]) => void
   platform?: PlatformType
   initialPrompt?: string
+  onCaptureErrorReady?: (captureError: (error: { message: string; stack?: string }) => void) => void
 }
 
 // Tool operation types
@@ -58,6 +61,20 @@ interface ThinkingBlock {
   id: string
   content: string
   isExpanded: boolean
+}
+
+// Error info for Fix Issue feature
+interface CapturedError {
+  message: string
+  stack?: string
+  timestamp: number
+}
+
+// Debug step for progress UI
+interface DebugStep {
+  id: string
+  content: string
+  status: 'pending' | 'in_progress' | 'completed'
 }
 
 // AI Avatar Component
@@ -133,157 +150,211 @@ function formatTime(dateString: string): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-// Tool Badge Component (Claude-style)
-function ToolBadge({ type, target, status }: { type: ToolType; target: string; status: string }) {
-  const fileName = target.split('/').pop() || target
-  const fullPath = target
-
-  const typeColors: Record<ToolType, string> = {
-    Read: 'text-teal-400',
-    Edit: 'text-amber-400',
-    Write: 'text-emerald-400',
-    Glob: 'text-cyan-400',
-    Grep: 'text-cyan-400',
-    Bash: 'text-rose-400',
-    Task: 'text-violet-400',
+// Get file icon based on extension
+function getFileIcon(filename: string) {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  const iconMap: Record<string, { icon: string; color: string }> = {
+    tsx: { icon: '⚛️', color: 'text-cyan-400' },
+    ts: { icon: '📘', color: 'text-blue-400' },
+    jsx: { icon: '⚛️', color: 'text-cyan-400' },
+    js: { icon: '📒', color: 'text-yellow-400' },
+    css: { icon: '🎨', color: 'text-pink-400' },
+    json: { icon: '📋', color: 'text-amber-400' },
+    html: { icon: '🌐', color: 'text-orange-400' },
+    md: { icon: '📝', color: 'text-gray-400' },
   }
-
-  const statusIcons = {
-    running: <Loader2 className="h-3 w-3 animate-spin text-emerald-400" />,
-    complete: <Check className="h-3 w-3 text-emerald-400" />,
-    error: <span className="h-3 w-3 text-red-400">✕</span>,
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-2 py-1 text-sm group"
-    >
-      <span className={cn(
-        "font-medium min-w-[40px]",
-        typeColors[type] || 'text-emerald-400',
-        status === 'running' && 'animate-pulse'
-      )}>
-        {type}
-      </span>
-      <span
-        className="text-white/50 font-mono text-xs group-hover:text-white/70 transition-colors truncate max-w-[200px]"
-        title={fullPath}
-      >
-        {fileName}
-      </span>
-      {statusIcons[status as keyof typeof statusIcons]}
-    </motion.div>
-  )
+  return iconMap[ext || ''] || { icon: '📄', color: 'text-white/60' }
 }
 
-// File operations progress component
+// Tool Badge Component (Claude-style) - Enhanced with better animations
+// Using forwardRef to support AnimatePresence mode="popLayout"
+const ToolBadge = forwardRef<HTMLDivElement, { type: ToolType; target: string; status: string; index?: number }>(
+  function ToolBadge({ type, target, status, index = 0 }, ref) {
+    const fileName = target.split('/').pop() || target
+    const fullPath = target
+    const fileInfo = getFileIcon(fileName)
+
+    const typeConfig: Record<ToolType, { color: string; bgColor: string; label: string }> = {
+      Read: { color: 'text-teal-400', bgColor: 'bg-teal-500/10', label: 'Read' },
+      Edit: { color: 'text-amber-400', bgColor: 'bg-amber-500/10', label: 'Edit' },
+      Write: { color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', label: 'Create' },
+      Glob: { color: 'text-cyan-400', bgColor: 'bg-cyan-500/10', label: 'Search' },
+      Grep: { color: 'text-cyan-400', bgColor: 'bg-cyan-500/10', label: 'Find' },
+      Bash: { color: 'text-rose-400', bgColor: 'bg-rose-500/10', label: 'Run' },
+      Task: { color: 'text-violet-400', bgColor: 'bg-violet-500/10', label: 'Task' },
+    }
+
+    const config = typeConfig[type] || typeConfig.Write
+
+    return (
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, x: -20, scale: 0.95 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ delay: index * 0.03, duration: 0.2, ease: 'easeOut' }}
+        className={cn(
+          "flex items-center gap-2.5 py-1.5 px-2 rounded-lg group transition-all duration-200",
+          status === 'running' && "bg-emerald-500/5",
+          status === 'complete' && "hover:bg-white/[0.02]"
+        )}
+      >
+      {/* Status indicator */}
+      <div className="relative flex items-center justify-center w-5 h-5">
+        {status === 'running' ? (
+          <motion.div
+            className="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+          />
+        ) : status === 'complete' ? (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          >
+            <Check className="h-4 w-4 text-emerald-400" />
+          </motion.div>
+        ) : (
+          <span className="h-4 w-4 text-red-400 text-center">✕</span>
+        )}
+      </div>
+
+      {/* File icon */}
+      <span className="text-sm">{fileInfo.icon}</span>
+
+      {/* File path */}
+      <div className="flex-1 min-w-0">
+        <span
+          className={cn(
+            "font-mono text-xs truncate block transition-colors",
+            status === 'running' ? "text-white/70" : "text-white/50 group-hover:text-white/70"
+          )}
+          title={fullPath}
+        >
+          {fullPath}
+        </span>
+      </div>
+
+      {/* Action badge */}
+      <span className={cn(
+        "text-[10px] font-medium px-1.5 py-0.5 rounded uppercase tracking-wider",
+        config.bgColor,
+        config.color
+      )}>
+        {config.label}
+      </span>
+    </motion.div>
+    )
+  }
+)
+
+// File operations progress component - Enhanced Claude/Cursor style
 function FileOperationsProgress({ operations, totalExpected, reviewStatus }: { operations: ToolOperation[]; totalExpected?: number; reviewStatus?: string }) {
+  const [isExpanded, setIsExpanded] = useState(true)
   const completed = operations.filter(op => op.status === 'complete').length
   const hasRunning = operations.some(op => op.status === 'running')
   const total = totalExpected || operations.length
+  const progress = total > 0 ? (completed / total) * 100 : 0
 
   if (operations.length === 0) return null
 
   // Determine current phase for display
-  const isReviewing = reviewStatus?.includes('Reviewing') || reviewStatus?.includes('🔍')
-  const isFixing = reviewStatus?.includes('Fixing') || reviewStatus?.includes('🔧') || reviewStatus?.includes('Auto-fixing')
-  const isComplete = reviewStatus?.includes('✅') || reviewStatus?.includes('All checks')
+  const isReviewing = reviewStatus?.includes('Reviewing') || reviewStatus?.includes('🔍') || reviewStatus?.includes('review')
+  const isFixing = reviewStatus?.includes('Fixing') || reviewStatus?.includes('🔧') || reviewStatus?.includes('Auto-fixing') || reviewStatus?.includes('fixed')
+  const isComplete = reviewStatus?.includes('✅') || reviewStatus?.includes('All checks') || reviewStatus?.includes('passed') || reviewStatus?.includes('complete')
 
   return (
-    <div className="space-y-2">
-      {/* Progress header */}
-      <div className="flex items-center justify-between text-xs text-white/50">
-        <span className="flex items-center gap-1.5">
-          {hasRunning ? (
-            <Loader2 className="h-3 w-3 text-emerald-400 animate-spin" />
-          ) : (
-            <Check className="h-3 w-3 text-emerald-400" />
-          )}
-          <span>{hasRunning ? 'Creating files' : 'Files created'}</span>
-        </span>
-        <span className="font-mono">
-          {completed}/{total}
-        </span>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl overflow-hidden bg-gradient-to-b from-slate-800/80 to-slate-900/80 border border-white/[0.08] shadow-xl"
+    >
+      {/* Header with progress */}
+      <div
+        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          {/* Animated status icon */}
+          <div className="relative">
+            {hasRunning ? (
+              <motion.div
+                className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <motion.div
+                  className="w-5 h-5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center"
+              >
+                <Check className="h-5 w-5 text-emerald-400" />
+              </motion.div>
+            )}
+          </div>
 
-      {/* Operations list */}
-      <div className="space-y-0.5 py-2 px-3 rounded-lg bg-slate-800/50 border border-white/[0.05] max-h-[200px] overflow-y-auto">
-        {operations.slice(-15).map((op) => (
-          <ToolBadge
-            key={op.id}
-            type={op.type}
-            target={op.target}
-            status={op.status}
-          />
-        ))}
+          {/* Title and count */}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-white/90">
+                {hasRunning ? 'Creating files' : 'Files created'}
+              </span>
+              <motion.span
+                key={completed}
+                initial={{ scale: 1.2, color: '#34d399' }}
+                animate={{ scale: 1, color: 'rgba(255,255,255,0.5)' }}
+                className="text-xs font-mono bg-white/[0.05] px-2 py-0.5 rounded-full"
+              >
+                {completed}/{total}
+              </motion.span>
+            </div>
+            {hasRunning && operations.length > 0 && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xs text-white/40 font-mono"
+              >
+                {operations[operations.length - 1]?.target.split('/').pop()}
+              </motion.span>
+            )}
+          </div>
+        </div>
+
+        {/* Expand/collapse button */}
+        <motion.div
+          animate={{ rotate: isExpanded ? 0 : -90 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="h-4 w-4 text-white/40" />
+        </motion.div>
       </div>
 
       {/* Progress bar */}
-      {total > 0 && (
-        <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
-            initial={{ width: 0 }}
-            animate={{ width: `${(completed / total) * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-      )}
-
-      {/* Review status - shown below progress */}
-      {reviewStatus && !hasRunning && (
+      <div className="h-1 bg-slate-700/50">
         <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            "flex items-center gap-2 text-xs py-2 px-3 rounded-lg border",
-            isReviewing && "bg-blue-500/10 border-blue-500/20 text-blue-400",
-            isFixing && "bg-amber-500/10 border-amber-500/20 text-amber-400",
-            isComplete && "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
-            !isReviewing && !isFixing && !isComplete && "bg-slate-500/10 border-slate-500/20 text-slate-400"
-          )}
+          className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 relative overflow-hidden"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
         >
-          {isReviewing && <Loader2 className="h-3 w-3 animate-spin" />}
-          {isFixing && <Loader2 className="h-3 w-3 animate-spin" />}
-          {isComplete && <Check className="h-3 w-3" />}
-          {!isReviewing && !isFixing && !isComplete && <Loader2 className="h-3 w-3 animate-spin" />}
-          <span>{reviewStatus}</span>
+          {hasRunning && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            />
+          )}
         </motion.div>
-      )}
-    </div>
-  )
-}
+      </div>
 
-// Thinking Section (Claude-style collapsible)
-function ThinkingSection({ content, defaultExpanded = false }: { content: string; defaultExpanded?: boolean }) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
-
-  return (
-    <div className="py-2 px-3 rounded-lg bg-teal-500/5 border border-teal-500/10">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-teal-300/70 hover:text-teal-300 transition-colors"
-      >
-        {isExpanded ? (
-          <ChevronDown className="h-4 w-4" />
-        ) : (
-          <ChevronRight className="h-4 w-4" />
-        )}
-        <span className="font-medium">Thinking</span>
-        {!isExpanded && (
-          <motion.div
-            className="flex gap-1 ml-1"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <span className="w-1 h-1 rounded-full bg-teal-400" />
-            <span className="w-1 h-1 rounded-full bg-teal-400" />
-            <span className="w-1 h-1 rounded-full bg-teal-400" />
-          </motion.div>
-        )}
-      </button>
+      {/* Expandable operations list */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -293,49 +364,360 @@ function ThinkingSection({ content, defaultExpanded = false }: { content: string
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pl-6 pt-2 text-sm text-white/60 leading-relaxed whitespace-pre-wrap border-l-2 border-teal-500/20 ml-2 mt-2">
-              {content}
+            <div className="p-2 max-h-[280px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+              <AnimatePresence mode="popLayout">
+                {operations.slice(-20).map((op, idx) => (
+                  <ToolBadge
+                    key={op.id}
+                    type={op.type}
+                    target={op.target}
+                    status={op.status}
+                    index={idx}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* Review status - Enhanced styling */}
+      {reviewStatus && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={cn(
+            "flex items-center gap-2 text-xs py-2.5 px-4 border-t",
+            isReviewing && "bg-blue-500/5 border-blue-500/10 text-blue-400",
+            isFixing && "bg-amber-500/5 border-amber-500/10 text-amber-400",
+            isComplete && "bg-emerald-500/5 border-emerald-500/10 text-emerald-400",
+            !isReviewing && !isFixing && !isComplete && "bg-slate-500/5 border-slate-500/10 text-slate-400"
+          )}
+        >
+          {(isReviewing || isFixing) && !isComplete ? (
+            <motion.div
+              className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            />
+          ) : isComplete ? (
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+              <Check className="h-3.5 w-3.5" />
+            </motion.div>
+          ) : (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          )}
+          <span className="font-medium">{reviewStatus}</span>
+        </motion.div>
+      )}
+    </motion.div>
   )
 }
 
-// Todo List Component (Claude-style)
-function TodoList({ items, title = "Update Todos" }: { items: TodoItem[]; title?: string }) {
+// Thinking Section (Claude-style collapsible) - Enhanced
+function ThinkingSection({ content, defaultExpanded = false }: { content: string; defaultExpanded?: boolean }) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+
   return (
-    <div className="py-2 px-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
-        <span className="text-sm font-medium text-white/80">{title}</span>
-      </div>
-      <div className="space-y-1 pl-4">
-        {items.map((item) => (
-          <div key={item.id} className="flex items-start gap-2 py-0.5">
-            {item.status === 'completed' ? (
-              <CheckSquare className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-            ) : item.status === 'in_progress' ? (
-              <div className="relative mt-0.5">
-                <Square className="h-4 w-4 text-teal-400 shrink-0" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse shadow-sm shadow-teal-400/50" />
-                </div>
+    <motion.div
+      initial={{ opacity: 0, y: -5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl overflow-hidden bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-violet-500/5 border border-violet-500/10"
+    >
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/[0.02] transition-colors"
+      >
+        {/* Animated brain icon */}
+        <div className="relative">
+          <motion.div
+            className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center"
+            animate={!isExpanded ? { scale: [1, 1.1, 1] } : {}}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Bot className="h-4 w-4 text-violet-400" />
+          </motion.div>
+          {!isExpanded && (
+            <motion.div
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-violet-400"
+              animate={{ scale: [1, 1.3, 1], opacity: [1, 0.5, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+          )}
+        </div>
+
+        <div className="flex-1 text-left">
+          <span className="font-medium text-violet-300/90">Thinking</span>
+          {!isExpanded && (
+            <motion.span
+              className="ml-2 text-violet-400/50"
+              animate={{ opacity: [0.3, 0.7, 0.3] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              •••
+            </motion.span>
+          )}
+        </div>
+
+        <motion.div
+          animate={{ rotate: isExpanded ? 0 : -90 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="h-4 w-4 text-violet-400/50" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4">
+              <div className="pl-4 text-sm text-white/60 leading-relaxed whitespace-pre-wrap border-l-2 border-violet-500/30">
+                {content}
               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+// Todo List Component (Claude-style) - Enhanced with animations
+function TodoList({ items, title = "Task Progress" }: { items: TodoItem[]; title?: string }) {
+  const completedCount = items.filter(i => i.status === 'completed').length
+  const hasRunning = items.some(i => i.status === 'in_progress')
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl overflow-hidden bg-gradient-to-b from-slate-800/60 to-slate-900/60 border border-white/[0.06]"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.05]">
+        <div className="flex items-center gap-2.5">
+          <div className="relative">
+            {hasRunning ? (
+              <motion.div
+                className="w-6 h-6 rounded-md bg-teal-500/20 flex items-center justify-center"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <Zap className="h-3.5 w-3.5 text-teal-400" />
+              </motion.div>
             ) : (
-              <Square className="h-4 w-4 text-white/30 mt-0.5 shrink-0" />
+              <div className="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
+              </div>
             )}
-            <span className={cn(
-              "text-sm leading-relaxed",
-              item.status === 'completed' ? "text-white/50 line-through" : "text-white/70"
-            )}>
-              {item.content}
-            </span>
           </div>
-        ))}
+          <span className="text-sm font-medium text-white/80">{title}</span>
+        </div>
+        <span className="text-xs text-white/40 font-mono bg-white/[0.03] px-2 py-0.5 rounded-full">
+          {completedCount}/{items.length}
+        </span>
       </div>
-    </div>
+
+      {/* Tasks list */}
+      <div className="p-2 space-y-0.5">
+        <AnimatePresence mode="popLayout">
+          {items.map((item, idx) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ delay: idx * 0.05 }}
+              className={cn(
+                "flex items-center gap-2.5 py-2 px-2.5 rounded-lg transition-all duration-200",
+                item.status === 'in_progress' && "bg-teal-500/5",
+                item.status === 'completed' && "opacity-60"
+              )}
+            >
+              {/* Status checkbox */}
+              <div className="relative flex items-center justify-center w-5 h-5">
+                {item.status === 'completed' ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                    className="w-5 h-5 rounded-md bg-emerald-500/20 flex items-center justify-center"
+                  >
+                    <Check className="h-3 w-3 text-emerald-400" />
+                  </motion.div>
+                ) : item.status === 'in_progress' ? (
+                  <div className="relative w-5 h-5 rounded-md bg-teal-500/20 flex items-center justify-center">
+                    <motion.div
+                      className="w-3 h-3 border-2 border-teal-400/30 border-t-teal-400 rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-5 h-5 rounded-md bg-white/[0.03] border border-white/10" />
+                )}
+              </div>
+
+              {/* Task content */}
+              <span className={cn(
+                "flex-1 text-sm",
+                item.status === 'completed' && "line-through text-white/40",
+                item.status === 'in_progress' && "text-white/80",
+                item.status === 'pending' && "text-white/50"
+              )}>
+                {item.content}
+              </span>
+
+              {/* Status badge for in_progress */}
+              {item.status === 'in_progress' && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-[10px] font-medium text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded"
+                >
+                  Running
+                </motion.span>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  )
+}
+
+// Error Panel with Fix Issue button - Industry standard like Bolt.new/Cursor
+function ErrorPanel({
+  error,
+  onFixIssue,
+  onDismiss,
+  isFixing,
+  debugSteps,
+  debugMessage,
+}: {
+  error: CapturedError
+  onFixIssue: () => void
+  onDismiss: () => void
+  isFixing: boolean
+  debugSteps: DebugStep[]
+  debugMessage: string
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+      className="rounded-xl overflow-hidden bg-gradient-to-b from-red-950/80 to-slate-900/90 border border-red-500/20 shadow-xl shadow-red-500/10"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-red-500/10 border-b border-red-500/20">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+          </div>
+          <div>
+            <span className="text-sm font-medium text-red-300">Error Detected</span>
+            <p className="text-xs text-red-400/60">Click Fix Issue to let AI resolve this</p>
+          </div>
+        </div>
+        {!isFixing && (
+          <button
+            onClick={onDismiss}
+            className="text-white/40 hover:text-white/60 transition-colors p-1"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Error message */}
+      <div className="px-4 py-3">
+        <pre className="text-xs text-red-300/80 font-mono whitespace-pre-wrap break-all max-h-24 overflow-y-auto scrollbar-thin scrollbar-thumb-red-500/20">
+          {error.message}
+        </pre>
+        {error.stack && (
+          <details className="mt-2">
+            <summary className="text-xs text-red-400/50 cursor-pointer hover:text-red-400/70">
+              Stack trace
+            </summary>
+            <pre className="text-[10px] text-red-300/50 font-mono whitespace-pre-wrap break-all mt-1 max-h-20 overflow-y-auto">
+              {error.stack}
+            </pre>
+          </details>
+        )}
+      </div>
+
+      {/* Debug progress (when fixing) */}
+      {isFixing && debugSteps.length > 0 && (
+        <div className="px-4 py-2 border-t border-red-500/10 bg-slate-900/50">
+          <div className="space-y-1.5">
+            {debugSteps.map((step) => (
+              <div key={step.id} className="flex items-center gap-2">
+                {step.status === 'completed' ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                ) : step.status === 'in_progress' ? (
+                  <motion.div
+                    className="w-3.5 h-3.5 border-2 border-amber-400/30 border-t-amber-400 rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  />
+                ) : (
+                  <Circle className="h-3.5 w-3.5 text-white/20" />
+                )}
+                <span className={cn(
+                  "text-xs",
+                  step.status === 'completed' && "text-white/50",
+                  step.status === 'in_progress' && "text-amber-300",
+                  step.status === 'pending' && "text-white/30"
+                )}>
+                  {step.content}
+                </span>
+              </div>
+            ))}
+          </div>
+          {debugMessage && (
+            <p className="text-xs text-amber-400/70 mt-2">{debugMessage}</p>
+          )}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 px-4 py-3 border-t border-red-500/10">
+        {isFixing ? (
+          <div className="flex items-center gap-2 text-amber-400">
+            <motion.div
+              className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            />
+            <span className="text-sm font-medium">AI is fixing the issue...</span>
+          </div>
+        ) : (
+          <>
+            <Button
+              onClick={onFixIssue}
+              className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium shadow-lg shadow-amber-500/20"
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              Fix Issue
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={onDismiss}
+              className="text-white/50 hover:text-white/70"
+            >
+              Dismiss
+            </Button>
+          </>
+        )}
+      </div>
+    </motion.div>
   )
 }
 
@@ -498,7 +880,7 @@ function FilesCreatedList({ files }: { files: string[] }) {
   )
 }
 
-export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp', initialPrompt }: AIChatbotProps) {
+export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp', initialPrompt, onCaptureErrorReady }: AIChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -513,6 +895,11 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
   const [totalExpectedFiles, setTotalExpectedFiles] = useState<number>(0)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [elapsedTime, setElapsedTime] = useState(0)
+  // Debug/Fix Issue state
+  const [capturedError, setCapturedError] = useState<CapturedError | null>(null)
+  const [isDebugging, setIsDebugging] = useState(false)
+  const [debugSteps, setDebugSteps] = useState<DebugStep[]>([])
+  const [debugMessage, setDebugMessage] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const generatedFilesRef = useRef<string[]>([])
@@ -1122,6 +1509,189 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
     }
   }
 
+  // Fix Issue handler - calls the debug API to let AI fix errors
+  const fixIssue = async () => {
+    if (!capturedError || isDebugging) return
+
+    setIsDebugging(true)
+    setDebugSteps([
+      { id: '1', content: 'Analyzing error', status: 'in_progress' },
+      { id: '2', content: 'Identifying affected files', status: 'pending' },
+      { id: '3', content: 'Generating fixes', status: 'pending' },
+      { id: '4', content: 'Applying fixes', status: 'pending' },
+    ])
+    setDebugMessage('AI is analyzing the error...')
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          files,
+          debugMode: true,
+          errorMessage: capturedError.message,
+          errorStack: capturedError.stack,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Debug request failed: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+
+                if (data.type === 'debug') {
+                  // Update debug progress
+                  const stepMessage = data.message || ''
+                  setDebugMessage(stepMessage)
+
+                  // Update step statuses based on message content
+                  if (stepMessage.includes('Analyzing') || stepMessage.includes('analyzing')) {
+                    setDebugSteps(prev => prev.map(s =>
+                      s.id === '1' ? { ...s, status: 'in_progress' } : s
+                    ))
+                  } else if (stepMessage.includes('Identifying') || stepMessage.includes('file')) {
+                    setDebugSteps(prev => prev.map(s =>
+                      s.id === '1' ? { ...s, status: 'completed' } :
+                      s.id === '2' ? { ...s, status: 'in_progress' } : s
+                    ))
+                  } else if (stepMessage.includes('Generating') || stepMessage.includes('fix')) {
+                    setDebugSteps(prev => prev.map(s =>
+                      s.id === '1' || s.id === '2' ? { ...s, status: 'completed' } :
+                      s.id === '3' ? { ...s, status: 'in_progress' } : s
+                    ))
+                  } else if (stepMessage.includes('Applying') || stepMessage.includes('apply')) {
+                    setDebugSteps(prev => prev.map(s =>
+                      s.id === '1' || s.id === '2' || s.id === '3' ? { ...s, status: 'completed' } :
+                      s.id === '4' ? { ...s, status: 'in_progress' } : s
+                    ))
+                  }
+                } else if (data.type === 'actions' && data.actions) {
+                  // Handle file updates from debug
+                  const updatedFiles = [...filesRef.current]
+                  const normalizePath = (p: string) => p.replace(/^\.?\//, '').trim()
+
+                  for (const action of data.actions) {
+                    if (action.type === 'create_or_update_file') {
+                      const normalizedPath = normalizePath(action.path)
+                      const existingIndex = updatedFiles.findIndex(f => normalizePath(f.path) === normalizedPath)
+
+                      if (existingIndex >= 0) {
+                        updatedFiles[existingIndex] = {
+                          ...updatedFiles[existingIndex],
+                          content: action.content,
+                          updated_at: new Date().toISOString(),
+                        }
+                      } else {
+                        const ext = normalizedPath.split('.').pop()?.toLowerCase() || ''
+                        const langMap: Record<string, string> = {
+                          html: 'html', css: 'css', js: 'javascript', jsx: 'javascript',
+                          ts: 'typescript', tsx: 'typescript', json: 'json', md: 'markdown'
+                        }
+                        updatedFiles.push({
+                          id: crypto.randomUUID(),
+                          project_id: projectId,
+                          path: normalizedPath,
+                          content: action.content,
+                          language: langMap[ext] || 'plaintext',
+                          created_at: new Date().toISOString(),
+                          updated_at: new Date().toISOString(),
+                        })
+                      }
+                    }
+                  }
+
+                  filesRef.current = updatedFiles
+                  onFilesChange(updatedFiles)
+                } else if (data.type === 'complete' || data.type === 'done') {
+                  // Mark all steps complete
+                  setDebugSteps(prev => prev.map(s => ({ ...s, status: 'completed' })))
+                  setDebugMessage('Issue fixed successfully!')
+
+                  // Clear error after short delay
+                  setTimeout(() => {
+                    setCapturedError(null)
+                    setIsDebugging(false)
+                    setDebugSteps([])
+                    setDebugMessage('')
+                  }, 1500)
+
+                  toast({
+                    title: 'Issue Fixed',
+                    description: 'AI has resolved the error. Check the preview.',
+                  })
+                } else if (data.type === 'error') {
+                  throw new Error(data.error || 'Debug failed')
+                }
+              } catch (parseError) {
+                if (!(parseError instanceof SyntaxError)) {
+                  throw parseError
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Debug error:', error)
+      setDebugMessage(`Failed to fix: ${error.message}`)
+      setDebugSteps(prev => prev.map(s =>
+        s.status === 'in_progress' ? { ...s, status: 'pending' } : s
+      ))
+
+      toast({
+        title: 'Debug Failed',
+        description: error.message || 'Failed to fix the issue',
+        variant: 'destructive',
+      })
+
+      // Reset debugging state after delay
+      setTimeout(() => {
+        setIsDebugging(false)
+      }, 2000)
+    }
+  }
+
+  // Expose captureError method to parent via callback
+  const captureError = useCallback((error: { message: string; stack?: string }) => {
+    setCapturedError({
+      message: error.message,
+      stack: error.stack,
+      timestamp: Date.now(),
+    })
+  }, [])
+
+  // Dismiss error
+  const dismissError = useCallback(() => {
+    if (!isDebugging) {
+      setCapturedError(null)
+      setDebugSteps([])
+      setDebugMessage('')
+    }
+  }, [isDebugging])
+
+  // Expose captureError to parent component
+  useEffect(() => {
+    if (onCaptureErrorReady) {
+      onCaptureErrorReady(captureError)
+    }
+  }, [onCaptureErrorReady, captureError])
+
   const suggestions = getSuggestionsForPlatform(platform, 4)
 
   return (
@@ -1218,8 +1788,8 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
                         <ThinkingSection content={thinkingContent} defaultExpanded={false} />
                       )}
 
-                      {/* Todos if present - shows task progress */}
-                      {idx === messages.length - 1 && todos.length > 0 && (
+                      {/* Todos if present - shows task progress (only when not loading, loading has its own) */}
+                      {idx === messages.length - 1 && todos.length > 0 && !isLoading && (
                         <TodoList items={todos} title="Task Progress" />
                       )}
 
@@ -1328,6 +1898,24 @@ export function AIChatbot({ projectId, files, onFilesChange, platform = 'webapp'
           >
             <ArrowDownCircle className="h-5 w-5" />
           </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Error Panel - Fix Issue feature */}
+      <AnimatePresence>
+        {capturedError && (
+          <div className="px-4 pb-2">
+            <div className="max-w-3xl mx-auto">
+              <ErrorPanel
+                error={capturedError}
+                onFixIssue={fixIssue}
+                onDismiss={dismissError}
+                isFixing={isDebugging}
+                debugSteps={debugSteps}
+                debugMessage={debugMessage}
+              />
+            </div>
+          </div>
         )}
       </AnimatePresence>
 

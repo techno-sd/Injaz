@@ -160,6 +160,9 @@ export function LovableWorkspaceLayout({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
+  // Error capture callback for AI Fix feature
+  const [captureErrorFn, setCaptureErrorFn] = useState<((error: { message: string; stack?: string }) => void) | null>(null)
+
   // Persistent workspace panel configuration
   const {
     config,
@@ -694,6 +697,7 @@ export function LovableWorkspaceLayout({
                   onFilesChange={handleFilesChange}
                   platform={(project as any).platform || 'webapp'}
                   initialPrompt={initialPrompt}
+                  onCaptureErrorReady={(fn) => setCaptureErrorFn(() => fn)}
                 />
               </aside>
             ) : (
@@ -755,6 +759,7 @@ export function LovableWorkspaceLayout({
                     projectId={project.id}
                     files={files}
                     platform={projectPlatform}
+                    onError={captureErrorFn || undefined}
                   />
                 ) : (
                   <LivePreview
@@ -940,6 +945,7 @@ export function LovableWorkspaceLayout({
                           projectId={project.id}
                           files={files}
                           platform={projectPlatform}
+                          onError={captureErrorFn || undefined}
                         />
                       ) : (
                         <LivePreview
@@ -966,6 +972,7 @@ export function LovableWorkspaceLayout({
                   onFilesChange={handleFilesChange}
                   platform={(project as any).platform || 'webapp'}
                   initialPrompt={initialPrompt}
+                  onCaptureErrorReady={(fn) => setCaptureErrorFn(() => fn)}
                 />
               </div>
             )}
@@ -1029,6 +1036,7 @@ export function LovableWorkspaceLayout({
                   projectId={project.id}
                   files={files}
                   platform={projectPlatform}
+                  onError={captureErrorFn || undefined}
                 />
               ) : (
                 <LivePreview

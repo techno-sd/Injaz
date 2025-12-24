@@ -7,8 +7,7 @@ export interface TemplateFile {
   content: string
 }
 
-// Package.json - Ultra-minimal for fast install
-// Tailwind loads via Play CDN (no build required)
+// Package.json - Minimal but with Tailwind for proper CSS
 const PACKAGE_JSON = `{
   "name": "vite-react-app",
   "private": true,
@@ -25,6 +24,9 @@ const PACKAGE_JSON = `{
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
     "vite": "^5.0.0"
   }
 }`
@@ -61,7 +63,24 @@ export default defineConfig({
   clearScreen: false,
 })`
 
-// Note: Tailwind and PostCSS configs removed - using Play CDN instead
+const TAILWIND_CONFIG = `/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`
+
+const POSTCSS_CONFIG = `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`
 
 const TSCONFIG = `{
   "compilerOptions": {
@@ -108,22 +127,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>React App</title>
-    <!-- Tailwind Play CDN - instant styling, no build required -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              background: 'rgb(17, 24, 39)',
-              foreground: 'rgb(249, 250, 251)',
-            }
-          }
-        }
-      }
-    </script>
-    <!-- Import maps for CDN fallback - ensures packages load even if npm install fails -->
+    <!-- Import maps for CDN - runtime packages load from esm.sh -->
     <script type="importmap">
     {
       "imports": {
@@ -145,18 +149,6 @@ const INDEX_HTML = `<!DOCTYPE html>
       }
     }
     </script>
-    <style>
-      body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background-color: rgb(17, 24, 39);
-        color: rgb(249, 250, 251);
-        min-height: 100vh;
-        margin: 0;
-      }
-      #root {
-        min-height: 100vh;
-      }
-    </style>
   </head>
   <body>
     <div id="root"></div>
@@ -176,8 +168,31 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 )`
 
-const INDEX_CSS = `/* Global styles - Tailwind loaded via Play CDN */
-/* Custom styles can be added here */`
+const INDEX_CSS = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 17 24 39;
+  --foreground: 249 250 251;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}`
 
 const VITE_ENV_DTS = `/// <reference types="vite/client" />`
 
@@ -191,10 +206,11 @@ export function cn(...inputs: ClassValue[]) {
 }`
 
 // All base files - these are ALWAYS included and NEVER modified by AI
-// Note: Tailwind loads via Play CDN (no config files needed)
 export const BASE_FILES: TemplateFile[] = [
   { path: 'package.json', content: PACKAGE_JSON },
   { path: 'vite.config.ts', content: VITE_CONFIG },
+  { path: 'tailwind.config.js', content: TAILWIND_CONFIG },
+  { path: 'postcss.config.js', content: POSTCSS_CONFIG },
   { path: 'tsconfig.json', content: TSCONFIG },
   { path: 'tsconfig.node.json', content: TSCONFIG_NODE },
   { path: 'index.html', content: INDEX_HTML },

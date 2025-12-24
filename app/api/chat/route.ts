@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getProviderForModel, isModelAvailable } from '@/lib/ai/providers'
 import { buildContext } from '@/lib/ai/context-manager'
-import { generate as simpleGenerate } from '@/lib/ai/simple-generator'
+import { generate as simpleGenerate, debugAndFix } from '@/lib/ai/simple-generator'
 import type { Message, File, AIAction, PlatformType, AIMode, UnifiedAppSchema } from '@/types'
 
 export const runtime = 'edge'
@@ -107,6 +107,10 @@ export async function POST(req: Request) {
       mode = 'auto' as AIMode,
       schema = null as UnifiedAppSchema | null,
       useDualMode = false,
+      // Debug mode parameters
+      debugMode = false,
+      errorMessage = '',
+      errorStack = '',
     } = await req.json()
 
     const isDemoProject = projectId === 'demo' || projectId === 'new' || projectId.startsWith('new-')
@@ -145,6 +149,18 @@ export async function POST(req: Request) {
       if (project.app_schema) {
         existingSchema = project.app_schema as UnifiedAppSchema
       }
+    }
+
+    // Handle debug mode - AI fixes errors in generated code
+    if (debugMode && errorMessage) {
+      return handleDebugMode({
+        projectId,
+        files,
+        errorMessage,
+        errorStack,
+        supabase,
+        isDemoProject,
+      })
     }
 
     // Determine if we should use dual-mode AI (Controller + CodeGen)
@@ -379,6 +395,26 @@ async function handleDualModeChat({
             controller.enqueue(encoder.encode(`data: ${chatData}\n\n`))
           }
 
+          // Handle AI review events
+          if (event.type === 'review') {
+            const fixes = event.data?.fixes || []
+            const message = event.data?.message || 'Code review complete'
+
+            // Send review phase to UI
+            const reviewData = JSON.stringify({
+              type: 'planning',
+              phase: fixes.length > 0 ? 'fixing' : 'reviewing',
+              message: message,
+              fixes: fixes,
+            })
+            controller.enqueue(encoder.encode(`data: ${reviewData}\n\n`))
+
+            // Log fixes if any
+            if (fixes.length > 0) {
+              console.log('[Chat] AI review fixed issues:', fixes)
+            }
+          }
+
           if (event.type === 'complete') {
             // Save generation history
             if (supabase && !isDemoProject && generatedFiles.length > 0) {
@@ -453,6 +489,153 @@ async function handleDualModeChat({
           type: 'error',
           error: errorMessage,
           retryable: isProviderError,
+        })
+        controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
+}
+
+/**
+ * Handle debug mode - AI analyzes errors and fixes code
+ * Industry-standard error fixing like Bolt.new, Cursor, Replit
+ */
+async function handleDebugMode({
+  projectId,
+  files,
+  errorMessage,
+  errorStack,
+  supabase,
+  isDemoProject,
+}: {
+  projectId: string
+  files: File[]
+  errorMessage: string
+  errorStack: string
+  supabase: any
+  isDemoProject: boolean
+}) {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: 'API key not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // Send debug mode info
+        const modeInfo = JSON.stringify({
+          type: 'mode',
+          mode: 'debug',
+        })
+        controller.enqueue(encoder.encode(`data: ${modeInfo}\n\n`))
+
+        console.log('[Debug] Starting debug for error:', errorMessage.substring(0, 100))
+
+        // Convert files to generator format
+        const generatorFiles = files.map(f => ({
+          path: f.path,
+          content: f.content,
+        }))
+
+        // Use the debugAndFix generator
+        for await (const event of debugAndFix(errorMessage, errorStack, generatorFiles, apiKey)) {
+          console.log('[Debug] Event:', event.type)
+
+          if (event.type === 'debug') {
+            // Send debug progress
+            const debugData = JSON.stringify({
+              type: 'debug',
+              phase: 'analyzing',
+              message: event.data?.message || 'Debugging...',
+              steps: event.data?.debugSteps || [],
+            })
+            controller.enqueue(encoder.encode(`data: ${debugData}\n\n`))
+          }
+
+          if (event.type === 'file' && event.data?.file) {
+            const file = event.data.file
+
+            // Send file action
+            const actionData = JSON.stringify({
+              type: 'actions',
+              actions: [{
+                type: 'create_or_update_file',
+                path: file.path,
+                content: file.content,
+              }],
+            })
+            controller.enqueue(encoder.encode(`data: ${actionData}\n\n`))
+
+            // Save to database if not demo
+            if (supabase && !isDemoProject) {
+              await supabase
+                .from('files')
+                .upsert({
+                  project_id: projectId,
+                  path: file.path,
+                  content: file.content,
+                  language: getLanguageFromPath(file.path),
+                }, {
+                  onConflict: 'project_id,path',
+                })
+            }
+          }
+
+          if (event.type === 'complete') {
+            // Send completion
+            const completeData = JSON.stringify({
+              type: 'debug',
+              phase: 'complete',
+              message: event.data?.message || 'Fix applied successfully',
+              fixes: event.data?.fixes || [],
+              steps: event.data?.debugSteps || [],
+            })
+            controller.enqueue(encoder.encode(`data: ${completeData}\n\n`))
+
+            // Send summary content
+            const summaryData = JSON.stringify({
+              type: 'content',
+              content: event.data?.message || 'Fixed the issue. Please check the preview.',
+            })
+            controller.enqueue(encoder.encode(`data: ${summaryData}\n\n`))
+          }
+
+          if (event.type === 'error') {
+            console.error('[Debug] Error:', event.data)
+            const errorData = JSON.stringify({
+              type: 'error',
+              error: event.data?.message || 'Debug failed',
+            })
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+          }
+        }
+
+        // Send done signal
+        const doneData = JSON.stringify({ type: 'done' })
+        controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
+
+        controller.close()
+      } catch (error: any) {
+        console.error('[Debug] Error in debug stream:', error)
+
+        const errorData = JSON.stringify({
+          type: 'error',
+          error: error.message || 'Debug failed',
         })
         controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
         controller.close()
